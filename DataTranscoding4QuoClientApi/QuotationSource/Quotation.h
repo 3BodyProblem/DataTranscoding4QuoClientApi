@@ -4,14 +4,11 @@
 
 #pragma warning(disable:4786)
 #include <set>
-#include <map>
-#include <string>
 #include <stdexcept>
 #include "DataDump.h"
+#include "DataCenter.h"
 #include "DataCollector.h"
-#include "../Configuration.h"
 #include "../Infrastructure/Thread.h"
-#include "../Infrastructure/DateTime.h"
 
 
 /**
@@ -102,6 +99,7 @@ public:
 
 private:
 	DataCollector				m_oQuotPlugin;			///< 行情插件
+	QuotationData				m_oQuoDataCenter;		///< 行情数据集合
 	WorkStatus					m_oWorkStatus;			///< 工作状态
 //	static T_MAP_RATE			m_mapRate;				///< 各分类的放大倍数
 //	static T_MAP_KIND			m_mapKind;				///< 分类信息集合

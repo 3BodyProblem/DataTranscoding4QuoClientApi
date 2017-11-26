@@ -100,18 +100,25 @@ int Quotation::Initialize()
 		QuoCollector::GetCollector()->OnLog( TLV_INFO, "Quotation::Initialize() : ............ [%s] Quotation Is Activating............" );
 		Release();
 
+		if( (nErrCode = m_oQuoDataCenter.Initialize()) < 0 )
+		{
+			QuoCollector::GetCollector()->OnLog( TLV_WARN, "Quotation::Initialize() : failed 2 initialize DataCenter, errorcode = %d", nErrCode );
+			Release();
+			return -1;
+		}
+
 		if( (nErrCode = m_oQuotPlugin.Initialize( this )) < 0 )
 		{
 			QuoCollector::GetCollector()->OnLog( TLV_WARN, "Quotation::Initialize() : failed 2 initialize Quotation Plugin, errorcode = %d", nErrCode );
 			Release();
-			return -1;
+			return -2;
 		}
 
 		if( (nErrCode = m_oQuotPlugin.RecoverDataCollector()) < 0 )
 		{
 			QuoCollector::GetCollector()->OnLog( TLV_WARN, "Quotation::Initialize() : failed 2 activate Quotation Plugin, errorcode = %d", nErrCode );
 			Release();
-			return -2;
+			return -3;
 		}
 
 		m_oWorkStatus = ET_SS_WORKING;				///< 更新Quotation会话的状态
