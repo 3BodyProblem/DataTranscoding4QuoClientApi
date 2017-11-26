@@ -20,6 +20,11 @@ void QuotationData::Release()
 
 }
 
+void QuotationData::UpdateModuleStatus( enum XDFMarket nMarket, int nStatus )
+{
+	m_mapModuleStatus[nMarket] = nStatus;
+}
+
 
 
 

@@ -139,7 +139,9 @@ int Quotation::Release()
 	{
 		QuoCollector::GetCollector()->OnLog( TLV_INFO, "Quotation::Release() : ............ Destroying .............." );
 
-		m_oWorkStatus = ET_SS_UNACTIVE;		///< 更新Quotation会话的状态
+		m_oWorkStatus = ET_SS_UNACTIVE;			///< 更新Quotation会话的状态
+		m_oQuotPlugin.Release();				///< 释放行情源插件
+		m_oQuoDataCenter.Release();				///< 释放行情数据资源
 
 		QuoCollector::GetCollector()->OnLog( TLV_INFO, "Quotation::Release() : ............ Destroyed! .............." );
 	}
@@ -147,8 +149,20 @@ int Quotation::Release()
 	return 0;
 }
 
+int Quotation::ReloadShLv1( enum XDFRunStat eStatus )
+{
+	if( XRS_Normal != eStatus )
+	{
+		return -1;
+	}
+
+
+	return 0;
+}
+
 bool __stdcall	Quotation::XDF_OnRspStatusChanged( unsigned char cMarket, int nStatus )
 {
+	bool	bNormalStatus = false;
 	char	pszDesc[128] = { 0 };
 
 	switch( nStatus )
@@ -163,16 +177,50 @@ bool __stdcall	Quotation::XDF_OnRspStatusChanged( unsigned char cMarket, int nSt
 		::strcpy( pszDesc, "初始化" );
 		break;
 	case 5:
-		::strcpy( pszDesc, "可服务" );
+		{
+			::strcpy( pszDesc, "可服务" );
+			bNormalStatus = true;
+		}
 		break;
 	default:
-		::strcpy( pszDesc, "非法状态值" );
-		break;
+		QuoCollector::GetCollector()->OnLog( TLV_INFO, "Quotation::XDF_OnRspStatusChanged() : Market(%d), Status=非法状态值", (int)cMarket, pszDesc );
+		return false;
 	}
 
-	::printf( "市场(%d), 状态:%s\n", cMarket, pszDesc );		///< 市场状态变化通知
+	///< 更新模块状态
+	QuoCollector::GetCollector()->OnLog( TLV_INFO, "Quotation::XDF_OnRspStatusChanged() : Market(%d), Status=%s", (int)cMarket, pszDesc );
+	m_oQuoDataCenter.UpdateModuleStatus( (enum XDFMarket)cMarket, nStatus );	///< 更新模块工作状态
 
-	return false;
+	///< 加载各市场基础信息
+	if( true == bNormalStatus )
+	{
+		switch( (enum XDFMarket)cMarket )
+		{
+		case XDF_SH:		///< 上证L1
+			ReloadShLv1( (enum XDFRunStat)nStatus );
+			break;
+		case XDF_SHL2:		///< 上证L2(QuoteClientApi内部屏蔽)
+			break;
+		case XDF_SHOPT:		///< 上证期权
+			break;
+		case XDF_SZ:		///< 深证L1
+			break;
+		case XDF_SZOPT:		///< 深圳期权
+			break;
+		case XDF_SZL2:		///< 深圳L2(QuoteClientApi内部屏蔽)
+			break;
+		case XDF_CF:		///< 中金期货
+			break;
+		case XDF_ZJOPT:		///< 中金期权
+			break;
+		case XDF_CNF:		///< 商品期货(上海/郑州/大连)
+			break;
+		case XDF_CNFOPT:	///< 商品期货和商品期权(上海/郑州/大连)
+			break;
+		}
+	}
+
+	return true;
 }
 
 void __stdcall	Quotation::XDF_OnRspRecvData( XDFAPI_PkgHead * pHead, const char * pszBuf, int nBytes )
@@ -217,8 +265,6 @@ void __stdcall	Quotation::XDF_OnRspRecvData( XDFAPI_PkgHead * pHead, const char 
 							char				pszCode[8] = { 0 };
 							XDFAPI_StockData5*	pData = (XDFAPI_StockData5*)pbuf;
 
-							if( ::strncmp( pData->Code, "600098", 6 ) == 0 )
-								int a = 0;
 							::memcpy( pszCode, pData->Code, 6 );
 							::printf( "快照:%s, 价格:%u\n", pszCode, pData->Now );
 
@@ -319,7 +365,7 @@ void __stdcall	Quotation::XDF_OnRspRecvData( XDFAPI_PkgHead * pHead, const char 
 
 void __stdcall	Quotation::XDF_OnRspOutLog( unsigned char nLogType, unsigned char nLogLevel, const char * pLogBuf )
 {
-	::printf( "[Plugin] Type=%u, Level=%u, Log=%s \n", nLogType, nLogLevel, pLogBuf );
+	QuoCollector::GetCollector()->OnLog( TLV_INFO, "Quotation::XDF_OnRspOutLog() : %s", pLogBuf );
 }
 
 int	__stdcall	Quotation::XDF_OnRspNotify( unsigned int nNotifyNo, void* wParam, void* lParam )

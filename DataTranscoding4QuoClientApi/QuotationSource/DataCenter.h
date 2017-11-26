@@ -11,6 +11,9 @@
 #include "../Infrastructure/DateTime.h"
 
 
+typedef	std::map<enum XDFMarket,int>		TMAP_MKID2STATUS;
+
+
 /**
  * @class				QuotationData
  * @brief				行情数据存储类
@@ -33,6 +36,15 @@ public:
 	void				Release();
 
 public:
+	/**
+	 * @brief			更新模块工作状态
+	 * @param[in]		cMarket			市场ID
+	 * @param[in]		nStatus			状态值
+	 */
+	void				UpdateModuleStatus( enum XDFMarket nMarket, int nStatus );
+
+protected:
+	TMAP_MKID2STATUS	m_mapModuleStatus;		///< 模块状态表
 
 };
 

@@ -50,7 +50,6 @@ private:
 
 
 //typedef			std::map<unsigned int,unsigned int>					T_MAP_RATE;			///< 放大倍数映射表[商品分类,商品放大倍数]
-//typedef			std::map<std::string,tagSHL1KindDetail_LF150>		T_MAP_KIND;			///< 根据标的代码映射到对应的分类信息
 
 
 /**
@@ -78,24 +77,33 @@ public:
 	 */
 	int							Release();
 
+	/**
+	 * @brief					获取会话状态信息
+	 */
+	WorkStatus&					GetWorkStatus();
+
+public:
+	/**
+	 * @brief					加载上海Lv1的基础信息
+	 * @param[in]				eStatus		市场模块状态
+	 * @return					==0			成功
+								!=0			失败
+	 */
+	int							ReloadShLv1( enum XDFRunStat eStatus );
+
 public:
 	virtual bool __stdcall		XDF_OnRspStatusChanged( unsigned char cMarket, int nStatus );
 	virtual void __stdcall		XDF_OnRspRecvData( XDFAPI_PkgHead * pHead, const char * pszBuf, int nBytes );
 	virtual void __stdcall		XDF_OnRspOutLog( unsigned char nLogType, unsigned char nLogLevel,const char * pLogBuf );
 	virtual int	__stdcall		XDF_OnRspNotify( unsigned int nNotifyNo, void* wParam, void* lParam );
 
-public:
+protected:
 	/**
 	 * @brief					任务函数(内循环)
 	 * @return					==0					成功
 								!=0					失败
 	 */
 	int							Execute();
-
-	/**
-	 * @brief					获取会话状态信息
-	 */
-	WorkStatus&					GetWorkStatus();
 
 private:
 	DataCollector				m_oQuotPlugin;			///< 行情插件
