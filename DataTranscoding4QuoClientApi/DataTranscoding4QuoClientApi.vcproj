@@ -259,6 +259,14 @@
 				>
 			</File>
 			<File
+				RelativePath=".\Infrastructure\LoopBuffer.cpp"
+				>
+			</File>
+			<File
+				RelativePath=".\Infrastructure\LoopBuffer.h"
+				>
+			</File>
+			<File
 				RelativePath=".\Infrastructure\Thread.cpp"
 				>
 			</File>

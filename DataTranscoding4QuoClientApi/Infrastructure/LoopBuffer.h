@@ -18,7 +18,7 @@ public:
 	virtual ~MLoopBufferSt();
 public:
 	//初始化
-	int  Instance(unsigned long lMaxSize);
+	int  Instance( char* pszBufferPtr, unsigned long lMaxSize);
 	//释放空间
 	void Release(void);
 public:
@@ -48,45 +48,6 @@ public:
 	int  GetPercent(void);
 };
 
-template<class tempclass>class MLoopBufferMt : public MLoopBufferSt<tempclass>
-{
-protected:
-	CriticalObject				m_mSection;
-public:
-	MLoopBufferMt(void);
-	virtual ~MLoopBufferMt();
-public:
-	//初始化
-	int  Instance(unsigned long lMaxSize);
-	//释放空间
-	void Release(void);
-public:
-	//存储数据
-	int  PutData(const tempclass * lpIn,unsigned long lInSize = 1);
-	//取出数据
-	int  GetData(tempclass * lpOut,unsigned long lInSize = 1);
-	//查看数据（仅仅查看，不取出
-	int  LookData(tempclass * lpOut,unsigned long lInSize = 1);
-	//移除数据
-	int  MoveData(unsigned long lInSize = 1);
-public:
-	//清除数据
-	void Clear(void);
-public:
-	//判断是否为空或满
-	bool IsEmpty(void);
-	bool IsFull(void);
-public:
-	//获取数据数量
-	int  GetRecordCount(void);
-	//获取当前空余（剩余）空间数量
-	int  GetFreeRecordCount(void);
-	//获取数据最大空间
-	int  GetMaxRecord(void);
-	//获取数据百分比
-	int  GetPercent(void);
-};
-//------------------------------------------------------------------------------------------------------------------------------
 //------------------------------------------------------------------------------------------------------------------------------
 //代码实现部分
 //------------------------------------------------------------------------------------------------------------------------------
@@ -97,31 +58,25 @@ template<class tempclass> MLoopBufferSt<tempclass>::MLoopBufferSt(void)
 	m_lFirstRecord = 0;
 	m_lLastRecord = 0;
 }
-//..............................................................................................................................
+
 template<class tempclass> MLoopBufferSt<tempclass>::~MLoopBufferSt()
 {
 	Release();
 }
-//..............................................................................................................................
-template<class tempclass>int  MLoopBufferSt<tempclass>::Instance(unsigned long lMaxSize)
+
+template<class tempclass>int  MLoopBufferSt<tempclass>::Instance( char* pszBufferPtr, unsigned long lMaxSize )
 {
 	assert(lMaxSize != 0);
 
 	Release();
-#ifndef	_LINUXTRYOFF
-	try{
-#endif
-		m_lpRecordData = new tempclass[lMaxSize];
-#ifndef	_LINUXTRYOFF
-	}catch(...)
-	{
-		m_lpRecordData = NULL;
-	}
-#endif
+
+	m_lpRecordData = pszBufferPtr;
+
 	if ( m_lpRecordData == NULL )
 	{
 		return -1;
 	}
+
 	m_lMaxRecord = lMaxSize;
 
 	m_lFirstRecord = 0;
@@ -129,7 +84,7 @@ template<class tempclass>int  MLoopBufferSt<tempclass>::Instance(unsigned long l
 
 	return(1);
 }
-//..............................................................................................................................
+
 template<class tempclass>void MLoopBufferSt<tempclass>::Release(void)
 {
 	if ( m_lpRecordData != NULL )
@@ -142,7 +97,7 @@ template<class tempclass>void MLoopBufferSt<tempclass>::Release(void)
 	m_lFirstRecord = 0;
 	m_lLastRecord = 0;
 }
-//..............................................................................................................................
+
 template<class tempclass>int  MLoopBufferSt<tempclass>::PutData(const tempclass * lpIn,unsigned long lInSize)
 {
 	register int				errorcode;
@@ -187,7 +142,7 @@ template<class tempclass>int  MLoopBufferSt<tempclass>::PutData(const tempclass 
 #endif
 	return(lInSize);
 }
-//..............................................................................................................................
+
 template<class tempclass>int  MLoopBufferSt<tempclass>::GetData(tempclass * lpOut,unsigned long lInSize)
 {
 	register int				errorcode;
@@ -226,7 +181,7 @@ template<class tempclass>int  MLoopBufferSt<tempclass>::GetData(tempclass * lpOu
 	
 	return(lInSize);
 }
-//..............................................................................................................................
+
 template<class tempclass>int  MLoopBufferSt<tempclass>::LookData(tempclass * lpOut,unsigned long lInSize)
 {
 	register int				errorcode;
@@ -263,7 +218,7 @@ template<class tempclass>int  MLoopBufferSt<tempclass>::LookData(tempclass * lpO
 	
 	return(lInSize);
 }
-//..............................................................................................................................
+
 template<class tempclass>int  MLoopBufferSt<tempclass>::MoveData(unsigned long lInSize)
 {
 	register unsigned long				errorcode;
@@ -284,13 +239,13 @@ template<class tempclass>int  MLoopBufferSt<tempclass>::MoveData(unsigned long l
 	
 	return(lInSize);
 }
-//..............................................................................................................................
+
 template<class tempclass>void MLoopBufferSt<tempclass>::Clear(void)
 {
 	m_lLastRecord = 0;
 	m_lFirstRecord = 0;
 }
-//..............................................................................................................................
+
 template<class tempclass>bool MLoopBufferSt<tempclass>::IsEmpty(void)
 {
 	if ( m_lLastRecord == m_lFirstRecord )
@@ -302,7 +257,7 @@ template<class tempclass>bool MLoopBufferSt<tempclass>::IsEmpty(void)
 		return(false);
 	}
 }
-//..............................................................................................................................
+
 template<class tempclass>bool MLoopBufferSt<tempclass>::IsFull(void)
 {
 	if ( m_lMaxRecord == 0 )
@@ -319,7 +274,7 @@ template<class tempclass>bool MLoopBufferSt<tempclass>::IsFull(void)
 		return(false);
 	}
 }
-//..............................................................................................................................
+
 template<class tempclass>int  MLoopBufferSt<tempclass>::GetRecordCount(void)
 {
 	if ( m_lMaxRecord == 0 )
@@ -330,7 +285,7 @@ template<class tempclass>int  MLoopBufferSt<tempclass>::GetRecordCount(void)
 
 	return((m_lLastRecord + m_lMaxRecord - m_lFirstRecord) % m_lMaxRecord);
 }
-//..............................................................................................................................
+
 template<class tempclass>int  MLoopBufferSt<tempclass>::GetFreeRecordCount(void)
 {
 	if ( m_lMaxRecord == 0 )
@@ -341,12 +296,12 @@ template<class tempclass>int  MLoopBufferSt<tempclass>::GetFreeRecordCount(void)
 
 	return(m_lMaxRecord - GetRecordCount() - 1);
 }
-//..............................................................................................................................
+
 template<class tempclass>int  MLoopBufferSt<tempclass>::GetMaxRecord(void)
 {
 	return(m_lMaxRecord);
 }
-//..............................................................................................................................
+
 template<class tempclass>int  MLoopBufferSt<tempclass>::GetPercent(void)
 {
 	if ( m_lMaxRecord == 0 )
@@ -357,109 +312,10 @@ template<class tempclass>int  MLoopBufferSt<tempclass>::GetPercent(void)
 
 	return(((m_lLastRecord + m_lMaxRecord - m_lFirstRecord) % m_lMaxRecord) * 100 / m_lMaxRecord);
 }
-//------------------------------------------------------------------------------------------------------------------------------
-template<class tempclass> MLoopBufferMt<tempclass>::MLoopBufferMt(void)
-{
-}
-//..............................................................................................................................
-template<class tempclass> MLoopBufferMt<tempclass>::~MLoopBufferMt()
-{
-	Release();
-}
-//..............................................................................................................................
-template<class tempclass> int  MLoopBufferMt<tempclass>::Instance(unsigned long lMaxSize)
-{
-	CriticalLock				section(m_mSection);
 
-	return(MLoopBufferSt<tempclass>::Instance(lMaxSize));
-}
-//..............................................................................................................................
-template<class tempclass> void MLoopBufferMt<tempclass>::Release(void)
-{
-	CriticalLock				section(m_mSection);
-	
-	MLoopBufferSt<tempclass>::Release();
-}
-//..............................................................................................................................
-template<class tempclass> int  MLoopBufferMt<tempclass>::PutData(const tempclass * lpIn,unsigned long lInSize)
-{
-	CriticalLock				section(m_mSection);
 
-	return(MLoopBufferSt<tempclass>::PutData(lpIn,lInSize));
-}
-//..............................................................................................................................
-template<class tempclass> int  MLoopBufferMt<tempclass>::GetData(tempclass * lpOut,unsigned long lInSize)
-{
-	CriticalLock				section(m_mSection);
-	
-	return(MLoopBufferSt<tempclass>::GetData(lpOut,lInSize));
-}
-//..............................................................................................................................
-template<class tempclass> int  MLoopBufferMt<tempclass>::LookData(tempclass * lpOut,unsigned long lInSize)
-{
-	CriticalLock				section(m_mSection);
-	
-	return(MLoopBufferSt<tempclass>::LookData(lpOut,lInSize));
-}
-//..............................................................................................................................
-template<class tempclass> int  MLoopBufferMt<tempclass>::MoveData(unsigned long lInSize)
-{
-	CriticalLock				section(m_mSection);
-	
-	return(MLoopBufferSt<tempclass>::MoveData(lInSize));
-}
-//..............................................................................................................................
-template<class tempclass> void MLoopBufferMt<tempclass>::Clear(void)
-{
-	CriticalLock				section(m_mSection);
-	
-	MLoopBufferSt<tempclass>::Clear();
-}
-//..............................................................................................................................
-template<class tempclass> bool MLoopBufferMt<tempclass>::IsEmpty(void)
-{
-	CriticalLock				section(m_mSection);
-	
-	return(MLoopBufferSt<tempclass>::IsEmpty());
-}
-//..............................................................................................................................
-template<class tempclass> bool MLoopBufferMt<tempclass>::IsFull(void)
-{
-	CriticalLock				section(m_mSection);
-	
-	return(MLoopBufferSt<tempclass>::IsFull());
-}
-//..............................................................................................................................
-template<class tempclass> int  MLoopBufferMt<tempclass>::GetRecordCount(void)
-{
-	CriticalLock				section(m_mSection);
-	
-	return(MLoopBufferSt<tempclass>::GetRecordCount());
-}
-//..............................................................................................................................
-template<class tempclass> int  MLoopBufferMt<tempclass>::GetFreeRecordCount(void)
-{
-	CriticalLock				section(m_mSection);
-	
-	return(MLoopBufferSt<tempclass>::GetFreeRecordCount());
-}
-//..............................................................................................................................
-template<class tempclass> int  MLoopBufferMt<tempclass>::GetMaxRecord(void)
-{
-	CriticalLock				section(m_mSection);
-	
-	return(MLoopBufferSt<tempclass>::GetMaxRecord());
-}
-//..............................................................................................................................
-template<class tempclass> int  MLoopBufferMt<tempclass>::GetPercent(void)
-{
-	CriticalLock				section(m_mSection);
-	
-	return(MLoopBufferSt<tempclass>::GetPercent());
-}
-//------------------------------------------------------------------------------------------------------------------------------
-//------------------------------------------------------------------------------------------------------------------------------
-//------------------------------------------------------------------------------------------------------------------------------
-//------------------------------------------------------------------------------------------------------------------------------
 #endif
-//------------------------------------------------------------------------------------------------------------------------------
+
+
+
+

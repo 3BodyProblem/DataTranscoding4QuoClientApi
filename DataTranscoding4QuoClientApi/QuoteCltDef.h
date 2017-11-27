@@ -675,22 +675,6 @@ typedef struct
 
 
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
 #pragma pack()
 
 
