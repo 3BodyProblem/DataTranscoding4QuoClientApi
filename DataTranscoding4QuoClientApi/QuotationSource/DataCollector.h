@@ -81,6 +81,11 @@ public:///< 数据采集模块事件定义
 	 */
 	enum E_SS_Status		InquireDataCollectorStatus( char* pszStatusDesc, unsigned int& nStrLen );
 
+	/**
+	 * @brief				操作符转义
+	 */
+	QuoteClientApi*			operator->();
+
 private:
 	Dll						m_oDllPlugin;					///< 插件加载类
 	CollectorStatus			m_oCollectorStatus;				///< 数据采集模块的状态

@@ -137,6 +137,11 @@ int DataCollector::RecoverDataCollector()
 	return nErrorCode;
 }
 
+QuoteClientApi* DataCollector::operator->()
+{
+	return m_pQuoteClientApi;
+}
+
 enum E_SS_Status DataCollector::InquireDataCollectorStatus( char* pszStatusDesc, unsigned int& nStrLen )
 {
 /*	if( NULL == m_pFuncGetStatus )

@@ -156,6 +156,83 @@ int Quotation::ReloadShLv1( enum XDFRunStat eStatus )
 		return -1;
 	}
 
+	int						nCodeCount =0;
+	int						nKindCount = 0;
+	XDFAPI_MarketKindInfo	vctKindInfo[32] = { 0 };
+	char					tempbuf[8192] = { 0 };
+	int						nErrorCode = m_oQuotPlugin->GetMarketInfo( XDF_SH, tempbuf, sizeof(tempbuf) );
+
+	///< -------------- 获取上海的基础信息 --------------------------------------------
+	if( nErrorCode <= 0 )
+	{
+		QuoCollector::GetCollector()->OnLog( TLV_ERROR, "Quotation::ReloadShLv1() : cannot fetch market infomation." );
+		return -1;
+	}
+
+	XDFAPI_MarketKindHead* pKindHead = (XDFAPI_MarketKindHead*)(tempbuf+ sizeof(XDFAPI_MsgHead));
+	QuoCollector::GetCollector()->OnLog( TLV_INFO, "Quotation::ReloadShLv1() : SHL1 WareCount = %d", pKindHead->WareCount );
+
+	int m = sizeof(XDFAPI_MsgHead)+sizeof(XDFAPI_MarketKindHead);
+	for( int i = 0; m < nErrorCode; )
+	{
+		XDFAPI_UniMsgHead*	pMsgHead = (XDFAPI_UniMsgHead*)(tempbuf + m);
+		char*				pbuf = tempbuf + m +sizeof(XDFAPI_UniMsgHead);
+		int					nMsgCount = pMsgHead->MsgCount;
+
+		while( nMsgCount-- > 0 )
+		{
+			XDFAPI_MarketKindInfo* pInfo = (XDFAPI_MarketKindInfo*)pbuf;
+			::memcpy( vctKindInfo + nKindCount++, pInfo, sizeof(XDFAPI_MarketKindInfo) );
+			pbuf += sizeof(XDFAPI_MarketKindInfo);
+		}
+
+		m += sizeof(XDFAPI_MsgHead) + pMsgHead->MsgLen;
+	}
+
+	///< ---------------- 获取上海市场码表数据 ----------------------------------------
+	nErrorCode = m_oQuotPlugin->GetCodeTable( XDF_SH, NULL, NULL, nCodeCount );			///< 先获取一下商品数量
+	if( nErrorCode > 0 && nCodeCount > 0 )
+	{
+		int		noffset = (sizeof(XDFAPI_StockData5) + sizeof(XDFAPI_UniMsgHead)) * nCodeCount;///< 根据商品数量，分配获取快照表需要的缓存
+		char*	pszCodeBuf = new char[noffset];
+
+		nErrorCode = m_oQuotPlugin->GetLastMarketDataAll( XDF_SH, pszCodeBuf, noffset );///< 获取快照
+		for( int m = 0; m < nErrorCode; )
+		{
+			XDFAPI_UniMsgHead*	pMsgHead = (XDFAPI_UniMsgHead*)(pszCodeBuf+m);
+			char*				pbuf = pszCodeBuf+m +sizeof(XDFAPI_UniMsgHead);
+			int					MsgCount = pMsgHead->MsgCount;
+
+			for( int i = 0; i < MsgCount; i++ )
+			{
+				char			pszCode[8] = { 0 };
+
+				if( abs(pMsgHead->MsgType) == 21 )			///< 指数
+				{
+					XDFAPI_IndexData* pData = (XDFAPI_IndexData*)pbuf;
+
+					::memcpy( pszCode, pData->Code, 6 );
+					::printf( "指数: %s \n", pszCode );
+					pbuf += sizeof(XDFAPI_IndexData);
+				}
+				else if( abs(pMsgHead->MsgType) == 22 )		///< 快照数据
+				{
+					XDFAPI_StockData5* pData = (XDFAPI_StockData5*)pbuf;
+
+					::memcpy( pszCode, pData->Code, 6 );
+					::printf( "快照: %s \n", pszCode );
+					pbuf += sizeof(XDFAPI_StockData5);
+				}
+			}
+
+			m += (sizeof(XDFAPI_UniMsgHead) + pMsgHead->MsgLen - sizeof(pMsgHead->MsgCount));
+		}
+
+		if( NULL != pszCodeBuf )
+		{
+			delete []pszCodeBuf;
+		}
+	}
 
 	return 0;
 }
