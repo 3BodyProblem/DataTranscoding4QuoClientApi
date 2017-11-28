@@ -34,6 +34,15 @@ typedef struct
 	unsigned __int64			NumTrades;		///< 成交笔数
 	double						Voip;			///< 基金模净、权证溢价
 } T_DAY_LINE;
+
+/**
+ * @class						T_LINE_PARAM
+ * @brief						基础参数s
+ */
+typedef struct
+{
+	double						dPriceRate;		///< 放大倍数
+} T_LINE_PARAM;
 #pragma pack()
 
 
@@ -77,7 +86,7 @@ public:
 	 * @brief					为一个商品代码分配缓存对应的专用缓存
 	 * @param[in]				eMkID			市场ID
 	 */
-	char*						GrabCache( enum XDFMarket eMkID );
+	char*						GrabCache( enum XDFMarket eMkID, unsigned int& nOutSize );
 
 	/**
 	 * @brief					释放缓存
@@ -89,6 +98,10 @@ private:
 	unsigned int				m_nAllocateSize;			///< 当前使用的缓存大小
 	char*						m_pDataCache;				///< 行情数据缓存地址
 };
+
+
+typedef	std::pair<T_LINE_PARAM,T_DAYLINE_CACHE>	T_QUO_DATA;	///< 数据缓存
+typedef std::map<std::string,T_QUO_DATA>	T_MAP_QUO;		///< 行情数据缓存
 
 
 /**
@@ -119,21 +132,33 @@ public:
 	 * @param[in]				cMarket			市场ID
 	 * @param[in]				nStatus			状态值
 	 */
-	void						UpdateModuleStatus( enum XDFMarket nMarket, int nStatus );
+	void						UpdateModuleStatus( enum XDFMarket eMarket, int nStatus );
+
+public:
+	/**
+	 * @brief					更新商品的参数信息
+	 * @param[in]				eMarket			市场ID
+	 * @param[in]				sCode			商品代码
+	 * @param[in]				refParam		行情参数
+	 */
+	void						BuildSecurity( enum XDFMarket eMarket, std::string& sCode, T_LINE_PARAM& refParam );
 
 protected:
 	TMAP_MKID2STATUS			m_mapModuleStatus;				///< 模块状态表
 	std::ofstream				m_vctDataDump[MAX_WRITER_NUM];	///< 落盘文件句柄数组
+protected:
+	T_MAP_QUO					m_mapSHL1;						///< 上证L1
+	T_MAP_QUO					m_mapSHOPT;						///< 上证期权
+	T_MAP_QUO					m_mapSZL1;						///< 深证L1
+	T_MAP_QUO					m_mapSZOPT;						///< 深证期权
+	T_MAP_QUO					m_mapCFF;						///< 中金期货
+	T_MAP_QUO					m_mapCFFOPT;					///< 中金期权
+	T_MAP_QUO					m_mapCNF;						///< 商品期货(上海/郑州/大连)
+	T_MAP_QUO					m_mapCNFOPT;					///< 商品期权(上海/郑州/大连)
 };
 
 
-
 #endif
-
-
-
-
-
 
 
 

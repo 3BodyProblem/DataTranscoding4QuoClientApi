@@ -70,7 +70,7 @@ template<class tempclass>int  MLoopBufferSt<tempclass>::Instance( char* pszBuffe
 
 	Release();
 
-	m_lpRecordData = pszBufferPtr;
+	m_lpRecordData = (tempclass*)pszBufferPtr;
 
 	if ( m_lpRecordData == NULL )
 	{

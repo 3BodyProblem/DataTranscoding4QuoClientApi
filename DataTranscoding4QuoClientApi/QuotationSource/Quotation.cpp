@@ -217,6 +217,8 @@ bool __stdcall	Quotation::XDF_OnRspStatusChanged( unsigned char cMarket, int nSt
 			break;
 		case XDF_CNFOPT:	///< 商品期货和商品期权(上海/郑州/大连)
 			break;
+		default:
+			return false;
 		}
 	}
 
