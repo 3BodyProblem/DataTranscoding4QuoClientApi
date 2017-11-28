@@ -4,34 +4,117 @@
 #include <sys/timeb.h>
 
 
-static char*		s_pDataCache = NULL;
-static unsigned int	s_nMaxCacheSize = 0;
-static unsigned int	s_nAllocateSize = 0;
-static unsigned int	s_nSectionNumber = 60;
+///< -------------------- Configuration ------------------------------------------------
+const int	XDF_SH_COUNT = 20000;					///< 上海Lv1
+const int	XDF_SHL2_COUNT = 20000;					///< 上海Lv2(QuoteClientApi内部屏蔽)
+const int	XDF_SHOPT_COUNT = 12000	;				///< 上海期权
+const int	XDF_SZ_COUNT = 12000;					///< 深证Lv1
+const int	XDF_SZL2_COUNT = 12000;					///< 深证Lv2(QuoteClientApi内部屏蔽)
+const int	XDF_SZOPT_COUNT = 12000;				///< 深圳期权
+const int	XDF_CF_COUNT = 1000;					///< 中金期货
+const int	XDF_ZJOPT_COUNT = 1000;					///< 中金期权
+const int	XDF_CNF_COUNT = 1000;					///< 商品期货(上海/郑州/大连)
+const int	XDF_CNFOPT_COUNT = 1000;				///< 商品期权(上海/郑州/大连)
+static unsigned int	s_nNumberInSection = 120;		///< 一个市场有可以缓存多少个数据块
+///< -----------------------------------------------------------------------------------
 
-DayLineArray::DayLineArray( enum XDFMarket eMkID )
- : m_eMarketID( eMkID )
+
+CacheAlloc::CacheAlloc()
+ : m_nMaxCacheSize( 0 ), m_nAllocateSize( 0 ), m_pDataCache( NULL )
 {
 }
 
-char* DayLineArray::GrabCache()
+CacheAlloc::~CacheAlloc()
 {
-	if( NULL == s_pDataCache )
+	CacheAlloc::GetObj().FreeCaches();
+}
+
+CacheAlloc& CacheAlloc::GetObj()
+{
+	static	CacheAlloc	obj;
+
+	return obj;
+}
+
+char* CacheAlloc::GetBufferPtr()
+{
+	return m_pDataCache;
+}
+
+unsigned int CacheAlloc::GetDataLength()
+{
+	return m_nAllocateSize;
+}
+
+char* CacheAlloc::GrabCache( enum XDFMarket eMkID )
+{
+	char*			pData = NULL;
+	unsigned int	nBufferSize4Market = 0;
+
+	if( NULL == m_pDataCache )
 	{
-		///<				结构大小	单市场k线数	市场预留数
-		s_nMaxCacheSize = sizeof(T_DAY_LINE) * 15000 * 10 * s_nSectionNumber + 128;
-		s_pDataCache = new char[s_nMaxCacheSize];
+		m_nMaxCacheSize = (XDF_SH_COUNT + XDF_SHOPT_COUNT + XDF_SZ_COUNT + XDF_SZOPT_COUNT + XDF_CF_COUNT + XDF_ZJOPT_COUNT + XDF_CNF_COUNT + XDF_CNFOPT_COUNT) * sizeof(T_DAY_LINE) * s_nNumberInSection;
+		m_pDataCache = new char[m_nMaxCacheSize];
 	}
 
-	return NULL;
+	if( NULL == m_pDataCache )
+	{
+		throw std::runtime_error( "DayLineArray::GrabCache() : invalid buffer pointer." );
+	}
+
+	switch( eMkID )
+	{
+	case XDF_SH:		///< 上海Lv1
+		nBufferSize4Market = XDF_SH_COUNT * sizeof(T_DAY_LINE) * s_nNumberInSection;
+		break;
+	case XDF_SHL2:		///< 上海Lv2(QuoteClientApi内部屏蔽)
+		nBufferSize4Market = XDF_SHL2_COUNT * sizeof(T_DAY_LINE) * s_nNumberInSection;
+		break;
+	case XDF_SHOPT:		///< 上海期权
+		nBufferSize4Market = XDF_SHOPT_COUNT * sizeof(T_DAY_LINE) * s_nNumberInSection;
+		break;
+	case XDF_SZ:		///< 深证Lv1
+		nBufferSize4Market = XDF_SZ_COUNT * sizeof(T_DAY_LINE) * s_nNumberInSection;
+		break;
+	case XDF_SZL2:		///< 深证Lv2(QuoteClientApi内部屏蔽)
+		nBufferSize4Market = XDF_SZL2_COUNT * sizeof(T_DAY_LINE) * s_nNumberInSection;
+		break;
+	case XDF_SZOPT:		///< 深圳期权
+		nBufferSize4Market = XDF_SZOPT_COUNT * sizeof(T_DAY_LINE) * s_nNumberInSection;
+		break;
+	case XDF_CF:		///< 中金期货
+		nBufferSize4Market = XDF_CF_COUNT * sizeof(T_DAY_LINE) * s_nNumberInSection;
+		break;
+	case XDF_ZJOPT:		///< 中金期权
+		nBufferSize4Market = XDF_ZJOPT_COUNT * sizeof(T_DAY_LINE) * s_nNumberInSection;
+		break;
+	case XDF_CNF:		///< 商品期货(上海/郑州/大连)
+		nBufferSize4Market = XDF_CNF_COUNT * sizeof(T_DAY_LINE) * s_nNumberInSection;
+		break;
+	case XDF_CNFOPT:	///< 商品期权(上海/郑州/大连)
+		nBufferSize4Market = XDF_CNFOPT_COUNT * sizeof(T_DAY_LINE) * s_nNumberInSection;
+		break;
+	default:
+		throw std::runtime_error( "DayLineArray::GrabCache() : unknow market id" );
+	}
+
+	if( (m_nAllocateSize + nBufferSize4Market) > m_nMaxCacheSize )
+	{
+		throw std::runtime_error( "DayLineArray::GrabCache() : not enough space." );
+	}
+
+	pData = m_pDataCache + m_nAllocateSize;
+	m_nAllocateSize += nBufferSize4Market;
+
+	return pData;
 }
 
-void DayLineArray::FreeCaches()
+void CacheAlloc::FreeCaches()
 {
-	if( NULL != s_pDataCache )
+	if( NULL != m_pDataCache )
 	{
-		delete [] s_pDataCache;
-		s_pDataCache = NULL;
+		delete [] m_pDataCache;
+		m_pDataCache = NULL;
 	}
 }
 

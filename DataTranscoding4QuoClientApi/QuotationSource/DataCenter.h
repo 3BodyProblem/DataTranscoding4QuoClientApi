@@ -37,39 +37,57 @@ typedef struct
 #pragma pack()
 
 
-typedef MLoopBufferSt<T_DAY_LINE>				T_DAYLINE_CACHE;
-typedef	std::map<enum XDFMarket,int>			TMAP_MKID2STATUS;
-const	unsigned int							MAX_WRITER_NUM = 128;
+typedef MLoopBufferSt<T_DAY_LINE>				T_DAYLINE_CACHE;			///< 循环队列缓存
+typedef	std::map<enum XDFMarket,int>			TMAP_MKID2STATUS;			///< 各市场模块状态
+const	unsigned int							MAX_WRITER_NUM = 128;		///< 最大落盘文件句柄
 
 
 /**
- * @class						DayLineArray
+ * @class						CacheAlloc
  * @brief						日线缓存
  */
-class DayLineArray
+class CacheAlloc
 {
-public:
+private:
 	/**
 	 * @brief					构造函数
 	 * @param[in]				eMkID			市场ID
 	 */
-	DayLineArray( enum XDFMarket eMkID );
+	CacheAlloc();
 
-protected:
+public:
+	~CacheAlloc();
+
+	/**
+	 * @brief					获取单键
+	 */
+	static CacheAlloc&			GetObj();
+
+	/**
+	 * @brief					获取缓存地址
+	 */
+	char*						GetBufferPtr();
+
+	/**
+	 * @brief					获取缓存中有效数据的长度
+	 */
+	unsigned int				GetDataLength();
+
 	/**
 	 * @brief					为一个商品代码分配缓存对应的专用缓存
+	 * @param[in]				eMkID			市场ID
 	 */
-	static char*				GrabCache();
+	char*						GrabCache( enum XDFMarket eMkID );
 
 	/**
 	 * @brief					释放缓存
 	 */
-	static void					FreeCaches();
+	void						FreeCaches();
 
-protected:
-	enum XDFMarket				m_eMarketID;	///< 市场编号
-	T_DAYLINE_CACHE				m_oKLineBuffer;	///< 日线缓存
-	bool						m_bWrited;		///< 是否需要做数据落盘
+private:
+	unsigned int				m_nMaxCacheSize;			///< 行情缓存总大小
+	unsigned int				m_nAllocateSize;			///< 当前使用的缓存大小
+	char*						m_pDataCache;				///< 行情数据缓存地址
 };
 
 

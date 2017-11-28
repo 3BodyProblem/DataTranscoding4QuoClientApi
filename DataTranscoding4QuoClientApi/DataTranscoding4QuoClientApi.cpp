@@ -124,7 +124,7 @@ extern "C"
 
 	__declspec(dllexport) bool __stdcall IsProxy()
 	{
-		return true;
+		return false;
 	}
 
 	__declspec(dllexport) int __stdcall	GetMarketID()
