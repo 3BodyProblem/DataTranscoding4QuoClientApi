@@ -144,6 +144,291 @@ void QuotationData::Release()
 void QuotationData::UpdateModuleStatus( enum XDFMarket eMarket, int nStatus )
 {
 	m_mapModuleStatus[eMarket] = nStatus;
+
+	if( 5 == nStatus )
+	{
+		switch( eMarket )
+		{
+		case XDF_SH:		///< 上海Lv1
+			{
+				if( false == m_oThdSHL1.IsAlive() )
+				{
+					if( 0 != m_oThdSHL1.Create( "ThreadDumpDayLine4SHL1()", ThreadDumpDayLine4SHL1, this ) ) {
+						QuoCollector::GetCollector()->OnLog( TLV_ERROR, "QuotationData::UpdateModuleStatus() : failed 2 create SHL1 day line thread" );
+					}
+				}
+			}
+			break;
+		case XDF_SHL2:		///< 上海Lv2(QuoteClientApi内部屏蔽)
+			break;
+		case XDF_SHOPT:		///< 上海期权
+			{
+				if( false == m_oThdSHOPT.IsAlive() )
+				{
+					if( 0 != m_oThdSHOPT.Create( "ThreadDumpDayLine4SHOPT()", ThreadDumpDayLine4SHOPT, this ) ) {
+						QuoCollector::GetCollector()->OnLog( TLV_ERROR, "QuotationData::UpdateModuleStatus() : failed 2 create SHOPT day line thread" );
+					}
+				}
+			}
+			break;
+		case XDF_SZ:		///< 深证Lv1
+			{
+				if( false == m_oThdSZL1.IsAlive() )
+				{
+					if( 0 != m_oThdSZL1.Create( "ThreadDumpDayLine4SZL1()", ThreadDumpDayLine4SZL1, this ) ) {
+						QuoCollector::GetCollector()->OnLog( TLV_ERROR, "QuotationData::UpdateModuleStatus() : failed 2 create SZL1 day line thread" );
+					}
+				}
+			}
+			break;
+		case XDF_SZL2:		///< 深证Lv2(QuoteClientApi内部屏蔽)
+			break;
+		case XDF_SZOPT:		///< 深圳期权
+			{
+				if( false == m_oThdSZOPT.IsAlive() )
+				{
+					if( 0 != m_oThdSZOPT.Create( "ThreadDumpDayLine4SZOPT()", ThreadDumpDayLine4SZOPT, this ) ) {
+						QuoCollector::GetCollector()->OnLog( TLV_ERROR, "QuotationData::UpdateModuleStatus() : failed 2 create SZL1 day line thread" );
+					}
+				}
+			}
+			break;
+		case XDF_CF:		///< 中金期货
+			{
+				if( false == m_oThdCFF.IsAlive() )
+				{
+					if( 0 != m_oThdCFF.Create( "ThreadDumpDayLine4CFF()", ThreadDumpDayLine4CFF, this ) ) {
+						QuoCollector::GetCollector()->OnLog( TLV_ERROR, "QuotationData::UpdateModuleStatus() : failed 2 create CFF day line thread" );
+					}
+				}
+			}
+			break;
+		case XDF_ZJOPT:		///< 中金期权
+			{
+				if( false == m_oThdCFFOPT.IsAlive() )
+				{
+					if( 0 != m_oThdCFFOPT.Create( "ThreadDumpDayLine4CFFOPT()", ThreadDumpDayLine4CFFOPT, this ) ) {
+						QuoCollector::GetCollector()->OnLog( TLV_ERROR, "QuotationData::UpdateModuleStatus() : failed 2 create CFFOPT day line thread" );
+					}
+				}
+			}
+			break;
+		case XDF_CNF:		///< 商品期货(上海/郑州/大连)
+			{
+				if( false == m_oThdCNF.IsAlive() )
+				{
+					if( 0 != m_oThdCNF.Create( "ThreadDumpDayLine4CNF()", ThreadDumpDayLine4CNF, this ) ) {
+						QuoCollector::GetCollector()->OnLog( TLV_ERROR, "QuotationData::UpdateModuleStatus() : failed 2 create CNF day line thread" );
+					}
+				}
+			}
+			break;
+		case XDF_CNFOPT:	///< 商品期权(上海/郑州/大连)
+			{
+				if( false == m_oThdCNFOPT.IsAlive() )
+				{
+					if( 0 != m_oThdCNFOPT.Create( "ThreadDumpDayLine4CNFOPT()", ThreadDumpDayLine4CNFOPT, this ) ) {
+						QuoCollector::GetCollector()->OnLog( TLV_ERROR, "QuotationData::UpdateModuleStatus() : failed 2 create CNFOPT day line thread" );
+					}
+				}
+			}
+			break;
+		default:
+			break;
+		}
+	}
+}
+
+void* QuotationData::ThreadDumpDayLine4SHL1( void* pSelf )
+{
+	QuotationData&	refData = *(QuotationData*)pSelf;
+
+	while( true == refData.m_oThdSHL1.IsAlive() )
+	{
+		T_MAP_QUO&	refMapData = refData.m_mapSHL1;
+
+		SimpleThread::Sleep( 1000 * 1 );
+		for( T_MAP_QUO::iterator it = refMapData.begin(); it != refMapData.end(); it++ )
+		{
+			T_DAY_LINE			tagLine = { 0 };
+			T_DAYLINE_CACHE&	refDayLines = it->second.second;
+
+			if( refDayLines.GetData( &tagLine, sizeof(T_DAY_LINE) ) <= 0 )
+			{
+				break;
+			}
+		}
+	}
+
+	return NULL;
+}
+
+void* QuotationData::ThreadDumpDayLine4SHOPT( void* pSelf )
+{
+	QuotationData&	refData = *(QuotationData*)pSelf;
+
+	while( true == refData.m_oThdSHOPT.IsAlive() )
+	{
+		T_MAP_QUO&	refMapData = refData.m_mapSHOPT;
+
+		SimpleThread::Sleep( 1000 * 1 );
+		for( T_MAP_QUO::iterator it = refMapData.begin(); it != refMapData.end(); it++ )
+		{
+			T_DAY_LINE			tagLine = { 0 };
+			T_DAYLINE_CACHE&	refDayLines = it->second.second;
+
+			if( refDayLines.GetData( &tagLine, sizeof(T_DAY_LINE) ) <= 0 )
+			{
+				break;
+			}
+		}
+	}
+
+	return NULL;
+}
+
+void* QuotationData::ThreadDumpDayLine4SZL1( void* pSelf )
+{
+	QuotationData&	refData = *(QuotationData*)pSelf;
+
+	while( true == refData.m_oThdSZL1.IsAlive() )
+	{
+		T_MAP_QUO&	refMapData = refData.m_mapSZL1;
+
+		SimpleThread::Sleep( 1000 * 1 );
+		for( T_MAP_QUO::iterator it = refMapData.begin(); it != refMapData.end(); it++ )
+		{
+			T_DAY_LINE			tagLine = { 0 };
+			T_DAYLINE_CACHE&	refDayLines = it->second.second;
+
+			if( refDayLines.GetData( &tagLine, sizeof(T_DAY_LINE) ) <= 0 )
+			{
+				break;
+			}
+		}
+	}
+
+	return NULL;
+}
+
+void* QuotationData::ThreadDumpDayLine4SZOPT( void* pSelf )
+{
+	QuotationData&	refData = *(QuotationData*)pSelf;
+
+	while( true == refData.m_oThdSZOPT.IsAlive() )
+	{
+		T_MAP_QUO&	refMapData = refData.m_mapSZOPT;
+
+		SimpleThread::Sleep( 1000 * 1 );
+		for( T_MAP_QUO::iterator it = refMapData.begin(); it != refMapData.end(); it++ )
+		{
+			T_DAY_LINE			tagLine = { 0 };
+			T_DAYLINE_CACHE&	refDayLines = it->second.second;
+
+			if( refDayLines.GetData( &tagLine, sizeof(T_DAY_LINE) ) <= 0 )
+			{
+				break;
+			}
+		}
+	}
+
+	return NULL;
+}
+
+void* QuotationData::ThreadDumpDayLine4CFF( void* pSelf )
+{
+	QuotationData&	refData = *(QuotationData*)pSelf;
+
+	while( true == refData.m_oThdCFF.IsAlive() )
+	{
+		T_MAP_QUO&	refMapData = refData.m_mapCFF;
+
+		SimpleThread::Sleep( 1000 * 1 );
+		for( T_MAP_QUO::iterator it = refMapData.begin(); it != refMapData.end(); it++ )
+		{
+			T_DAY_LINE			tagLine = { 0 };
+			T_DAYLINE_CACHE&	refDayLines = it->second.second;
+
+			if( refDayLines.GetData( &tagLine, sizeof(T_DAY_LINE) ) <= 0 )
+			{
+				break;
+			}
+		}
+	}
+
+	return NULL;
+}
+
+void* QuotationData::ThreadDumpDayLine4CFFOPT( void* pSelf )
+{
+	QuotationData&	refData = *(QuotationData*)pSelf;
+
+	while( true == refData.m_oThdCFFOPT.IsAlive() )
+	{
+		T_MAP_QUO&	refMapData = refData.m_mapCFFOPT;
+
+		SimpleThread::Sleep( 1000 * 1 );
+		for( T_MAP_QUO::iterator it = refMapData.begin(); it != refMapData.end(); it++ )
+		{
+			T_DAY_LINE			tagLine = { 0 };
+			T_DAYLINE_CACHE&	refDayLines = it->second.second;
+
+			if( refDayLines.GetData( &tagLine, sizeof(T_DAY_LINE) ) <= 0 )
+			{
+				break;
+			}
+		}
+	}
+
+	return NULL;
+}
+
+void* QuotationData::ThreadDumpDayLine4CNF( void* pSelf )
+{
+	QuotationData&	refData = *(QuotationData*)pSelf;
+
+	while( true == refData.m_oThdCNF.IsAlive() )
+	{
+		T_MAP_QUO&	refMapData = refData.m_mapCNF;
+
+		SimpleThread::Sleep( 1000 * 1 );
+		for( T_MAP_QUO::iterator it = refMapData.begin(); it != refMapData.end(); it++ )
+		{
+			T_DAY_LINE			tagLine = { 0 };
+			T_DAYLINE_CACHE&	refDayLines = it->second.second;
+
+			if( refDayLines.GetData( &tagLine, sizeof(T_DAY_LINE) ) <= 0 )
+			{
+				break;
+			}
+		}
+	}
+
+	return NULL;
+}
+
+void* QuotationData::ThreadDumpDayLine4CNFOPT( void* pSelf )
+{
+	QuotationData&	refData = *(QuotationData*)pSelf;
+
+	while( true == refData.m_oThdCNFOPT.IsAlive() )
+	{
+		T_MAP_QUO&	refMapData = refData.m_mapCNFOPT;
+
+		SimpleThread::Sleep( 1000 * 1 );
+		for( T_MAP_QUO::iterator it = refMapData.begin(); it != refMapData.end(); it++ )
+		{
+			T_DAY_LINE			tagLine = { 0 };
+			T_DAYLINE_CACHE&	refDayLines = it->second.second;
+
+			if( refDayLines.GetData( &tagLine, sizeof(T_DAY_LINE) ) <= 0 )
+			{
+				break;
+			}
+		}
+	}
+
+	return NULL;
 }
 
 int QuotationData::BuildSecurity( enum XDFMarket eMarket, std::string& sCode, T_LINE_PARAM& refParam )

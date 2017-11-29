@@ -8,7 +8,6 @@
 #include "DataDump.h"
 #include "DataCenter.h"
 #include "DataCollector.h"
-#include "../Infrastructure/Thread.h"
 
 
 /**

@@ -5,7 +5,6 @@
 #pragma warning(disable:4786)
 #include <string>
 #include <fstream>
-#include "../Configuration.h"
 #include "../Infrastructure/DateTime.h"
 
 
@@ -28,112 +27,228 @@ std::string	JoinPath( std::string sPath, std::string sFileName );
 std::string	GenFilePathByWeek( std::string sFolderPath, std::string sFileName, unsigned int nMkDate );
 
 
-#pragma pack(1)
-struct RecordMetaInfo
-{
-    unsigned int		nMs_time;		///< 本机毫秒时间
-    unsigned int		nLen;			///< 数据块长度
-    unsigned __int64	nStart;			///< 写入位置索引
-	unsigned short		nMsgID;			///< 消息ID
-};
-#pragma pack()
-
-
 /**
- * @class				QuotationRecorder
- * @brief				行情落盘类
- * @author				barry
+ * @class					MemoDumper
+ * @brief					将内存数据进行序列化/反序列化
+ * @note					文件头是一个日期值(交易日期,unsigned int)
+							&
+							写文件时会先写入一个临时文件名，然后再rename，以保证文件内容的"完整性"
+ * @author					barry
  */
-class QuotationRecorder
+template<class TYPE>
+class MemoDumper
 {
 public:
-	QuotationRecorder();
-    ~QuotationRecorder();
+	/**
+	 * @brief				构造
+	 * @detail				打开或创建一个文件
+	 * @param[in]			pszFileFolder		文件目录
+	 * @param[in]			bIsRead				true:为加载一个文件; false:为写一个文件
+	 * @param[in]			nTradingDay			行情交易日期
+	 * @param[in]			bAppendModel		追加模式(默认为“否”)
+	 */
+	MemoDumper( bool bIsRead, const char* pszFileFolder, unsigned int nTradingDay, bool bAppendModel = false );
+	MemoDumper();
+	~MemoDumper();
 
 	/**
-	 * @brief			打开文件
-	 * @param[in]		pszFilePath			落盘文件路径
-	 * @param[in]		bIsOverwrite		是否重写同名的文件
-	 * @return			==0					成功
-						<0					失败
+	 * @brief				打开或创建一个文件
+	 * @param[in]			pszFileFolder		文件目录
+	 * @param[in]			bIsRead				true:为加载一个文件; true:为写一个文件
+	 * @param[in]			nTradingDay			行情交易日期
+	 * @return				true				成功
 	 */
-    int					OpenFile( const char *pszFilePath, bool bIsOverwrite = false );
+	bool					Open( bool bIsRead, const char* pszFileFolder, unsigned int nTradingDay );
 
 	/**
-	 * @brief			关闭文件
+	 * @brief				关闭文件
 	 */
-    void				CloseFile();
+	void					Close();
 
 	/**
-	 * @brief			行情数据落盘
-	 * @param[in]		nMsgID				消息ID
-	 * @param[in]		pszData				数据地址
-	 * @param[in]		nLen				数据长度
-	 * @return			==0					写成功
-						<0					失败
+	 * @brief				是否打开成功
 	 */
-    int					Record( unsigned short nMsgID, const char* pszData, unsigned int nLen );
+	bool					IsOpen();
 
 	/**
-	 * @brief			刷新文件
+	 * @brief				取得文件数据对应的行情交易日期
+	 * @return				>0			合法数据
+							=0			非法数据
 	 */
-	void				Flush();
+	unsigned int			GetTradingDay();
+
+	/**
+	 * @brief				读/写函数
+	 * @return				>0			成功，且有后续待读数据
+							=0			已经读不出数据
+							<0			出错
+	 */
+	int						Read( TYPE& refData );
+	int						Read( char* pData, unsigned int nDataLen );
+	int						Write( const TYPE& refData );
+	int						Write( const char* pData, unsigned int nDataLen );
 
 protected:
-    std::ofstream		m_oDataFile;		///< 行情数据文件
-    std::ofstream		m_oIndexFile;		///< 行情元信息文件
-    unsigned __int64	m_nDataPos;			///< 数据写位置
+	bool					m_bAppendModel;			///< 文件写追加模式
+	unsigned int			m_nTradingDay;			///< 行情数据的交易日期
+	std::ifstream			m_fInput;				///< 写文件
+	std::ofstream			m_fOutput;				///< 读文件
+	bool					m_bIsRead;				///< 是否为读文件
+	char					m_pszTargetFile[128];	///< 目标写文件
+	char					m_pszTmpFilePath[128];	///< 临时写文件
 };
 
 
-/**
- * @class				QuotationRecover
- * @brief				行情加载类
- * @author				barry
- */
-class QuotationRecover
+template<class TYPE>
+MemoDumper<TYPE>::~MemoDumper()
 {
-public:
-	QuotationRecover();
-    ~QuotationRecover();
+	Close();
+}
 
-	/**
-	 * @brief			打开文件
-	 * @param[in]		pszFilePath			落盘文件路径
-	 * @param[in]		nBeginTime			开始自常播的时间（之前都是快播)
-	 * @return			==0					成功
-						<0					失败
-	 */
-    int					OpenFile( const char *pszFilePath, unsigned int nBeginTime = 0xffffffff );
+template<class TYPE>
+MemoDumper<TYPE>::MemoDumper()
+ : m_bIsRead( true ), m_nTradingDay( 0 ), m_bAppendModel( false )
+{
+	::memset( m_pszTargetFile, 0, sizeof(m_pszTargetFile) );
+	::memset( m_pszTmpFilePath, 0, sizeof(m_pszTmpFilePath) );
+}
 
-	/**
-	 * @brief			关闭文件
-	 */
-    void				CloseFile();
+template<class TYPE>
+MemoDumper<TYPE>::MemoDumper( bool bIsRead, const char* pszFileFolder, unsigned int nTradingDay, bool bAppendModel )
+ : m_bIsRead( bIsRead ), m_nTradingDay( 0 ), m_bAppendModel( bAppendModel )
+{
+	if( NULL != pszFileFolder )
+	{
+		Open( bIsRead, pszFileFolder, nTradingDay );
+	}
+}
 
-	/**
-	 * @brief			行情数据读出
-	 * @param[out]		nMsgID				消息ID
-	 * @param[out]		pszData				数据缓存地址
-	 * @param[in]		nLen				数据缓存长度
-	 * @return			>0					写成功
-						==0					读完
-						<0					失败
-	 */
-    int					Read( unsigned short& nMsgID, char* pszData, unsigned int nLen );
+template<class TYPE>
+void MemoDumper<TYPE>::Close()
+{
+	if( true == IsOpen() )
+	{
+		if( true == m_bIsRead )
+		{
+			m_fInput.close();
+		}
+		else
+		{
+			m_fOutput.close();
+			::MoveFileEx( m_pszTmpFilePath, m_pszTargetFile, MOVEFILE_REPLACE_EXISTING );
+		}
+	}
+}
 
-	/**
-	 * @brief			Enf Of File
-	 */
-	bool				IsEOF();
+template<class TYPE>
+bool MemoDumper<TYPE>::Open( bool bIsRead, const char* pszFileFolder, unsigned int nTradingDay )
+{
+	m_bIsRead = bIsRead;
+	::memset( m_pszTargetFile, 0, sizeof(m_pszTargetFile) );
+	::printf( "MemoDumper::Open() : File Path = %s, read flag = %d, trading day = %u\n", pszFileFolder, bIsRead, nTradingDay );
 
-protected:
-    std::ifstream		m_oDataFile;		///< 行情数据文件
-    std::ifstream		m_oIndexFile;		///< 行情元信息文件
-protected:
-	unsigned int		m_nBeginTime;		///< 开始正常速度播放的时间（之前是快播)
-	unsigned int		m_nLastTime;		///< 最后一次读出的市场时间记录
-};
+	if( true == m_bIsRead )
+	{
+		m_fInput.open( pszFileFolder, std::ios::in|std::ios::binary );
+
+		if( m_fInput.is_open() )
+		{
+			m_fInput.seekg( 0, std::ios::beg );
+			m_fInput.read( (char*)&m_nTradingDay, sizeof(m_nTradingDay) );
+		}
+	}
+	else
+	{
+		m_nTradingDay = nTradingDay;
+		::strcpy( m_pszTmpFilePath, pszFileFolder );
+		::strcpy( m_pszTargetFile, pszFileFolder );
+		::strcat( m_pszTmpFilePath, ".tmp" );
+
+		if( true == m_bAppendModel )
+		{
+			m_fOutput.open( m_pszTmpFilePath , std::ios::out|std::ios::binary|std::ios::app );
+		}
+		else
+		{
+			m_fOutput.open( m_pszTmpFilePath , std::ios::out|std::ios::binary );
+		}
+
+		if( !m_fOutput.is_open() ) {
+			m_nTradingDay = 0;
+		}
+
+		m_fOutput.write( (char*)&m_nTradingDay, sizeof(m_nTradingDay) );
+	}
+
+	return IsOpen();
+}
+
+template<class TYPE>
+unsigned int MemoDumper<TYPE>::GetTradingDay()
+{
+	return m_nTradingDay;
+}
+
+template<class TYPE>
+bool MemoDumper<TYPE>::IsOpen()
+{
+	if( true == m_bIsRead )
+	{
+		return m_fInput.is_open();
+	}
+	else
+	{
+		return m_fOutput.is_open();
+	}
+}
+
+template<class TYPE>
+int MemoDumper<TYPE>::Read( TYPE& refData )
+{
+	return Read( (char*)&refData, sizeof(TYPE) );
+}
+
+template<class TYPE>
+int MemoDumper<TYPE>::Read( char* pData, unsigned int nDataLen )
+{
+	if( false == IsOpen() )
+	{
+		return -1;
+	}
+
+//	if( true == m_fInput.eof() )
+	if( m_fInput.peek() == EOF || true == m_fInput.eof() )
+	{
+		return 0;		///< 文件读完
+	}
+
+	m_fInput.read( pData, nDataLen );
+
+	return m_fInput.gcount();
+}
+
+template<class TYPE>
+int MemoDumper<TYPE>::Write( const TYPE& refData )
+{
+	return Write( (const char*)&refData, sizeof(TYPE) );
+}
+
+template<class TYPE>
+int MemoDumper<TYPE>::Write( const char* pData, unsigned int nDataLen )
+{
+	if( false == IsOpen() )
+	{
+		return -1;
+	}
+
+	m_fOutput.write( pData, nDataLen );
+
+	return 1;
+}
+
+
+
+
 
 
 
