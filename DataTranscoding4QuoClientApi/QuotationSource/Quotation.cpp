@@ -158,7 +158,7 @@ int Quotation::ReloadShLv1( enum XDFRunStat eStatus )
 	if( nErrorCode <= 0 )
 	{
 		QuoCollector::GetCollector()->OnLog( TLV_ERROR, "Quotation::ReloadShLv1() : cannot fetch market infomation." );
-		return -1;
+		return -2;
 	}
 
 	XDFAPI_MarketKindHead* pKindHead = (XDFAPI_MarketKindHead*)(tempbuf+ sizeof(XDFAPI_MsgHead));
@@ -217,6 +217,46 @@ int Quotation::ReloadShLv1( enum XDFRunStat eStatus )
 			delete []pszCodeBuf;
 			pszCodeBuf = NULL;
 		}
+	}
+	else
+	{
+		QuoCollector::GetCollector()->OnLog( TLV_ERROR, "Quotation::ReloadShLv1() : cannot fetch nametable" );
+		return -3;
+	}
+
+	m_vctMkSvrStatus[XDF_SH] = ET_SS_WORKING;				///< 设置“可服务”状态标识
+	///< ---------------- 获取快照表数据 -------------------------------------------
+	int		noffset = (sizeof(XDFAPI_StockData5) + sizeof(XDFAPI_UniMsgHead)) * nCodeCount;	///< 根据商品数量，分配获取快照表需要的缓存
+	char*	pszCodeBuf = new char[noffset];
+
+	nErrorCode = m_oQuotPlugin->GetLastMarketDataAll( XDF_SH, pszCodeBuf, noffset );		///< 获取快照
+	for( int m = 0; m < nErrorCode; )
+	{
+		XDFAPI_UniMsgHead*	pMsgHead = (XDFAPI_UniMsgHead*)(pszCodeBuf+m);
+		char*				pbuf = pszCodeBuf+m +sizeof(XDFAPI_UniMsgHead);
+		int					MsgCount = pMsgHead->MsgCount;
+
+		for( int i = 0; i < MsgCount; i++ )
+		{
+			if( abs(pMsgHead->MsgType) == 21 )			///< 指数
+			{
+				m_oQuoDataCenter.UpdateDayLine( XDF_SH, pbuf, sizeof(XDFAPI_IndexData) );
+				pbuf += sizeof(XDFAPI_IndexData);
+			}
+			else if( abs(pMsgHead->MsgType) == 22 )		///< 快照数据
+			{
+				m_oQuoDataCenter.UpdateDayLine( XDF_SH, pbuf, sizeof(XDFAPI_StockData5) );
+				pbuf += sizeof(XDFAPI_StockData5);
+			}
+		}
+
+		m += (sizeof(XDFAPI_UniMsgHead) + pMsgHead->MsgLen - sizeof(pMsgHead->MsgCount));
+	}
+
+	if( NULL != pszCodeBuf )
+	{
+		delete []pszCodeBuf;
+		pszCodeBuf = NULL;
 	}
 
 	return 0;
@@ -299,6 +339,41 @@ int Quotation::ReloadShOpt( enum XDFRunStat eStatus )
 			pszCodeBuf = NULL;
 		}
 	}
+	else
+	{
+		QuoCollector::GetCollector()->OnLog( TLV_ERROR, "Quotation::ReloadShOpt() : cannot fetch nametable" );
+		return -3;
+	}
+
+	m_vctMkSvrStatus[XDF_SHOPT] = ET_SS_WORKING;				///< 设置“可服务”状态标识
+	///< ---------------- 获取快照表数据 -------------------------------------------
+	int		noffset = (sizeof(XDFAPI_ShOptData) + sizeof(XDFAPI_UniMsgHead)) * nCodeCount;	///< 根据商品数量，分配获取快照表需要的缓存
+	char*	pszCodeBuf = new char[noffset];
+
+	nErrorCode = m_oQuotPlugin->GetLastMarketDataAll( XDF_SHOPT, pszCodeBuf, noffset );		///< 获取快照
+	for( int m = 0; m < nErrorCode; )
+	{
+		XDFAPI_UniMsgHead*	pMsgHead = (XDFAPI_UniMsgHead*)(pszCodeBuf+m);
+		char*				pbuf = pszCodeBuf+m +sizeof(XDFAPI_UniMsgHead);
+		int					MsgCount = pMsgHead->MsgCount;
+
+		for( int i = 0; i < MsgCount; i++ )
+		{
+			if( abs(pMsgHead->MsgType) == 15 )			///< 指数
+			{
+				m_oQuoDataCenter.UpdateDayLine( XDF_SHOPT, pbuf, sizeof(XDFAPI_ShOptData) );
+				pbuf += sizeof(XDFAPI_ShOptData);
+			}
+		}
+
+		m += (sizeof(XDFAPI_UniMsgHead) + pMsgHead->MsgLen - sizeof(pMsgHead->MsgCount));
+	}
+
+	if( NULL != pszCodeBuf )
+	{
+		delete []pszCodeBuf;
+		pszCodeBuf = NULL;
+	}
 
 	return 0;
 }
@@ -379,6 +454,46 @@ int Quotation::ReloadSzLv1( enum XDFRunStat eStatus )
 			delete []pszCodeBuf;
 			pszCodeBuf = NULL;
 		}
+	}
+	else
+	{
+		QuoCollector::GetCollector()->OnLog( TLV_ERROR, "Quotation::ReloadSzLv1() : cannot fetch nametable" );
+		return -3;
+	}
+
+	m_vctMkSvrStatus[XDF_SZ] = ET_SS_WORKING;				///< 设置“可服务”状态标识
+	///< ---------------- 获取快照表数据 -------------------------------------------
+	int		noffset = (sizeof(XDFAPI_StockData5) + sizeof(XDFAPI_UniMsgHead)) * nCodeCount;	///< 根据商品数量，分配获取快照表需要的缓存
+	char*	pszCodeBuf = new char[noffset];
+
+	nErrorCode = m_oQuotPlugin->GetLastMarketDataAll( XDF_SZ, pszCodeBuf, noffset );		///< 获取快照
+	for( int m = 0; m < nErrorCode; )
+	{
+		XDFAPI_UniMsgHead*	pMsgHead = (XDFAPI_UniMsgHead*)(pszCodeBuf+m);
+		char*				pbuf = pszCodeBuf+m +sizeof(XDFAPI_UniMsgHead);
+		int					MsgCount = pMsgHead->MsgCount;
+
+		for( int i = 0; i < MsgCount; i++ )
+		{
+			if( abs(pMsgHead->MsgType) == 21 )			///< 指数
+			{
+				m_oQuoDataCenter.UpdateDayLine( XDF_SZ, pbuf, sizeof(XDFAPI_IndexData) );
+				pbuf += sizeof(XDFAPI_IndexData);
+			}
+			else if( abs(pMsgHead->MsgType) == 22 )		///< 快照数据
+			{
+				m_oQuoDataCenter.UpdateDayLine( XDF_SZ, pbuf, sizeof(XDFAPI_StockData5) );
+				pbuf += sizeof(XDFAPI_StockData5);
+			}
+		}
+
+		m += (sizeof(XDFAPI_UniMsgHead) + pMsgHead->MsgLen - sizeof(pMsgHead->MsgCount));
+	}
+
+	if( NULL != pszCodeBuf )
+	{
+		delete []pszCodeBuf;
+		pszCodeBuf = NULL;
 	}
 
 	return 0;
@@ -461,6 +576,41 @@ int Quotation::ReloadSzOpt( enum XDFRunStat eStatus )
 			pszCodeBuf = NULL;
 		}
 	}
+	else
+	{
+		QuoCollector::GetCollector()->OnLog( TLV_ERROR, "Quotation::ReloadSzOpt() : cannot fetch nametable" );
+		return -3;
+	}
+
+	m_vctMkSvrStatus[XDF_SZOPT] = ET_SS_WORKING;				///< 设置“可服务”状态标识
+	///< ---------------- 获取快照表数据 -------------------------------------------
+	int		noffset = (sizeof(XDFAPI_SzOptData) + sizeof(XDFAPI_UniMsgHead)) * nCodeCount;	///< 根据商品数量，分配获取快照表需要的缓存
+	char*	pszCodeBuf = new char[noffset];
+
+	nErrorCode = m_oQuotPlugin->GetLastMarketDataAll( XDF_SZOPT, pszCodeBuf, noffset );		///< 获取快照
+	for( int m = 0; m < nErrorCode; )
+	{
+		XDFAPI_UniMsgHead*	pMsgHead = (XDFAPI_UniMsgHead*)(pszCodeBuf+m);
+		char*				pbuf = pszCodeBuf+m +sizeof(XDFAPI_UniMsgHead);
+		int					MsgCount = pMsgHead->MsgCount;
+
+		for( int i = 0; i < MsgCount; i++ )
+		{
+			if( abs(pMsgHead->MsgType) == 35 )			///< 指数
+			{
+				m_oQuoDataCenter.UpdateDayLine( XDF_SZOPT, pbuf, sizeof(XDFAPI_SzOptData) );
+				pbuf += sizeof(XDFAPI_SzOptData);
+			}
+		}
+
+		m += (sizeof(XDFAPI_UniMsgHead) + pMsgHead->MsgLen - sizeof(pMsgHead->MsgCount));
+	}
+
+	if( NULL != pszCodeBuf )
+	{
+		delete []pszCodeBuf;
+		pszCodeBuf = NULL;
+	}
 
 	return 0;
 }
@@ -541,6 +691,41 @@ int Quotation::ReloadCFF( enum XDFRunStat eStatus )
 			delete []pszCodeBuf;
 			pszCodeBuf = NULL;
 		}
+	}
+	else
+	{
+		QuoCollector::GetCollector()->OnLog( TLV_ERROR, "Quotation::ReloadCFF() : cannot fetch nametable" );
+		return -3;
+	}
+
+	m_vctMkSvrStatus[XDF_CF] = ET_SS_WORKING;				///< 设置“可服务”状态标识
+	///< ---------------- 获取快照表数据 -------------------------------------------
+	int		noffset = (sizeof(XDFAPI_CffexData) + sizeof(XDFAPI_UniMsgHead)) * nCodeCount;	///< 根据商品数量，分配获取快照表需要的缓存
+	char*	pszCodeBuf = new char[noffset];
+
+	nErrorCode = m_oQuotPlugin->GetLastMarketDataAll( XDF_CF, pszCodeBuf, noffset );		///< 获取快照
+	for( int m = 0; m < nErrorCode; )
+	{
+		XDFAPI_UniMsgHead*	pMsgHead = (XDFAPI_UniMsgHead*)(pszCodeBuf+m);
+		char*				pbuf = pszCodeBuf+m +sizeof(XDFAPI_UniMsgHead);
+		int					MsgCount = pMsgHead->MsgCount;
+
+		for( int i = 0; i < MsgCount; i++ )
+		{
+			if( abs(pMsgHead->MsgType) == 20 )			///< 指数
+			{
+				m_oQuoDataCenter.UpdateDayLine( XDF_CF, pbuf, sizeof(XDFAPI_CffexData) );
+				pbuf += sizeof(XDFAPI_CffexData);
+			}
+		}
+
+		m += (sizeof(XDFAPI_UniMsgHead) + pMsgHead->MsgLen - sizeof(pMsgHead->MsgCount));
+	}
+
+	if( NULL != pszCodeBuf )
+	{
+		delete []pszCodeBuf;
+		pszCodeBuf = NULL;
 	}
 
 	return 0;
@@ -623,6 +808,41 @@ int Quotation::ReloadCFFOPT( enum XDFRunStat eStatus )
 			pszCodeBuf = NULL;
 		}
 	}
+	else
+	{
+		QuoCollector::GetCollector()->OnLog( TLV_ERROR, "Quotation::ReloadCFFOPT() : cannot fetch nametable" );
+		return -3;
+	}
+
+	m_vctMkSvrStatus[XDF_ZJOPT] = ET_SS_WORKING;				///< 设置“可服务”状态标识
+	///< ---------------- 获取快照表数据 -------------------------------------------
+	int		noffset = (sizeof(XDFAPI_ZjOptData) + sizeof(XDFAPI_UniMsgHead)) * nCodeCount;	///< 根据商品数量，分配获取快照表需要的缓存
+	char*	pszCodeBuf = new char[noffset];
+
+	nErrorCode = m_oQuotPlugin->GetLastMarketDataAll( XDF_ZJOPT, pszCodeBuf, noffset );		///< 获取快照
+	for( int m = 0; m < nErrorCode; )
+	{
+		XDFAPI_UniMsgHead*	pMsgHead = (XDFAPI_UniMsgHead*)(pszCodeBuf+m);
+		char*				pbuf = pszCodeBuf+m +sizeof(XDFAPI_UniMsgHead);
+		int					MsgCount = pMsgHead->MsgCount;
+
+		for( int i = 0; i < MsgCount; i++ )
+		{
+			if( abs(pMsgHead->MsgType) == 18 )			///< 指数
+			{
+				m_oQuoDataCenter.UpdateDayLine( XDF_ZJOPT, pbuf, sizeof(XDFAPI_ZjOptData) );
+				pbuf += sizeof(XDFAPI_ZjOptData);
+			}
+		}
+
+		m += (sizeof(XDFAPI_UniMsgHead) + pMsgHead->MsgLen - sizeof(pMsgHead->MsgCount));
+	}
+
+	if( NULL != pszCodeBuf )
+	{
+		delete []pszCodeBuf;
+		pszCodeBuf = NULL;
+	}
 
 	return 0;
 }
@@ -704,6 +924,41 @@ int Quotation::ReloadCNF( enum XDFRunStat eStatus )
 			pszCodeBuf = NULL;
 		}
 	}
+	else
+	{
+		QuoCollector::GetCollector()->OnLog( TLV_ERROR, "Quotation::ReloadCNF() : cannot fetch nametable" );
+		return -3;
+	}
+
+	m_vctMkSvrStatus[XDF_CNF] = ET_SS_WORKING;				///< 设置“可服务”状态标识
+	///< ---------------- 获取快照表数据 -------------------------------------------
+	int		noffset = (sizeof(XDFAPI_CNFutureData) + sizeof(XDFAPI_UniMsgHead)) * nCodeCount;	///< 根据商品数量，分配获取快照表需要的缓存
+	char*	pszCodeBuf = new char[noffset];
+
+	nErrorCode = m_oQuotPlugin->GetLastMarketDataAll( XDF_CNF, pszCodeBuf, noffset );		///< 获取快照
+	for( int m = 0; m < nErrorCode; )
+	{
+		XDFAPI_UniMsgHead*	pMsgHead = (XDFAPI_UniMsgHead*)(pszCodeBuf+m);
+		char*				pbuf = pszCodeBuf+m +sizeof(XDFAPI_UniMsgHead);
+		int					MsgCount = pMsgHead->MsgCount;
+
+		for( int i = 0; i < MsgCount; i++ )
+		{
+			if( abs(pMsgHead->MsgType) == 26 )			///< 指数
+			{
+				m_oQuoDataCenter.UpdateDayLine( XDF_CNF, pbuf, sizeof(XDFAPI_CNFutureData) );
+				pbuf += sizeof(XDFAPI_CNFutureData);
+			}
+		}
+
+		m += (sizeof(XDFAPI_UniMsgHead) + pMsgHead->MsgLen - sizeof(pMsgHead->MsgCount));
+	}
+
+	if( NULL != pszCodeBuf )
+	{
+		delete []pszCodeBuf;
+		pszCodeBuf = NULL;
+	}
 
 	return 0;
 }
@@ -784,6 +1039,41 @@ int Quotation::ReloadCNFOPT( enum XDFRunStat eStatus )
 			delete []pszCodeBuf;
 			pszCodeBuf = NULL;
 		}
+	}
+	else
+	{
+		QuoCollector::GetCollector()->OnLog( TLV_ERROR, "Quotation::ReloadCNFOPT() : cannot fetch nametable" );
+		return -3;
+	}
+
+	m_vctMkSvrStatus[XDF_CNFOPT] = ET_SS_WORKING;				///< 设置“可服务”状态标识
+	///< ---------------- 获取快照表数据 -------------------------------------------
+	int		noffset = (sizeof(XDFAPI_CNFutOptData) + sizeof(XDFAPI_UniMsgHead)) * nCodeCount;	///< 根据商品数量，分配获取快照表需要的缓存
+	char*	pszCodeBuf = new char[noffset];
+
+	nErrorCode = m_oQuotPlugin->GetLastMarketDataAll( XDF_CNFOPT, pszCodeBuf, noffset );		///< 获取快照
+	for( int m = 0; m < nErrorCode; )
+	{
+		XDFAPI_UniMsgHead*	pMsgHead = (XDFAPI_UniMsgHead*)(pszCodeBuf+m);
+		char*				pbuf = pszCodeBuf+m +sizeof(XDFAPI_UniMsgHead);
+		int					MsgCount = pMsgHead->MsgCount;
+
+		for( int i = 0; i < MsgCount; i++ )
+		{
+			if( abs(pMsgHead->MsgType) == 34 )			///< 指数
+			{
+				m_oQuoDataCenter.UpdateDayLine( XDF_CNFOPT, pbuf, sizeof(XDFAPI_CNFutOptData) );
+				pbuf += sizeof(XDFAPI_CNFutOptData);
+			}
+		}
+
+		m += (sizeof(XDFAPI_UniMsgHead) + pMsgHead->MsgLen - sizeof(pMsgHead->MsgCount));
+	}
+
+	if( NULL != pszCodeBuf )
+	{
+		delete []pszCodeBuf;
+		pszCodeBuf = NULL;
 	}
 
 	return 0;
@@ -869,8 +1159,6 @@ bool __stdcall	Quotation::XDF_OnRspStatusChanged( unsigned char cMarket, int nSt
 		default:
 			return false;
 		}
-
-		m_vctMkSvrStatus[cMarket] = ET_SS_WORKING;				///< 设置“可服务”状态标识
 	}
 
 	return true;
