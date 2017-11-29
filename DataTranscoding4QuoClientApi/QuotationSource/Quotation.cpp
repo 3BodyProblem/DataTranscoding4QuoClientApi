@@ -125,11 +125,6 @@ int Quotation::Initialize()
 	return 0;
 }
 
-int Quotation::Execute()
-{
-	return 0;
-}
-
 int Quotation::Release()
 {
 	if( m_oWorkStatus != ET_SS_UNACTIVE )
@@ -202,8 +197,6 @@ int Quotation::ReloadShLv1( enum XDFRunStat eStatus )
 
 			for( int i = 0; i < MsgCount; i++ )
 			{
-				char			pszCode[8] = { 0 };
-
 				if( abs(pMsgHead->MsgType) == 5 )
 				{
 					T_LINE_PARAM			tagParam = { 0 };
@@ -213,6 +206,87 @@ int Quotation::ReloadShLv1( enum XDFRunStat eStatus )
 					m_oQuoDataCenter.BuildSecurity( XDF_SH, std::string( pData->Code, 6 ), tagParam );
 
 					pbuf += sizeof(XDFAPI_NameTableSh);
+				}
+			}
+
+			m += (sizeof(XDFAPI_UniMsgHead) + pMsgHead->MsgLen - sizeof(pMsgHead->MsgCount));
+		}
+
+		if( NULL != pszCodeBuf )
+		{
+			delete []pszCodeBuf;
+			pszCodeBuf = NULL;
+		}
+	}
+
+	return 0;
+}
+
+int Quotation::ReloadShOpt( enum XDFRunStat eStatus )
+{
+	if( XRS_Normal != eStatus )
+	{
+		return -1;
+	}
+
+	int						nCodeCount = 0;
+	int						nKindCount = 0;
+	XDFAPI_MarketKindInfo	vctKindInfo[32] = { 0 };
+	char					tempbuf[8192] = { 0 };
+	int						nErrorCode = m_oQuotPlugin->GetMarketInfo( XDF_SHOPT, tempbuf, sizeof(tempbuf) );
+
+	///< -------------- 获取上海期权的基础信息 -----------------------------------------
+	if( nErrorCode <= 0 )
+	{
+		QuoCollector::GetCollector()->OnLog( TLV_ERROR, "Quotation::ReloadShOpt() : cannot fetch market infomation." );
+		return -1;
+	}
+
+	XDFAPI_MarketKindHead* pKindHead = (XDFAPI_MarketKindHead*)(tempbuf+ sizeof(XDFAPI_MsgHead));
+	QuoCollector::GetCollector()->OnLog( TLV_INFO, "Quotation::ReloadShOpt() : SHOPT WareCount = %d", pKindHead->WareCount );
+
+	int m = sizeof(XDFAPI_MsgHead)+sizeof(XDFAPI_MarketKindHead);
+	for( int i = 0; m < nErrorCode; )
+	{
+		XDFAPI_UniMsgHead*	pMsgHead = (XDFAPI_UniMsgHead*)(tempbuf + m);
+		char*				pbuf = tempbuf + m +sizeof(XDFAPI_UniMsgHead);
+		int					nMsgCount = pMsgHead->MsgCount;
+
+		while( nMsgCount-- > 0 )
+		{
+			XDFAPI_MarketKindInfo* pInfo = (XDFAPI_MarketKindInfo*)pbuf;
+			::memcpy( vctKindInfo + nKindCount++, pInfo, sizeof(XDFAPI_MarketKindInfo) );
+			pbuf += sizeof(XDFAPI_MarketKindInfo);
+		}
+
+		m += sizeof(XDFAPI_MsgHead) + pMsgHead->MsgLen;
+	}
+
+	///< ---------------- 获取上海期权的市场码表数据 ------------------------------------
+	nErrorCode = m_oQuotPlugin->GetCodeTable( XDF_SHOPT, NULL, NULL, nCodeCount );				///< 先获取一下商品数量
+	if( nErrorCode > 0 && nCodeCount > 0 )
+	{
+		int		noffset = (sizeof(XDFAPI_NameTableSz) + sizeof(XDFAPI_UniMsgHead)) * nCodeCount;///< 根据商品数量，分配获取快照表需要的缓存
+		char*	pszCodeBuf = new char[noffset];
+
+		nErrorCode = m_oQuotPlugin->GetCodeTable( XDF_SHOPT, pszCodeBuf, noffset, nCodeCount );	///< 获取码表
+		for( int m = 0; m < nErrorCode; )
+		{
+			XDFAPI_UniMsgHead*	pMsgHead = (XDFAPI_UniMsgHead*)(pszCodeBuf+m);
+			char*				pbuf = pszCodeBuf + m + sizeof(XDFAPI_UniMsgHead);
+			int					MsgCount = pMsgHead->MsgCount;
+
+			for( int i = 0; i < MsgCount; i++ )
+			{
+				if( abs(pMsgHead->MsgType) == 2 )
+				{
+					T_LINE_PARAM			tagParam = { 0 };
+					XDFAPI_NameTableShOpt*	pData = (XDFAPI_NameTableShOpt*)pbuf;
+
+					tagParam.dPriceRate = ::pow(10.0, int(vctKindInfo[pData->SecKind].PriceRate) );
+					m_oQuoDataCenter.BuildSecurity( XDF_SHOPT, std::string( pData->Code, 6 ), tagParam );
+
+					pbuf += sizeof(XDFAPI_NameTableShOpt);
 				}
 			}
 
@@ -285,8 +359,6 @@ int Quotation::ReloadSzLv1( enum XDFRunStat eStatus )
 
 			for( int i = 0; i < MsgCount; i++ )
 			{
-				char			pszCode[8] = { 0 };
-
 				if( abs(pMsgHead->MsgType) == 6 )
 				{
 					T_LINE_PARAM			tagParam = { 0 };
@@ -296,6 +368,411 @@ int Quotation::ReloadSzLv1( enum XDFRunStat eStatus )
 					m_oQuoDataCenter.BuildSecurity( XDF_SZ, std::string( pData->Code, 6 ), tagParam );
 
 					pbuf += sizeof(XDFAPI_NameTableSz);
+				}
+			}
+
+			m += (sizeof(XDFAPI_UniMsgHead) + pMsgHead->MsgLen - sizeof(pMsgHead->MsgCount));
+		}
+
+		if( NULL != pszCodeBuf )
+		{
+			delete []pszCodeBuf;
+			pszCodeBuf = NULL;
+		}
+	}
+
+	return 0;
+}
+
+int Quotation::ReloadSzOpt( enum XDFRunStat eStatus )
+{
+	if( XRS_Normal != eStatus )
+	{
+		return -1;
+	}
+
+	int						nCodeCount = 0;
+	int						nKindCount = 0;
+	XDFAPI_MarketKindInfo	vctKindInfo[32] = { 0 };
+	char					tempbuf[8192] = { 0 };
+	int						nErrorCode = m_oQuotPlugin->GetMarketInfo( XDF_SZOPT, tempbuf, sizeof(tempbuf) );
+
+	///< -------------- 获取深圳期权的基础信息 --------------------------------------------
+	if( nErrorCode <= 0 )
+	{
+		QuoCollector::GetCollector()->OnLog( TLV_ERROR, "Quotation::ReloadSzOpt() : cannot fetch market infomation." );
+		return -1;
+	}
+
+	XDFAPI_MarketKindHead* pKindHead = (XDFAPI_MarketKindHead*)(tempbuf+ sizeof(XDFAPI_MsgHead));
+	QuoCollector::GetCollector()->OnLog( TLV_INFO, "Quotation::ReloadSzOpt() : SZOPT WareCount = %d", pKindHead->WareCount );
+
+	int m = sizeof(XDFAPI_MsgHead)+sizeof(XDFAPI_MarketKindHead);
+	for( int i = 0; m < nErrorCode; )
+	{
+		XDFAPI_UniMsgHead*	pMsgHead = (XDFAPI_UniMsgHead*)(tempbuf + m);
+		char*				pbuf = tempbuf + m +sizeof(XDFAPI_UniMsgHead);
+		int					nMsgCount = pMsgHead->MsgCount;
+
+		while( nMsgCount-- > 0 )
+		{
+			XDFAPI_MarketKindInfo* pInfo = (XDFAPI_MarketKindInfo*)pbuf;
+			::memcpy( vctKindInfo + nKindCount++, pInfo, sizeof(XDFAPI_MarketKindInfo) );
+			pbuf += sizeof(XDFAPI_MarketKindInfo);
+		}
+
+		m += sizeof(XDFAPI_MsgHead) + pMsgHead->MsgLen;
+	}
+
+	///< ---------------- 获取深圳期权市场码表数据 ----------------------------------------
+	nErrorCode = m_oQuotPlugin->GetCodeTable( XDF_SZOPT, NULL, NULL, nCodeCount );				///< 先获取一下商品数量
+	if( nErrorCode > 0 && nCodeCount > 0 )
+	{
+		int		noffset = (sizeof(XDFAPI_NameTableSz) + sizeof(XDFAPI_UniMsgHead)) * nCodeCount;///< 根据商品数量，分配获取快照表需要的缓存
+		char*	pszCodeBuf = new char[noffset];
+
+		nErrorCode = m_oQuotPlugin->GetCodeTable( XDF_SZOPT, pszCodeBuf, noffset, nCodeCount );	///< 获取码表
+		for( int m = 0; m < nErrorCode; )
+		{
+			XDFAPI_UniMsgHead*	pMsgHead = (XDFAPI_UniMsgHead*)(pszCodeBuf+m);
+			char*				pbuf = pszCodeBuf+m +sizeof(XDFAPI_UniMsgHead);
+			int					MsgCount = pMsgHead->MsgCount;
+
+			for( int i = 0; i < MsgCount; i++ )
+			{
+				if( abs(pMsgHead->MsgType) == 9 )
+				{
+					T_LINE_PARAM			tagParam = { 0 };
+					XDFAPI_NameTableSzOpt*	pData = (XDFAPI_NameTableSzOpt*)pbuf;
+
+					tagParam.dPriceRate = ::pow(10.0, int(vctKindInfo[pData->SecKind].PriceRate) );
+					m_oQuoDataCenter.BuildSecurity( XDF_SZOPT, std::string( pData->Code, 8 ), tagParam );
+
+					pbuf += sizeof(XDFAPI_NameTableSzOpt);
+				}
+			}
+
+			m += (sizeof(XDFAPI_UniMsgHead) + pMsgHead->MsgLen - sizeof(pMsgHead->MsgCount));
+		}
+
+		if( NULL != pszCodeBuf )
+		{
+			delete []pszCodeBuf;
+			pszCodeBuf = NULL;
+		}
+	}
+
+	return 0;
+}
+
+int Quotation::ReloadCFF( enum XDFRunStat eStatus )
+{
+	if( XRS_Normal != eStatus )
+	{
+		return -1;
+	}
+
+	int						nCodeCount = 0;
+	int						nKindCount = 0;
+	XDFAPI_MarketKindInfo	vctKindInfo[32] = { 0 };
+	char					tempbuf[8192] = { 0 };
+	int						nErrorCode = m_oQuotPlugin->GetMarketInfo( XDF_CF, tempbuf, sizeof(tempbuf) );
+
+	///< -------------- 获取中金期货的基础信息 --------------------------------------------
+	if( nErrorCode <= 0 )
+	{
+		QuoCollector::GetCollector()->OnLog( TLV_ERROR, "Quotation::ReloadCFF() : cannot fetch market infomation." );
+		return -1;
+	}
+
+	XDFAPI_MarketKindHead* pKindHead = (XDFAPI_MarketKindHead*)(tempbuf+ sizeof(XDFAPI_MsgHead));
+	QuoCollector::GetCollector()->OnLog( TLV_INFO, "Quotation::ReloadCFF() : CFF WareCount = %d", pKindHead->WareCount );
+
+	int m = sizeof(XDFAPI_MsgHead)+sizeof(XDFAPI_MarketKindHead);
+	for( int i = 0; m < nErrorCode; )
+	{
+		XDFAPI_UniMsgHead*	pMsgHead = (XDFAPI_UniMsgHead*)(tempbuf + m);
+		char*				pbuf = tempbuf + m +sizeof(XDFAPI_UniMsgHead);
+		int					nMsgCount = pMsgHead->MsgCount;
+
+		while( nMsgCount-- > 0 )
+		{
+			XDFAPI_MarketKindInfo* pInfo = (XDFAPI_MarketKindInfo*)pbuf;
+			::memcpy( vctKindInfo + nKindCount++, pInfo, sizeof(XDFAPI_MarketKindInfo) );
+			pbuf += sizeof(XDFAPI_MarketKindInfo);
+		}
+
+		m += sizeof(XDFAPI_MsgHead) + pMsgHead->MsgLen;
+	}
+
+	///< ---------------- 获取中金期货市场码表数据 ----------------------------------------
+	nErrorCode = m_oQuotPlugin->GetCodeTable( XDF_CF, NULL, NULL, nCodeCount );					///< 先获取一下商品数量
+	if( nErrorCode > 0 && nCodeCount > 0 )
+	{
+		int		noffset = (sizeof(XDFAPI_NameTableZjqh) + sizeof(XDFAPI_UniMsgHead))*nCodeCount;///< 根据商品数量，分配获取快照表需要的缓存
+		char*	pszCodeBuf = new char[noffset];
+
+		nErrorCode = m_oQuotPlugin->GetCodeTable( XDF_CF, pszCodeBuf, noffset, nCodeCount );	///< 获取码表
+		for( int m = 0; m < nErrorCode; )
+		{
+			XDFAPI_UniMsgHead*	pMsgHead = (XDFAPI_UniMsgHead*)(pszCodeBuf+m);
+			char*				pbuf = pszCodeBuf+m +sizeof(XDFAPI_UniMsgHead);
+			int					MsgCount = pMsgHead->MsgCount;
+
+			for( int i = 0; i < MsgCount; i++ )
+			{
+				if( abs(pMsgHead->MsgType) == 4 )
+				{
+					T_LINE_PARAM			tagParam = { 0 };
+					XDFAPI_NameTableZjqh*	pData = (XDFAPI_NameTableZjqh*)pbuf;
+
+					tagParam.dPriceRate = ::pow(10.0, int(vctKindInfo[pData->SecKind].PriceRate) );
+					m_oQuoDataCenter.BuildSecurity( XDF_CF, std::string( pData->Code, 6 ), tagParam );
+
+					pbuf += sizeof(XDFAPI_NameTableZjqh);
+				}
+			}
+
+			m += (sizeof(XDFAPI_UniMsgHead) + pMsgHead->MsgLen - sizeof(pMsgHead->MsgCount));
+		}
+
+		if( NULL != pszCodeBuf )
+		{
+			delete []pszCodeBuf;
+			pszCodeBuf = NULL;
+		}
+	}
+
+	return 0;
+}
+
+int Quotation::ReloadCFFOPT( enum XDFRunStat eStatus )
+{
+	if( XRS_Normal != eStatus )
+	{
+		return -1;
+	}
+
+	int						nCodeCount = 0;
+	int						nKindCount = 0;
+	XDFAPI_MarketKindInfo	vctKindInfo[32] = { 0 };
+	char					tempbuf[8192] = { 0 };
+	int						nErrorCode = m_oQuotPlugin->GetMarketInfo( XDF_ZJOPT, tempbuf, sizeof(tempbuf) );
+
+	///< -------------- 获取中金期权的基础信息 --------------------------------------------
+	if( nErrorCode <= 0 )
+	{
+		QuoCollector::GetCollector()->OnLog( TLV_ERROR, "Quotation::ReloadCFFOPT() : cannot fetch market infomation." );
+		return -1;
+	}
+
+	XDFAPI_MarketKindHead* pKindHead = (XDFAPI_MarketKindHead*)(tempbuf+ sizeof(XDFAPI_MsgHead));
+	QuoCollector::GetCollector()->OnLog( TLV_INFO, "Quotation::ReloadCFFOPT() : CFFOPT WareCount = %d", pKindHead->WareCount );
+
+	int m = sizeof(XDFAPI_MsgHead)+sizeof(XDFAPI_MarketKindHead);
+	for( int i = 0; m < nErrorCode; )
+	{
+		XDFAPI_UniMsgHead*	pMsgHead = (XDFAPI_UniMsgHead*)(tempbuf + m);
+		char*				pbuf = tempbuf + m +sizeof(XDFAPI_UniMsgHead);
+		int					nMsgCount = pMsgHead->MsgCount;
+
+		while( nMsgCount-- > 0 )
+		{
+			XDFAPI_MarketKindInfo* pInfo = (XDFAPI_MarketKindInfo*)pbuf;
+			::memcpy( vctKindInfo + nKindCount++, pInfo, sizeof(XDFAPI_MarketKindInfo) );
+			pbuf += sizeof(XDFAPI_MarketKindInfo);
+		}
+
+		m += sizeof(XDFAPI_MsgHead) + pMsgHead->MsgLen;
+	}
+
+	///< ---------------- 获取中金期权市场码表数据 ----------------------------------------
+	nErrorCode = m_oQuotPlugin->GetCodeTable( XDF_ZJOPT, NULL, NULL, nCodeCount );				///< 先获取一下商品数量
+	if( nErrorCode > 0 && nCodeCount > 0 )
+	{
+		int		noffset = (sizeof(XDFAPI_NameTableZjqh) + sizeof(XDFAPI_UniMsgHead))*nCodeCount;///< 根据商品数量，分配获取快照表需要的缓存
+		char*	pszCodeBuf = new char[noffset];
+
+		nErrorCode = m_oQuotPlugin->GetCodeTable( XDF_ZJOPT, pszCodeBuf, noffset, nCodeCount );	///< 获取码表
+		for( int m = 0; m < nErrorCode; )
+		{
+			XDFAPI_UniMsgHead*	pMsgHead = (XDFAPI_UniMsgHead*)(pszCodeBuf+m);
+			char*				pbuf = pszCodeBuf+m +sizeof(XDFAPI_UniMsgHead);
+			int					MsgCount = pMsgHead->MsgCount;
+
+			for( int i = 0; i < MsgCount; i++ )
+			{
+				if( abs(pMsgHead->MsgType) == 3 )
+				{
+					T_LINE_PARAM			tagParam = { 0 };
+					XDFAPI_NameTableZjOpt*	pData = (XDFAPI_NameTableZjOpt*)pbuf;
+
+					tagParam.dPriceRate = ::pow(10.0, int(vctKindInfo[pData->SecKind].PriceRate) );
+					m_oQuoDataCenter.BuildSecurity( XDF_ZJOPT, std::string( pData->Code, 6 ), tagParam );
+
+					pbuf += sizeof(XDFAPI_NameTableZjOpt);
+				}
+			}
+
+			m += (sizeof(XDFAPI_UniMsgHead) + pMsgHead->MsgLen - sizeof(pMsgHead->MsgCount));
+		}
+
+		if( NULL != pszCodeBuf )
+		{
+			delete []pszCodeBuf;
+			pszCodeBuf = NULL;
+		}
+	}
+
+	return 0;
+}
+
+int Quotation::ReloadCNF( enum XDFRunStat eStatus )
+{
+	if( XRS_Normal != eStatus )
+	{
+		return -1;
+	}
+
+	int						nCodeCount = 0;
+	int						nKindCount = 0;
+	XDFAPI_MarketKindInfo	vctKindInfo[32] = { 0 };
+	char					tempbuf[8192] = { 0 };
+	int						nErrorCode = m_oQuotPlugin->GetMarketInfo( XDF_CNF, tempbuf, sizeof(tempbuf) );
+
+	///< -------------- 获取商品期货的基础信息 --------------------------------------------
+	if( nErrorCode <= 0 )
+	{
+		QuoCollector::GetCollector()->OnLog( TLV_ERROR, "Quotation::ReloadCNF() : cannot fetch market infomation." );
+		return -1;
+	}
+
+	XDFAPI_MarketKindHead* pKindHead = (XDFAPI_MarketKindHead*)(tempbuf+ sizeof(XDFAPI_MsgHead));
+	QuoCollector::GetCollector()->OnLog( TLV_INFO, "Quotation::ReloadCNF() : CNF WareCount = %d", pKindHead->WareCount );
+
+	int m = sizeof(XDFAPI_MsgHead)+sizeof(XDFAPI_MarketKindHead);
+	for( int i = 0; m < nErrorCode; )
+	{
+		XDFAPI_UniMsgHead*	pMsgHead = (XDFAPI_UniMsgHead*)(tempbuf + m);
+		char*				pbuf = tempbuf + m +sizeof(XDFAPI_UniMsgHead);
+		int					nMsgCount = pMsgHead->MsgCount;
+
+		while( nMsgCount-- > 0 )
+		{
+			XDFAPI_MarketKindInfo* pInfo = (XDFAPI_MarketKindInfo*)pbuf;
+			::memcpy( vctKindInfo + nKindCount++, pInfo, sizeof(XDFAPI_MarketKindInfo) );
+			pbuf += sizeof(XDFAPI_MarketKindInfo);
+		}
+
+		m += sizeof(XDFAPI_MsgHead) + pMsgHead->MsgLen;
+	}
+
+	///< ---------------- 获取商品期货市场码表数据 ----------------------------------------
+	nErrorCode = m_oQuotPlugin->GetCodeTable( XDF_CNF, NULL, NULL, nCodeCount );				///< 先获取一下商品数量
+	if( nErrorCode > 0 && nCodeCount > 0 )
+	{
+		int		noffset = (sizeof(XDFAPI_NameTableCnf) + sizeof(XDFAPI_UniMsgHead))*nCodeCount;	///< 根据商品数量，分配获取快照表需要的缓存
+		char*	pszCodeBuf = new char[noffset];
+
+		nErrorCode = m_oQuotPlugin->GetCodeTable( XDF_CNF, pszCodeBuf, noffset, nCodeCount );	///< 获取码表
+		for( int m = 0; m < nErrorCode; )
+		{
+			XDFAPI_UniMsgHead*	pMsgHead = (XDFAPI_UniMsgHead*)(pszCodeBuf+m);
+			char*				pbuf = pszCodeBuf+m +sizeof(XDFAPI_UniMsgHead);
+			int					MsgCount = pMsgHead->MsgCount;
+
+			for( int i = 0; i < MsgCount; i++ )
+			{
+				if( abs(pMsgHead->MsgType) == 7 )
+				{
+					T_LINE_PARAM			tagParam = { 0 };
+					XDFAPI_NameTableCnf*	pData = (XDFAPI_NameTableCnf*)pbuf;
+
+					tagParam.dPriceRate = ::pow(10.0, int(vctKindInfo[pData->SecKind].PriceRate) );
+					m_oQuoDataCenter.BuildSecurity( XDF_CNF, std::string( pData->Code, 6 ), tagParam );
+
+					pbuf += sizeof(XDFAPI_NameTableCnf);
+				}
+			}
+
+			m += (sizeof(XDFAPI_UniMsgHead) + pMsgHead->MsgLen - sizeof(pMsgHead->MsgCount));
+		}
+
+		if( NULL != pszCodeBuf )
+		{
+			delete []pszCodeBuf;
+			pszCodeBuf = NULL;
+		}
+	}
+
+	return 0;
+}
+
+int Quotation::ReloadCNFOPT( enum XDFRunStat eStatus )
+{
+	if( XRS_Normal != eStatus )
+	{
+		return -1;
+	}
+
+	int						nCodeCount = 0;
+	int						nKindCount = 0;
+	XDFAPI_MarketKindInfo	vctKindInfo[32] = { 0 };
+	char					tempbuf[8192] = { 0 };
+	int						nErrorCode = m_oQuotPlugin->GetMarketInfo( XDF_CNFOPT, tempbuf, sizeof(tempbuf) );
+
+	///< -------------- 获取商品期权的基础信息 --------------------------------------------
+	if( nErrorCode <= 0 )
+	{
+		QuoCollector::GetCollector()->OnLog( TLV_ERROR, "Quotation::ReloadCNFOPT() : cannot fetch market infomation." );
+		return -1;
+	}
+
+	XDFAPI_MarketKindHead* pKindHead = (XDFAPI_MarketKindHead*)(tempbuf+ sizeof(XDFAPI_MsgHead));
+	QuoCollector::GetCollector()->OnLog( TLV_INFO, "Quotation::ReloadCNFOPT() : CNFOPT WareCount = %d", pKindHead->WareCount );
+
+	int m = sizeof(XDFAPI_MsgHead)+sizeof(XDFAPI_MarketKindHead);
+	for( int i = 0; m < nErrorCode; )
+	{
+		XDFAPI_UniMsgHead*	pMsgHead = (XDFAPI_UniMsgHead*)(tempbuf + m);
+		char*				pbuf = tempbuf + m +sizeof(XDFAPI_UniMsgHead);
+		int					nMsgCount = pMsgHead->MsgCount;
+
+		while( nMsgCount-- > 0 )
+		{
+			XDFAPI_MarketKindInfo* pInfo = (XDFAPI_MarketKindInfo*)pbuf;
+			::memcpy( vctKindInfo + nKindCount++, pInfo, sizeof(XDFAPI_MarketKindInfo) );
+			pbuf += sizeof(XDFAPI_MarketKindInfo);
+		}
+
+		m += sizeof(XDFAPI_MsgHead) + pMsgHead->MsgLen;
+	}
+
+	///< ---------------- 获取商品期权市场码表数据 ----------------------------------------
+	nErrorCode = m_oQuotPlugin->GetCodeTable( XDF_CNFOPT, NULL, NULL, nCodeCount );					///< 先获取一下商品数量
+	if( nErrorCode > 0 && nCodeCount > 0 )
+	{
+		int		noffset = (sizeof(XDFAPI_NameTableCnf) + sizeof(XDFAPI_UniMsgHead))*nCodeCount;		///< 根据商品数量，分配获取快照表需要的缓存
+		char*	pszCodeBuf = new char[noffset];
+
+		nErrorCode = m_oQuotPlugin->GetCodeTable( XDF_CNFOPT, pszCodeBuf, noffset, nCodeCount );	///< 获取码表
+		for( int m = 0; m < nErrorCode; )
+		{
+			XDFAPI_UniMsgHead*	pMsgHead = (XDFAPI_UniMsgHead*)(pszCodeBuf+m);
+			char*				pbuf = pszCodeBuf+m +sizeof(XDFAPI_UniMsgHead);
+			int					MsgCount = pMsgHead->MsgCount;
+
+			for( int i = 0; i < MsgCount; i++ )
+			{
+				if( abs(pMsgHead->MsgType) == 11 )
+				{
+					T_LINE_PARAM			tagParam = { 0 };
+					XDFAPI_NameTableCnfOpt*	pData = (XDFAPI_NameTableCnfOpt*)pbuf;
+
+					tagParam.dPriceRate = ::pow(10.0, int(vctKindInfo[pData->SecKind].PriceRate) );
+					m_oQuoDataCenter.BuildSecurity( XDF_CNFOPT, std::string( pData->Code ), tagParam );
+
+					pbuf += sizeof(XDFAPI_NameTableCnfOpt);
 				}
 			}
 
@@ -367,21 +844,27 @@ bool __stdcall	Quotation::XDF_OnRspStatusChanged( unsigned char cMarket, int nSt
 		case XDF_SHL2:		///< 上证L2(QuoteClientApi内部屏蔽)
 			break;
 		case XDF_SHOPT:		///< 上证期权
+			ReloadShOpt( (enum XDFRunStat)nStatus );
 			break;
 		case XDF_SZ:		///< 深证L1
 			ReloadSzLv1( (enum XDFRunStat)nStatus );
 			break;
 		case XDF_SZOPT:		///< 深圳期权
+			ReloadSzOpt( (enum XDFRunStat)nStatus );
 			break;
 		case XDF_SZL2:		///< 深圳L2(QuoteClientApi内部屏蔽)
 			break;
 		case XDF_CF:		///< 中金期货
+			ReloadCFF( (enum XDFRunStat)nStatus );
 			break;
 		case XDF_ZJOPT:		///< 中金期权
+			ReloadCFFOPT( (enum XDFRunStat)nStatus );
 			break;
 		case XDF_CNF:		///< 商品期货(上海/郑州/大连)
+			ReloadCNF( (enum XDFRunStat)nStatus );
 			break;
 		case XDF_CNFOPT:	///< 商品期货和商品期权(上海/郑州/大连)
+			ReloadCNFOPT( (enum XDFRunStat)nStatus );
 			break;
 		default:
 			return false;
@@ -472,6 +955,52 @@ void __stdcall	Quotation::XDF_OnRspRecvData( XDFAPI_PkgHead * pHead, const char 
 				}
 			}
 		}
+		break;
+		case XDF_SHOPT:												///< 处理上海期权的行情推送
+		{
+			while( nLen > 0 )
+			{
+				pMsgHead = (XDFAPI_UniMsgHead*)pbuf;
+
+				if( pMsgHead->MsgType < 0 )							///< 复合数据包
+				{
+					int				nMsgCount = pMsgHead->MsgCount;
+					pbuf += sizeof(XDFAPI_UniMsgHead);
+					nLen -= sizeof(XDFAPI_UniMsgHead);
+
+					switch ( abs(pMsgHead->MsgType) )
+					{
+					case 15:										///< 商品快照
+						{
+							while( nMsgCount-- > 0 )
+							{
+								m_oQuoDataCenter.UpdateDayLine( XDF_SHOPT, pbuf, sizeof(XDFAPI_ShOptData) );
+
+								pbuf += sizeof(XDFAPI_ShOptData);
+							}
+							nLen -= pMsgHead->MsgLen;
+						}
+						break;
+					}
+				}
+				else												///< 单一数据包
+				{
+					pbuf += sizeof(XDFAPI_MsgHead);
+					nLen -= sizeof(XDFAPI_MsgHead);
+
+					switch ( pMsgHead->MsgType )
+					{
+					case 1:///< 市场状态信息
+						{
+							pbuf += sizeof(XDFAPI_ShOptMarketStatus);
+							nLen -= pMsgHead->MsgLen;
+						}
+						break;
+					}
+				}
+			}
+		}
+		break;
 		case XDF_SZ:												///< 处理深圳Lv1的行情推送
 		{
 			while( nLen > 0 )
@@ -540,6 +1069,52 @@ void __stdcall	Quotation::XDF_OnRspRecvData( XDFAPI_PkgHead * pHead, const char 
 				}
 			}
 		}
+		break;
+		case XDF_SZOPT:												///< 处理深圳期权的行情推送
+		{
+			while( nLen > 0 )
+			{
+				pMsgHead = (XDFAPI_UniMsgHead*)pbuf;
+
+				if( pMsgHead->MsgType < 0 )							///< 复合数据包
+				{
+					int				nMsgCount = pMsgHead->MsgCount;
+					pbuf += sizeof(XDFAPI_UniMsgHead);
+					nLen -= sizeof(XDFAPI_UniMsgHead);
+
+					switch ( abs(pMsgHead->MsgType) )
+					{
+					case 35:										///< 商品快照
+						{
+							while( nMsgCount-- > 0 )
+							{
+								m_oQuoDataCenter.UpdateDayLine( XDF_SZOPT, pbuf, sizeof(XDFAPI_SzOptData) );
+
+								pbuf += sizeof(XDFAPI_SzOptData);
+							}
+							nLen -= pMsgHead->MsgLen;
+						}
+						break;
+					}
+				}
+				else												///< 单一数据包
+				{
+					pbuf += sizeof(XDFAPI_MsgHead);
+					nLen -= sizeof(XDFAPI_MsgHead);
+
+					switch ( pMsgHead->MsgType )
+					{
+					case 1:///< 市场状态信息
+						{
+							pbuf += sizeof(XDFAPI_MarketStatusInfo);
+							nLen -= pMsgHead->MsgLen;
+						}
+						break;
+					}
+				}
+			}
+		}
+		break;
 		case XDF_CF:												///< 处理中金期货的行情推送
 		{
 			while( nLen > 0 )
@@ -558,13 +1133,7 @@ void __stdcall	Quotation::XDF_OnRspRecvData( XDFAPI_PkgHead * pHead, const char 
 						{
 							while( nMsgCount-- > 0 )
 							{
-								char				pszCode[8] = { 0 };
-								XDFAPI_CffexData*	pData = (XDFAPI_CffexData*)pbuf;
-
-								if( ::strncmp( pData->Code, "600098", 6 ) == 0 )
-									int a = 0;
-								::memcpy( pszCode, pData->Code, 6 );
-								::printf( "快照:%s, 价格:%u\n", pszCode, pData->Now );
+								m_oQuoDataCenter.UpdateDayLine( XDF_CF, pbuf, sizeof(XDFAPI_CffexData) );
 
 								pbuf += sizeof(XDFAPI_CffexData);
 							}
@@ -583,10 +1152,6 @@ void __stdcall	Quotation::XDF_OnRspRecvData( XDFAPI_PkgHead * pHead, const char 
 					{
 					case 1:///< 市场状态信息
 						{
-							XDFAPI_MarketStatusInfo* pData = (XDFAPI_MarketStatusInfo*)pbuf;
-
-							::printf( "市场日期=%u,时间=%u\n", pData->MarketDate, pData->MarketTime );
-
 							pbuf += sizeof(XDFAPI_MarketStatusInfo);
 							nLen -= pMsgHead->MsgLen;
 						}
@@ -594,7 +1159,146 @@ void __stdcall	Quotation::XDF_OnRspRecvData( XDFAPI_PkgHead * pHead, const char 
 					}
 				}
 			}
-		}///< end case
+		}
+		break;
+		case XDF_ZJOPT:												///< 处理中金期权的行情推送
+		{
+			while( nLen > 0 )
+			{
+				pMsgHead = (XDFAPI_UniMsgHead*)pbuf;
+
+				if( pMsgHead->MsgType < 0 )							///< 复合数据包
+				{
+					int				nMsgCount = pMsgHead->MsgCount;
+					pbuf += sizeof(XDFAPI_UniMsgHead);
+					nLen -= sizeof(XDFAPI_UniMsgHead);
+
+					switch ( abs(pMsgHead->MsgType) )
+					{
+					case 18:										///< 商品快照
+						{
+							while( nMsgCount-- > 0 )
+							{
+								m_oQuoDataCenter.UpdateDayLine( XDF_ZJOPT, pbuf, sizeof(XDFAPI_ZjOptData) );
+
+								pbuf += sizeof(XDFAPI_ZjOptData);
+							}
+						}
+						break;
+					}
+
+					nLen -= pMsgHead->MsgLen;
+				}
+				else												///< 单一数据包
+				{
+					pbuf += sizeof(XDFAPI_MsgHead);
+					nLen -= sizeof(XDFAPI_MsgHead);
+
+					switch ( pMsgHead->MsgType )
+					{
+					case 1:///< 市场状态信息
+						{
+							pbuf += sizeof(XDFAPI_MarketStatusInfo);
+							nLen -= pMsgHead->MsgLen;
+						}
+						break;
+					}
+				}
+			}
+		}
+		break;
+		case XDF_CNF:												///< 处理商品期货行情推送
+		{
+			while( nLen > 0 )
+			{
+				pMsgHead = (XDFAPI_UniMsgHead*)pbuf;
+
+				if( pMsgHead->MsgType < 0 )							///< 复合数据包
+				{
+					int				nMsgCount = pMsgHead->MsgCount;
+					pbuf += sizeof(XDFAPI_UniMsgHead);
+					nLen -= sizeof(XDFAPI_UniMsgHead);
+
+					switch ( abs(pMsgHead->MsgType) )
+					{
+					case 26:										///< 商品快照
+						{
+							while( nMsgCount-- > 0 )
+							{
+								m_oQuoDataCenter.UpdateDayLine( XDF_CNF, pbuf, sizeof(XDFAPI_CNFutureData) );
+
+								pbuf += sizeof(XDFAPI_CNFutureData);
+							}
+						}
+						break;
+					}
+
+					nLen -= pMsgHead->MsgLen;
+				}
+				else												///< 单一数据包
+				{
+					pbuf += sizeof(XDFAPI_MsgHead);
+					nLen -= sizeof(XDFAPI_MsgHead);
+
+					switch ( pMsgHead->MsgType )
+					{
+					case 1:///< 市场状态信息
+						{
+							pbuf += sizeof(XDFAPI_MarketStatusInfo);
+							nLen -= pMsgHead->MsgLen;
+						}
+						break;
+					}
+				}
+			}
+		}
+		break;
+		case XDF_CNFOPT:											///< 处理商品期权行情推送
+		{
+			while( nLen > 0 )
+			{
+				pMsgHead = (XDFAPI_UniMsgHead*)pbuf;
+
+				if( pMsgHead->MsgType < 0 )							///< 复合数据包
+				{
+					int				nMsgCount = pMsgHead->MsgCount;
+					pbuf += sizeof(XDFAPI_UniMsgHead);
+					nLen -= sizeof(XDFAPI_UniMsgHead);
+
+					switch ( abs(pMsgHead->MsgType) )
+					{
+					case 34:										///< 商品快照
+						{
+							while( nMsgCount-- > 0 )
+							{
+								m_oQuoDataCenter.UpdateDayLine( XDF_CNFOPT, pbuf, sizeof(XDFAPI_CNFutOptData) );
+
+								pbuf += sizeof(XDFAPI_CNFutOptData);
+							}
+						}
+						break;
+					}
+
+					nLen -= pMsgHead->MsgLen;
+				}
+				else												///< 单一数据包
+				{
+					pbuf += sizeof(XDFAPI_MsgHead);
+					nLen -= sizeof(XDFAPI_MsgHead);
+
+					switch ( pMsgHead->MsgType )
+					{
+					case 1:///< 市场状态信息
+						{
+							pbuf += sizeof(XDFAPI_MarketStatusInfo);
+							nLen -= pMsgHead->MsgLen;
+						}
+						break;
+					}
+				}
+			}
+		}
+		break;
 	}
 }
 

@@ -55,7 +55,7 @@ private:
  * @detail			封装了针对商品期货期权各市场的初始化、管理控制等方面的方法
  * @author			barry
  */
-class Quotation : public SimpleTask, public QuoteClientSpi
+class Quotation : public QuoteClientSpi
 {
 public:
 	Quotation();
@@ -95,6 +95,14 @@ protected:
 	int							ReloadShLv1( enum XDFRunStat eStatus );
 
 	/**
+	 * @brief					加载上海Option的基础信息
+	 * @param[in]				eStatus		市场模块状态
+	 * @return					==0			成功
+								!=0			失败
+	 */
+	int							ReloadShOpt( enum XDFRunStat eStatus );
+
+	/**
 	 * @brief					加载深圳Lv1的基础信息
 	 * @param[in]				eStatus		市场模块状态
 	 * @return					==0			成功
@@ -102,14 +110,45 @@ protected:
 	 */
 	int							ReloadSzLv1( enum XDFRunStat eStatus );
 
-
-protected:
 	/**
-	 * @brief					任务函数(内循环)
-	 * @return					==0					成功
-								!=0					失败
+	 * @brief					加载深圳期权的基础信息
+	 * @param[in]				eStatus		市场模块状态
+	 * @return					==0			成功
+								!=0			失败
 	 */
-	int							Execute();
+	int							ReloadSzOpt( enum XDFRunStat eStatus );
+
+	/**
+	 * @brief					加载中金期货的基础信息
+	 * @param[in]				eStatus		市场模块状态
+	 * @return					==0			成功
+								!=0			失败
+	 */
+	int							ReloadCFF( enum XDFRunStat eStatus );
+
+	/**
+	 * @brief					加载中金期权的基础信息
+	 * @param[in]				eStatus		市场模块状态
+	 * @return					==0			成功
+								!=0			失败
+	 */
+	int							ReloadCFFOPT( enum XDFRunStat eStatus );
+
+	/**
+	 * @brief					加载商品期货的基础信息
+	 * @param[in]				eStatus		市场模块状态
+	 * @return					==0			成功
+								!=0			失败
+	 */
+	int							ReloadCNF( enum XDFRunStat eStatus );
+
+	/**
+	 * @brief					加载商品期权的基础信息
+	 * @param[in]				eStatus		市场模块状态
+	 * @return					==0			成功
+								!=0			失败
+	 */
+	int							ReloadCNFOPT( enum XDFRunStat eStatus );
 
 private:
 	WorkStatus					m_vctMkSvrStatus[64];	///< 各市场服务状态
