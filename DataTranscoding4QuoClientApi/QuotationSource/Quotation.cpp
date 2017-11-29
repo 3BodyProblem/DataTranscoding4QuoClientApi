@@ -1,3 +1,4 @@
+#include <time.h>
 #include <math.h>
 #include <iostream>
 #include <algorithm>
@@ -70,10 +71,6 @@ WorkStatus&	WorkStatus::operator= ( enum E_SS_Status eWorkStatus )
 
 
 ///< ----------------------------------------------------------------
-
-
-//T_MAP_RATE		Quotation::m_mapRate;
-//T_MAP_KIND		Quotation::m_mapKind;
 
 
 Quotation::Quotation()
@@ -156,7 +153,7 @@ int Quotation::ReloadShLv1( enum XDFRunStat eStatus )
 		return -1;
 	}
 
-	int						nCodeCount =0;
+	int						nCodeCount = 0;
 	int						nKindCount = 0;
 	XDFAPI_MarketKindInfo	vctKindInfo[32] = { 0 };
 	char					tempbuf[8192] = { 0 };
@@ -190,13 +187,13 @@ int Quotation::ReloadShLv1( enum XDFRunStat eStatus )
 	}
 
 	///< ---------------- 获取上海市场码表数据 ----------------------------------------
-	nErrorCode = m_oQuotPlugin->GetCodeTable( XDF_SH, NULL, NULL, nCodeCount );			///< 先获取一下商品数量
+	nErrorCode = m_oQuotPlugin->GetCodeTable( XDF_SH, NULL, NULL, nCodeCount );					///< 先获取一下商品数量
 	if( nErrorCode > 0 && nCodeCount > 0 )
 	{
-		int		noffset = (sizeof(XDFAPI_StockData5) + sizeof(XDFAPI_UniMsgHead)) * nCodeCount;///< 根据商品数量，分配获取快照表需要的缓存
+		int		noffset = (sizeof(XDFAPI_NameTableSh) + sizeof(XDFAPI_UniMsgHead)) * nCodeCount;///< 根据商品数量，分配获取快照表需要的缓存
 		char*	pszCodeBuf = new char[noffset];
 
-		nErrorCode = m_oQuotPlugin->GetLastMarketDataAll( XDF_SH, pszCodeBuf, noffset );///< 获取快照
+		nErrorCode = m_oQuotPlugin->GetCodeTable( XDF_SH, pszCodeBuf, noffset, nCodeCount );	///< 获取码表
 		for( int m = 0; m < nErrorCode; )
 		{
 			XDFAPI_UniMsgHead*	pMsgHead = (XDFAPI_UniMsgHead*)(pszCodeBuf+m);
@@ -207,21 +204,15 @@ int Quotation::ReloadShLv1( enum XDFRunStat eStatus )
 			{
 				char			pszCode[8] = { 0 };
 
-				if( abs(pMsgHead->MsgType) == 21 )			///< 指数
+				if( abs(pMsgHead->MsgType) == 5 )
 				{
-					XDFAPI_IndexData* pData = (XDFAPI_IndexData*)pbuf;
+					T_LINE_PARAM			tagParam = { 0 };
+					XDFAPI_NameTableSh*		pData = (XDFAPI_NameTableSh*)pbuf;
 
-					::memcpy( pszCode, pData->Code, 6 );
-					::printf( "指数: %s \n", pszCode );
-					pbuf += sizeof(XDFAPI_IndexData);
-				}
-				else if( abs(pMsgHead->MsgType) == 22 )		///< 快照数据
-				{
-					XDFAPI_StockData5* pData = (XDFAPI_StockData5*)pbuf;
+					tagParam.dPriceRate = ::pow(10.0, int(vctKindInfo[pData->SecKind].PriceRate) );
+					m_oQuoDataCenter.BuildSecurity( XDF_SH, std::string( pData->Code, 6 ), tagParam );
 
-					::memcpy( pszCode, pData->Code, 6 );
-					::printf( "快照: %s \n", pszCode );
-					pbuf += sizeof(XDFAPI_StockData5);
+					pbuf += sizeof(XDFAPI_NameTableSh);
 				}
 			}
 
@@ -231,6 +222,90 @@ int Quotation::ReloadShLv1( enum XDFRunStat eStatus )
 		if( NULL != pszCodeBuf )
 		{
 			delete []pszCodeBuf;
+			pszCodeBuf = NULL;
+		}
+	}
+
+	return 0;
+}
+
+int Quotation::ReloadSzLv1( enum XDFRunStat eStatus )
+{
+	if( XRS_Normal != eStatus )
+	{
+		return -1;
+	}
+
+	int						nCodeCount = 0;
+	int						nKindCount = 0;
+	XDFAPI_MarketKindInfo	vctKindInfo[32] = { 0 };
+	char					tempbuf[8192] = { 0 };
+	int						nErrorCode = m_oQuotPlugin->GetMarketInfo( XDF_SZ, tempbuf, sizeof(tempbuf) );
+
+	///< -------------- 获取深圳的基础信息 --------------------------------------------
+	if( nErrorCode <= 0 )
+	{
+		QuoCollector::GetCollector()->OnLog( TLV_ERROR, "Quotation::ReloadSzLv1() : cannot fetch market infomation." );
+		return -1;
+	}
+
+	XDFAPI_MarketKindHead* pKindHead = (XDFAPI_MarketKindHead*)(tempbuf+ sizeof(XDFAPI_MsgHead));
+	QuoCollector::GetCollector()->OnLog( TLV_INFO, "Quotation::ReloadSzLv1() : SZL1 WareCount = %d", pKindHead->WareCount );
+
+	int m = sizeof(XDFAPI_MsgHead)+sizeof(XDFAPI_MarketKindHead);
+	for( int i = 0; m < nErrorCode; )
+	{
+		XDFAPI_UniMsgHead*	pMsgHead = (XDFAPI_UniMsgHead*)(tempbuf + m);
+		char*				pbuf = tempbuf + m +sizeof(XDFAPI_UniMsgHead);
+		int					nMsgCount = pMsgHead->MsgCount;
+
+		while( nMsgCount-- > 0 )
+		{
+			XDFAPI_MarketKindInfo* pInfo = (XDFAPI_MarketKindInfo*)pbuf;
+			::memcpy( vctKindInfo + nKindCount++, pInfo, sizeof(XDFAPI_MarketKindInfo) );
+			pbuf += sizeof(XDFAPI_MarketKindInfo);
+		}
+
+		m += sizeof(XDFAPI_MsgHead) + pMsgHead->MsgLen;
+	}
+
+	///< ---------------- 获取深圳市场码表数据 ----------------------------------------
+	nErrorCode = m_oQuotPlugin->GetCodeTable( XDF_SZ, NULL, NULL, nCodeCount );					///< 先获取一下商品数量
+	if( nErrorCode > 0 && nCodeCount > 0 )
+	{
+		int		noffset = (sizeof(XDFAPI_NameTableSz) + sizeof(XDFAPI_UniMsgHead)) * nCodeCount;///< 根据商品数量，分配获取快照表需要的缓存
+		char*	pszCodeBuf = new char[noffset];
+
+		nErrorCode = m_oQuotPlugin->GetCodeTable( XDF_SZ, pszCodeBuf, noffset, nCodeCount );	///< 获取码表
+		for( int m = 0; m < nErrorCode; )
+		{
+			XDFAPI_UniMsgHead*	pMsgHead = (XDFAPI_UniMsgHead*)(pszCodeBuf+m);
+			char*				pbuf = pszCodeBuf+m +sizeof(XDFAPI_UniMsgHead);
+			int					MsgCount = pMsgHead->MsgCount;
+
+			for( int i = 0; i < MsgCount; i++ )
+			{
+				char			pszCode[8] = { 0 };
+
+				if( abs(pMsgHead->MsgType) == 6 )
+				{
+					T_LINE_PARAM			tagParam = { 0 };
+					XDFAPI_NameTableSz*		pData = (XDFAPI_NameTableSz*)pbuf;
+
+					tagParam.dPriceRate = ::pow(10.0, int(vctKindInfo[pData->SecKind].PriceRate) );
+					m_oQuoDataCenter.BuildSecurity( XDF_SZ, std::string( pData->Code, 6 ), tagParam );
+
+					pbuf += sizeof(XDFAPI_NameTableSz);
+				}
+			}
+
+			m += (sizeof(XDFAPI_UniMsgHead) + pMsgHead->MsgLen - sizeof(pMsgHead->MsgCount));
+		}
+
+		if( NULL != pszCodeBuf )
+		{
+			delete []pszCodeBuf;
+			pszCodeBuf = NULL;
 		}
 	}
 
@@ -268,9 +343,22 @@ bool __stdcall	Quotation::XDF_OnRspStatusChanged( unsigned char cMarket, int nSt
 	QuoCollector::GetCollector()->OnLog( TLV_INFO, "Quotation::XDF_OnRspStatusChanged() : Market(%d), Status=%s", (int)cMarket, pszDesc );
 	m_oQuoDataCenter.UpdateModuleStatus( (enum XDFMarket)cMarket, nStatus );	///< 更新模块工作状态
 
+	///< 判断是否需要重入加载过程
+	unsigned int	nNowT = ::time( NULL );
+	if( (nNowT - m_mapMkBuildTimeT[cMarket]) <= 3 )
+	{
+		return true;
+	}
+	else
+	{
+		m_mapMkBuildTimeT[cMarket] = nNowT;
+	}
+
 	///< 加载各市场基础信息
 	if( true == bNormalStatus )
 	{
+		m_vctMkSvrStatus[cMarket] = ET_SS_INITIALIZING;			///< 设置“初始中”状态标识
+
 		switch( (enum XDFMarket)cMarket )
 		{
 		case XDF_SH:		///< 上证L1
@@ -281,6 +369,7 @@ bool __stdcall	Quotation::XDF_OnRspStatusChanged( unsigned char cMarket, int nSt
 		case XDF_SHOPT:		///< 上证期权
 			break;
 		case XDF_SZ:		///< 深证L1
+			ReloadSzLv1( (enum XDFRunStat)nStatus );
 			break;
 		case XDF_SZOPT:		///< 深圳期权
 			break;
@@ -297,6 +386,8 @@ bool __stdcall	Quotation::XDF_OnRspStatusChanged( unsigned char cMarket, int nSt
 		default:
 			return false;
 		}
+
+		m_vctMkSvrStatus[cMarket] = ET_SS_WORKING;				///< 设置“可服务”状态标识
 	}
 
 	return true;
@@ -307,138 +398,203 @@ void __stdcall	Quotation::XDF_OnRspRecvData( XDFAPI_PkgHead * pHead, const char 
 	int						nLen = nBytes;
 	char*					pbuf = (char *)pszBuf;
 	XDFAPI_UniMsgHead*		pMsgHead = NULL;
+	unsigned char			nMarketID = pHead->MarketID;
 
-	if( XDF_SH == pHead->MarketID )								///< 处理上海Lv1的行情推送
+	if( m_vctMkSvrStatus[nMarketID] != ET_SS_WORKING )				///< 如果市场未就绪，就不接收回调
 	{
-		while( nLen > 0 )
-		{
-			pMsgHead = (XDFAPI_UniMsgHead*)pbuf;
-
-			if( pMsgHead->MsgType < 0 )							///< 复合数据包
-			{
-				int				nMsgCount = pMsgHead->MsgCount;
-				pbuf += sizeof(XDFAPI_UniMsgHead);
-				nLen -= sizeof(XDFAPI_UniMsgHead);
-
-				switch ( abs(pMsgHead->MsgType) )
-				{
-				case 21:										///< 指数快照
-					{
-						while( nMsgCount-- > 0 )
-						{
-							char				pszCode[8] = { 0 };
-							XDFAPI_IndexData*	pData = (XDFAPI_IndexData*)pbuf;
-
-							::memcpy( pszCode, pData->Code, 6 );
-							::printf( "指数:%s, 价格:%u\n", pszCode, pData->Now );
-
-							pbuf += sizeof(XDFAPI_IndexData);
-						}
-						nLen -= pMsgHead->MsgLen;
-					}
-					break;
-				case 22:										///< 商品快照
-					{
-						while( nMsgCount-- > 0 )
-						{
-							char				pszCode[8] = { 0 };
-							XDFAPI_StockData5*	pData = (XDFAPI_StockData5*)pbuf;
-
-							::memcpy( pszCode, pData->Code, 6 );
-							::printf( "快照:%s, 价格:%u\n", pszCode, pData->Now );
-
-							pbuf += sizeof(XDFAPI_StockData5);
-						}
-						nLen -= pMsgHead->MsgLen;
-					}
-					break;
-				}
-			}
-			else												///< 单一数据包
-			{
-				pbuf += sizeof(XDFAPI_MsgHead);
-				nLen -= sizeof(XDFAPI_MsgHead);
-
-				switch ( pMsgHead->MsgType )
-				{
-				case 1:///< 市场状态信息
-					{
-						XDFAPI_MarketStatusInfo* pData = (XDFAPI_MarketStatusInfo*)pbuf;
-
-						::printf( "市场日期=%u,时间=%u\n", pData->MarketDate, pData->MarketTime );
-
-						pbuf += sizeof(XDFAPI_MarketStatusInfo);
-						nLen -= pMsgHead->MsgLen;
-					}
-					break;
-				case 23:///< 停牌标识
-					{
-						XDFAPI_StopFlag* pData = (XDFAPI_StopFlag*)pbuf;
-
-						::printf( "停牌标识=%c\n", pData->SFlag );
-
-						pbuf += sizeof(XDFAPI_StopFlag);
-						nLen -= pMsgHead->MsgLen;
-					}
-					break;
-				}
-			}
-		}
+		return;
 	}
-	else if( XDF_CF == pHead->MarketID )								///< 处理中金期货的行情推送
+
+	switch( nMarketID )
 	{
-		while( nLen > 0 )
+		case XDF_SH:												///< 处理上海Lv1的行情推送
 		{
-			pMsgHead = (XDFAPI_UniMsgHead*)pbuf;
-
-			if( pMsgHead->MsgType < 0 )							///< 复合数据包
+			while( nLen > 0 )
 			{
-				int				nMsgCount = pMsgHead->MsgCount;
-				pbuf += sizeof(XDFAPI_UniMsgHead);
-				nLen -= sizeof(XDFAPI_UniMsgHead);
+				pMsgHead = (XDFAPI_UniMsgHead*)pbuf;
 
-				switch ( abs(pMsgHead->MsgType) )
+				if( pMsgHead->MsgType < 0 )							///< 复合数据包
 				{
-				case 20:										///< 商品快照
+					int				nMsgCount = pMsgHead->MsgCount;
+					pbuf += sizeof(XDFAPI_UniMsgHead);
+					nLen -= sizeof(XDFAPI_UniMsgHead);
+
+					switch ( abs(pMsgHead->MsgType) )
 					{
-						while( nMsgCount-- > 0 )
+					case 21:										///< 指数快照
 						{
-							char				pszCode[8] = { 0 };
-							XDFAPI_CffexData*	pData = (XDFAPI_CffexData*)pbuf;
+							while( nMsgCount-- > 0 )
+							{
+								m_oQuoDataCenter.UpdateDayLine( XDF_SH, pbuf, sizeof(XDFAPI_IndexData) );
 
-							if( ::strncmp( pData->Code, "600098", 6 ) == 0 )
-								int a = 0;
-							::memcpy( pszCode, pData->Code, 6 );
-							::printf( "快照:%s, 价格:%u\n", pszCode, pData->Now );
-
-							pbuf += sizeof(XDFAPI_CffexData);
+								pbuf += sizeof(XDFAPI_IndexData);
+							}
+							nLen -= pMsgHead->MsgLen;
 						}
+						break;
+					case 22:										///< 商品快照
+						{
+							while( nMsgCount-- > 0 )
+							{
+								m_oQuoDataCenter.UpdateDayLine( XDF_SH, pbuf, sizeof(XDFAPI_StockData5) );
+
+								pbuf += sizeof(XDFAPI_StockData5);
+							}
+							nLen -= pMsgHead->MsgLen;
+						}
+						break;
 					}
-					break;
 				}
-
-				nLen -= pMsgHead->MsgLen;
-			}
-			else												///< 单一数据包
-			{
-				pbuf += sizeof(XDFAPI_MsgHead);
-				nLen -= sizeof(XDFAPI_MsgHead);
-
-				switch ( pMsgHead->MsgType )
+				else												///< 单一数据包
 				{
-				case 1:///< 市场状态信息
+					pbuf += sizeof(XDFAPI_MsgHead);
+					nLen -= sizeof(XDFAPI_MsgHead);
+
+					switch ( pMsgHead->MsgType )
 					{
-						XDFAPI_MarketStatusInfo* pData = (XDFAPI_MarketStatusInfo*)pbuf;
-
-						::printf( "市场日期=%u,时间=%u\n", pData->MarketDate, pData->MarketTime );
-
-						pbuf += sizeof(XDFAPI_MarketStatusInfo);
-						nLen -= pMsgHead->MsgLen;
+					case 1:///< 市场状态信息
+						{
+							//XDFAPI_MarketStatusInfo* pData = (XDFAPI_MarketStatusInfo*)pbuf;
+							//::printf( "市场日期=%u,时间=%u\n", pData->MarketDate, pData->MarketTime );
+							pbuf += sizeof(XDFAPI_MarketStatusInfo);
+							nLen -= pMsgHead->MsgLen;
+						}
+						break;
+					case 23:///< 停牌标识
+						{
+							//XDFAPI_StopFlag* pData = (XDFAPI_StopFlag*)pbuf;
+							//::printf( "停牌标识=%c\n", pData->SFlag );
+							pbuf += sizeof(XDFAPI_StopFlag);
+							nLen -= pMsgHead->MsgLen;
+						}
+						break;
 					}
-					break;
 				}
 			}
 		}
+		case XDF_SZ:												///< 处理深圳Lv1的行情推送
+		{
+			while( nLen > 0 )
+			{
+				pMsgHead = (XDFAPI_UniMsgHead*)pbuf;
+
+				if( pMsgHead->MsgType < 0 )							///< 复合数据包
+				{
+					int				nMsgCount = pMsgHead->MsgCount;
+					pbuf += sizeof(XDFAPI_UniMsgHead);
+					nLen -= sizeof(XDFAPI_UniMsgHead);
+
+					switch ( abs(pMsgHead->MsgType) )
+					{
+					case 21:										///< 指数快照
+						{
+							while( nMsgCount-- > 0 )
+							{
+								m_oQuoDataCenter.UpdateDayLine( XDF_SZ, pbuf, sizeof(XDFAPI_IndexData) );
+
+								pbuf += sizeof(XDFAPI_IndexData);
+							}
+							nLen -= pMsgHead->MsgLen;
+						}
+						break;
+					case 22:										///< 商品快照
+						{
+							while( nMsgCount-- > 0 )
+							{
+								m_oQuoDataCenter.UpdateDayLine( XDF_SZ, pbuf, sizeof(XDFAPI_StockData5) );
+
+								pbuf += sizeof(XDFAPI_StockData5);
+							}
+							nLen -= pMsgHead->MsgLen;
+						}
+						break;
+					case 24:///< XDFAPI_PreNameChg					///< 前缀变更包
+						nLen -= pMsgHead->MsgLen;
+						break;
+					}
+				}
+				else												///< 单一数据包
+				{
+					pbuf += sizeof(XDFAPI_MsgHead);
+					nLen -= sizeof(XDFAPI_MsgHead);
+
+					switch ( pMsgHead->MsgType )
+					{
+					case 1:///< 市场状态信息
+						{
+							//XDFAPI_MarketStatusInfo* pData = (XDFAPI_MarketStatusInfo*)pbuf;
+							//::printf( "市场日期=%u,时间=%u\n", pData->MarketDate, pData->MarketTime );
+							pbuf += sizeof(XDFAPI_MarketStatusInfo);
+							nLen -= pMsgHead->MsgLen;
+						}
+						break;
+					case 23:///< 停牌标识
+						{
+							//XDFAPI_StopFlag* pData = (XDFAPI_StopFlag*)pbuf;
+							//::printf( "停牌标识=%c\n", pData->SFlag );
+							pbuf += sizeof(XDFAPI_StopFlag);
+							nLen -= pMsgHead->MsgLen;
+						}
+						break;
+					}
+				}
+			}
+		}
+		case XDF_CF:												///< 处理中金期货的行情推送
+		{
+			while( nLen > 0 )
+			{
+				pMsgHead = (XDFAPI_UniMsgHead*)pbuf;
+
+				if( pMsgHead->MsgType < 0 )							///< 复合数据包
+				{
+					int				nMsgCount = pMsgHead->MsgCount;
+					pbuf += sizeof(XDFAPI_UniMsgHead);
+					nLen -= sizeof(XDFAPI_UniMsgHead);
+
+					switch ( abs(pMsgHead->MsgType) )
+					{
+					case 20:										///< 商品快照
+						{
+							while( nMsgCount-- > 0 )
+							{
+								char				pszCode[8] = { 0 };
+								XDFAPI_CffexData*	pData = (XDFAPI_CffexData*)pbuf;
+
+								if( ::strncmp( pData->Code, "600098", 6 ) == 0 )
+									int a = 0;
+								::memcpy( pszCode, pData->Code, 6 );
+								::printf( "快照:%s, 价格:%u\n", pszCode, pData->Now );
+
+								pbuf += sizeof(XDFAPI_CffexData);
+							}
+						}
+						break;
+					}
+
+					nLen -= pMsgHead->MsgLen;
+				}
+				else												///< 单一数据包
+				{
+					pbuf += sizeof(XDFAPI_MsgHead);
+					nLen -= sizeof(XDFAPI_MsgHead);
+
+					switch ( pMsgHead->MsgType )
+					{
+					case 1:///< 市场状态信息
+						{
+							XDFAPI_MarketStatusInfo* pData = (XDFAPI_MarketStatusInfo*)pbuf;
+
+							::printf( "市场日期=%u,时间=%u\n", pData->MarketDate, pData->MarketTime );
+
+							pbuf += sizeof(XDFAPI_MarketStatusInfo);
+							nLen -= pMsgHead->MsgLen;
+						}
+						break;
+					}
+				}
+			}
+		}///< end case
 	}
 }
 

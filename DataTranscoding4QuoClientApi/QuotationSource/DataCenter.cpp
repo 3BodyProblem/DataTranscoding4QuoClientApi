@@ -67,34 +67,34 @@ char* CacheAlloc::GrabCache( enum XDFMarket eMkID, unsigned int& nOutSize )
 	switch( eMkID )
 	{
 	case XDF_SH:		///< 上海Lv1
-		nBufferSize4Market = XDF_SH_COUNT * sizeof(T_DAY_LINE) * s_nNumberInSection;
+		nBufferSize4Market = sizeof(T_DAY_LINE) * s_nNumberInSection;
 		break;
 	case XDF_SHL2:		///< 上海Lv2(QuoteClientApi内部屏蔽)
-		nBufferSize4Market = XDF_SHL2_COUNT * sizeof(T_DAY_LINE) * s_nNumberInSection;
+		nBufferSize4Market = sizeof(T_DAY_LINE) * s_nNumberInSection;
 		break;
 	case XDF_SHOPT:		///< 上海期权
-		nBufferSize4Market = XDF_SHOPT_COUNT * sizeof(T_DAY_LINE) * s_nNumberInSection;
+		nBufferSize4Market = sizeof(T_DAY_LINE) * s_nNumberInSection;
 		break;
 	case XDF_SZ:		///< 深证Lv1
-		nBufferSize4Market = XDF_SZ_COUNT * sizeof(T_DAY_LINE) * s_nNumberInSection;
+		nBufferSize4Market = sizeof(T_DAY_LINE) * s_nNumberInSection;
 		break;
 	case XDF_SZL2:		///< 深证Lv2(QuoteClientApi内部屏蔽)
-		nBufferSize4Market = XDF_SZL2_COUNT * sizeof(T_DAY_LINE) * s_nNumberInSection;
+		nBufferSize4Market = sizeof(T_DAY_LINE) * s_nNumberInSection;
 		break;
 	case XDF_SZOPT:		///< 深圳期权
-		nBufferSize4Market = XDF_SZOPT_COUNT * sizeof(T_DAY_LINE) * s_nNumberInSection;
+		nBufferSize4Market = sizeof(T_DAY_LINE) * s_nNumberInSection;
 		break;
 	case XDF_CF:		///< 中金期货
-		nBufferSize4Market = XDF_CF_COUNT * sizeof(T_DAY_LINE) * s_nNumberInSection;
+		nBufferSize4Market = sizeof(T_DAY_LINE) * s_nNumberInSection;
 		break;
 	case XDF_ZJOPT:		///< 中金期权
-		nBufferSize4Market = XDF_ZJOPT_COUNT * sizeof(T_DAY_LINE) * s_nNumberInSection;
+		nBufferSize4Market = sizeof(T_DAY_LINE) * s_nNumberInSection;
 		break;
 	case XDF_CNF:		///< 商品期货(上海/郑州/大连)
-		nBufferSize4Market = XDF_CNF_COUNT * sizeof(T_DAY_LINE) * s_nNumberInSection;
+		nBufferSize4Market = sizeof(T_DAY_LINE) * s_nNumberInSection;
 		break;
 	case XDF_CNFOPT:	///< 商品期权(上海/郑州/大连)
-		nBufferSize4Market = XDF_CNFOPT_COUNT * sizeof(T_DAY_LINE) * s_nNumberInSection;
+		nBufferSize4Market = sizeof(T_DAY_LINE) * s_nNumberInSection;
 		break;
 	default:
 		throw std::runtime_error( "DayLineArray::GrabCache() : unknow market id" );
@@ -146,7 +146,7 @@ void QuotationData::UpdateModuleStatus( enum XDFMarket eMarket, int nStatus )
 	m_mapModuleStatus[eMarket] = nStatus;
 }
 
-void QuotationData::BuildSecurity( enum XDFMarket eMarket, std::string& sCode, T_LINE_PARAM& refParam )
+int QuotationData::BuildSecurity( enum XDFMarket eMarket, std::string& sCode, T_LINE_PARAM& refParam )
 {
 	unsigned int		nBufSize = 0;
 	char*				pDataPtr = NULL;
@@ -243,13 +243,138 @@ void QuotationData::BuildSecurity( enum XDFMarket eMarket, std::string& sCode, T
 		}
 		break;
 	default:
-		nErrorCode = -1024;;
+		nErrorCode = -1024;
+		break;
 	}
 
 	if( nErrorCode < 0 )
 	{
 		QuoCollector::GetCollector()->OnLog( TLV_ERROR, "QuotationData::BuildSecurity() : an error occur while building security table, marketid=%d, errorcode=%d", (int)eMarket, nErrorCode );
 	}
+
+	return nErrorCode;
+}
+
+int QuotationData::UpdateDayLine( enum XDFMarket eMarket, char* pSnapData, unsigned int nSnapSize )
+{
+	int				nErrorCode = 0;
+	T_DAY_LINE		refDayLine = { 0 };
+
+	switch( refDayLine.eMarketID )
+	{
+	case XDF_SH:	///< 上证L1
+		{
+			refDayLine.eMarketID = XDF_SH;
+			switch( nSnapSize )
+			{
+			case sizeof(XDFAPI_StockData5):
+				{
+					XDFAPI_StockData5*		pStock = (XDFAPI_StockData5*)pSnapData;
+					T_MAP_QUO::iterator		it = m_mapSHL1.find( std::string(pStock->Code, 6 ) );
+
+					if( it != m_mapSHL1.end() )
+					{
+						T_LINE_PARAM&		refParam = it->second.first;
+						T_DAYLINE_CACHE&	refDayLineCache = it->second.second;
+
+						::strncpy( refDayLine.Code, pStock->Code, 6 );
+						nErrorCode = refDayLineCache.PutData( &refDayLine );
+					}
+				}
+				break;
+			case sizeof(XDFAPI_IndexData):
+				{
+					XDFAPI_IndexData*		pStock = (XDFAPI_IndexData*)pSnapData;
+					T_MAP_QUO::iterator		it = m_mapSHL1.find( std::string(pStock->Code, 6 ) );
+
+					if( it != m_mapSHL1.end() )
+					{
+						T_LINE_PARAM&		refParam = it->second.first;
+						T_DAYLINE_CACHE&	refDayLineCache = it->second.second;
+
+						::strncpy( refDayLine.Code, pStock->Code, 6 );
+						nErrorCode = refDayLineCache.PutData( &refDayLine );
+					}
+				}
+				break;
+			}
+		}
+		break;
+	case XDF_SHOPT:	///< 上期
+		{
+			T_QUO_DATA&	refData = m_mapSHOPT[std::string(refDayLine.Code)];
+			if( refData.first.dPriceRate == 0 )
+			{
+				nErrorCode = refData.second.PutData( &refDayLine );
+			}
+		}
+		break;
+	case XDF_SZ:	///< 深证L1
+		{
+			T_QUO_DATA&	refData = m_mapSZL1[std::string(refDayLine.Code)];
+			if( refData.first.dPriceRate == 0 )
+			{
+				nErrorCode = refData.second.PutData( &refDayLine );
+			}
+		}
+		break;
+	case XDF_SZOPT:	///< 深期
+		{
+			T_QUO_DATA&	refData = m_mapSZOPT[std::string(refDayLine.Code)];
+			if( refData.first.dPriceRate == 0 )
+			{
+				nErrorCode = refData.second.PutData( &refDayLine );
+			}
+		}
+		break;
+	case XDF_CF:	///< 中金期货
+		{
+			T_QUO_DATA&	refData = m_mapCFF[std::string(refDayLine.Code)];
+			if( refData.first.dPriceRate == 0 )
+			{
+				nErrorCode = refData.second.PutData( &refDayLine );
+			}
+		}
+		break;
+	case XDF_ZJOPT:	///< 中金期权
+		{
+			T_QUO_DATA&	refData = m_mapCFFOPT[std::string(refDayLine.Code)];
+			if( refData.first.dPriceRate == 0 )
+			{
+				nErrorCode = refData.second.PutData( &refDayLine );
+			}
+		}
+		break;
+	case XDF_CNF:	///< 商品期货(上海/郑州/大连)
+		{
+			T_QUO_DATA&	refData = m_mapCNF[std::string(refDayLine.Code)];
+			if( refData.first.dPriceRate == 0 )
+			{
+				nErrorCode = refData.second.PutData( &refDayLine );
+			}
+		}
+		break;
+	case XDF_CNFOPT:///< 商品期权(上海/郑州/大连)
+		{
+			T_QUO_DATA&	refData = m_mapCNFOPT[std::string(refDayLine.Code)];
+			if( refData.first.dPriceRate == 0 )
+			{
+				nErrorCode = refData.second.PutData( &refDayLine );
+			}
+		}
+		break;
+	default:
+		nErrorCode = -1024;
+		break;
+	}
+
+	if( nErrorCode < 0 )
+	{
+		QuoCollector::GetCollector()->OnLog( TLV_ERROR, "QuotationData::UpdateDayLine() : an error occur while updating day line(%s), marketid=%d, errorcode=%d", refDayLine.Code, (int)refDayLine.eMarketID, nErrorCode );
+		return -1;
+	}
+
+	return 0;
 }
 
 

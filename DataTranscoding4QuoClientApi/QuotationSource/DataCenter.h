@@ -101,7 +101,7 @@ private:
 
 
 typedef	std::pair<T_LINE_PARAM,T_DAYLINE_CACHE>	T_QUO_DATA;	///< 数据缓存
-typedef std::map<std::string,T_QUO_DATA>	T_MAP_QUO;		///< 行情数据缓存
+typedef std::map<std::string,T_QUO_DATA>		T_MAP_QUO;	///< 行情数据缓存
 
 
 /**
@@ -140,8 +140,18 @@ public:
 	 * @param[in]				eMarket			市场ID
 	 * @param[in]				sCode			商品代码
 	 * @param[in]				refParam		行情参数
+	 * @return					==0				成功
 	 */
-	void						BuildSecurity( enum XDFMarket eMarket, std::string& sCode, T_LINE_PARAM& refParam );
+	int							BuildSecurity( enum XDFMarket eMarket, std::string& sCode, T_LINE_PARAM& refParam );
+
+	/**
+	 * @brief					更新日线信息
+	 * @param[in]				refDayLine		日线信息
+	 * @param[in]				pSnapData		快照指针
+	 * @param[in]				nSnapSize		快照大小
+	 * @return					==0				成功
+	 */
+	int							UpdateDayLine( enum XDFMarket eMarket, char* pSnapData, unsigned int nSnapSize );
 
 protected:
 	TMAP_MKID2STATUS			m_mapModuleStatus;				///< 模块状态表
