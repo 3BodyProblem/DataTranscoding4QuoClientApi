@@ -21,6 +21,7 @@
  */
 typedef struct
 {
+	unsigned char				Valid;			///< 是否有效数据, 1:有效，需要落盘 0:无效或已落盘
 	char						eMarketID;		///< 市场ID
 	char						Code[16];		///< 商品代码
 	unsigned int				Date;			///< 日期(YYYYMMDD)
@@ -95,6 +96,7 @@ public:
 	void						FreeCaches();
 
 private:
+	CriticalObject				m_oLock;					///< 临界区对象
 	unsigned int				m_nMaxCacheSize;			///< 行情缓存总大小
 	unsigned int				m_nAllocateSize;			///< 当前使用的缓存大小
 	char*						m_pDataCache;				///< 行情数据缓存地址
@@ -134,6 +136,11 @@ public:
 	 * @param[in]				nStatus			状态值
 	 */
 	void						UpdateModuleStatus( enum XDFMarket eMarket, int nStatus );
+
+	/**
+	 * @brief					为就绪的市场启动落盘线程
+	 */
+	void						BeginDumpThread( enum XDFMarket eMarket, int nStatus );
 
 public:
 	/**

@@ -44,21 +44,19 @@ public:
 	 * @detail				打开或创建一个文件
 	 * @param[in]			pszFileFolder		文件目录
 	 * @param[in]			bIsRead				true:为加载一个文件; false:为写一个文件
-	 * @param[in]			nTradingDay			行情交易日期
 	 * @param[in]			bAppendModel		追加模式(默认为“否”)
 	 */
-	MemoDumper( bool bIsRead, const char* pszFileFolder, unsigned int nTradingDay, bool bAppendModel = false );
+	MemoDumper( bool bIsRead, const char* pszFileFolder, bool bAppendModel = false );
 	MemoDumper();
 	~MemoDumper();
 
 	/**
 	 * @brief				打开或创建一个文件
 	 * @param[in]			pszFileFolder		文件目录
-	 * @param[in]			bIsRead				true:为加载一个文件; true:为写一个文件
-	 * @param[in]			nTradingDay			行情交易日期
+	 * @param[in]			bIsRead				true:为加载一个文件; false:为写一个文件
 	 * @return				true				成功
 	 */
-	bool					Open( bool bIsRead, const char* pszFileFolder, unsigned int nTradingDay );
+	bool					Open( bool bIsRead, const char* pszFileFolder );
 
 	/**
 	 * @brief				关闭文件
@@ -69,13 +67,6 @@ public:
 	 * @brief				是否打开成功
 	 */
 	bool					IsOpen();
-
-	/**
-	 * @brief				取得文件数据对应的行情交易日期
-	 * @return				>0			合法数据
-							=0			非法数据
-	 */
-	unsigned int			GetTradingDay();
 
 	/**
 	 * @brief				读/写函数
@@ -90,7 +81,6 @@ public:
 
 protected:
 	bool					m_bAppendModel;			///< 文件写追加模式
-	unsigned int			m_nTradingDay;			///< 行情数据的交易日期
 	std::ifstream			m_fInput;				///< 写文件
 	std::ofstream			m_fOutput;				///< 读文件
 	bool					m_bIsRead;				///< 是否为读文件
@@ -107,19 +97,19 @@ MemoDumper<TYPE>::~MemoDumper()
 
 template<class TYPE>
 MemoDumper<TYPE>::MemoDumper()
- : m_bIsRead( true ), m_nTradingDay( 0 ), m_bAppendModel( false )
+ : m_bIsRead( true ), m_bAppendModel( false )
 {
 	::memset( m_pszTargetFile, 0, sizeof(m_pszTargetFile) );
 	::memset( m_pszTmpFilePath, 0, sizeof(m_pszTmpFilePath) );
 }
 
 template<class TYPE>
-MemoDumper<TYPE>::MemoDumper( bool bIsRead, const char* pszFileFolder, unsigned int nTradingDay, bool bAppendModel )
- : m_bIsRead( bIsRead ), m_nTradingDay( 0 ), m_bAppendModel( bAppendModel )
+MemoDumper<TYPE>::MemoDumper( bool bIsRead, const char* pszFileFolder, bool bAppendModel )
+ : m_bIsRead( bIsRead ), m_bAppendModel( bAppendModel )
 {
 	if( NULL != pszFileFolder )
 	{
-		Open( bIsRead, pszFileFolder, nTradingDay );
+		Open( bIsRead, pszFileFolder );
 	}
 }
 
@@ -141,11 +131,11 @@ void MemoDumper<TYPE>::Close()
 }
 
 template<class TYPE>
-bool MemoDumper<TYPE>::Open( bool bIsRead, const char* pszFileFolder, unsigned int nTradingDay )
+bool MemoDumper<TYPE>::Open( bool bIsRead, const char* pszFileFolder )
 {
 	m_bIsRead = bIsRead;
 	::memset( m_pszTargetFile, 0, sizeof(m_pszTargetFile) );
-	::printf( "MemoDumper::Open() : File Path = %s, read flag = %d, trading day = %u\n", pszFileFolder, bIsRead, nTradingDay );
+	::printf( "MemoDumper::Open() : File Path = %s, read flag = %d\n", pszFileFolder, bIsRead );
 
 	if( true == m_bIsRead )
 	{
@@ -154,12 +144,10 @@ bool MemoDumper<TYPE>::Open( bool bIsRead, const char* pszFileFolder, unsigned i
 		if( m_fInput.is_open() )
 		{
 			m_fInput.seekg( 0, std::ios::beg );
-			m_fInput.read( (char*)&m_nTradingDay, sizeof(m_nTradingDay) );
 		}
 	}
 	else
 	{
-		m_nTradingDay = nTradingDay;
 		::strcpy( m_pszTmpFilePath, pszFileFolder );
 		::strcpy( m_pszTargetFile, pszFileFolder );
 		::strcat( m_pszTmpFilePath, ".tmp" );
@@ -172,21 +160,9 @@ bool MemoDumper<TYPE>::Open( bool bIsRead, const char* pszFileFolder, unsigned i
 		{
 			m_fOutput.open( m_pszTmpFilePath , std::ios::out|std::ios::binary );
 		}
-
-		if( !m_fOutput.is_open() ) {
-			m_nTradingDay = 0;
-		}
-
-		m_fOutput.write( (char*)&m_nTradingDay, sizeof(m_nTradingDay) );
 	}
 
 	return IsOpen();
-}
-
-template<class TYPE>
-unsigned int MemoDumper<TYPE>::GetTradingDay()
-{
-	return m_nTradingDay;
 }
 
 template<class TYPE>

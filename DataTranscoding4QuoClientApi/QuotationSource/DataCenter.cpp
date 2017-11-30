@@ -1,4 +1,5 @@
 #include "DataCenter.h"
+#include "DataDump.h"
 #include <windows.h>
 #include <time.h>
 #include <sys/timeb.h>
@@ -7,11 +8,11 @@
 
 ///< -------------------- Configuration ------------------------------------------------
 const int	XDF_SH_COUNT = 20000;					///< 上海Lv1
-const int	XDF_SHL2_COUNT = 20000;					///< 上海Lv2(QuoteClientApi内部屏蔽)
+const int	XDF_SHL2_COUNT = 0;						///< 上海Lv2(QuoteClientApi内部屏蔽)
 const int	XDF_SHOPT_COUNT = 12000	;				///< 上海期权
 const int	XDF_SZ_COUNT = 12000;					///< 深证Lv1
-const int	XDF_SZL2_COUNT = 12000;					///< 深证Lv2(QuoteClientApi内部屏蔽)
-const int	XDF_SZOPT_COUNT = 12000;				///< 深圳期权
+const int	XDF_SZL2_COUNT = 0;						///< 深证Lv2(QuoteClientApi内部屏蔽)
+const int	XDF_SZOPT_COUNT = 0;					///< 深圳期权
 const int	XDF_CF_COUNT = 1000;					///< 中金期货
 const int	XDF_ZJOPT_COUNT = 1000;					///< 中金期权
 const int	XDF_CNF_COUNT = 1000;					///< 商品期货(上海/郑州/大连)
@@ -51,63 +52,81 @@ char* CacheAlloc::GrabCache( enum XDFMarket eMkID, unsigned int& nOutSize )
 {
 	char*			pData = NULL;
 	unsigned int	nBufferSize4Market = 0;
+	CriticalLock	section( m_oLock );
 
-	nOutSize = 0;
-	if( NULL == m_pDataCache )
+	try
 	{
-		m_nMaxCacheSize = (XDF_SH_COUNT + XDF_SHOPT_COUNT + XDF_SZ_COUNT + XDF_SZOPT_COUNT + XDF_CF_COUNT + XDF_ZJOPT_COUNT + XDF_CNF_COUNT + XDF_CNFOPT_COUNT) * sizeof(T_DAY_LINE) * s_nNumberInSection;
-		m_pDataCache = new char[m_nMaxCacheSize];
-	}
+		nOutSize = 0;
+		if( NULL == m_pDataCache )
+		{
+			m_nMaxCacheSize = (XDF_SH_COUNT + XDF_SHOPT_COUNT + XDF_SZ_COUNT + XDF_SZOPT_COUNT + XDF_CF_COUNT + XDF_ZJOPT_COUNT + XDF_CNF_COUNT + XDF_CNFOPT_COUNT) * sizeof(T_DAY_LINE) * s_nNumberInSection;
+			m_pDataCache = new char[m_nMaxCacheSize];
+			::memset( m_pDataCache, 0, m_nMaxCacheSize );
+		}
 
-	if( NULL == m_pDataCache )
+		if( NULL == m_pDataCache )
+		{
+			QuoCollector::GetCollector()->OnLog( TLV_ERROR, "DayLineArray::GrabCache() : invalid buffer pointer." );
+			return NULL;
+		}
+
+		switch( eMkID )
+		{
+		case XDF_SH:		///< 上海Lv1
+			nBufferSize4Market = sizeof(T_DAY_LINE) * s_nNumberInSection;
+			break;
+		case XDF_SHL2:		///< 上海Lv2(QuoteClientApi内部屏蔽)
+			nBufferSize4Market = sizeof(T_DAY_LINE) * s_nNumberInSection;
+			break;
+		case XDF_SHOPT:		///< 上海期权
+			nBufferSize4Market = sizeof(T_DAY_LINE) * s_nNumberInSection;
+			break;
+		case XDF_SZ:		///< 深证Lv1
+			nBufferSize4Market = sizeof(T_DAY_LINE) * s_nNumberInSection;
+			break;
+		case XDF_SZL2:		///< 深证Lv2(QuoteClientApi内部屏蔽)
+			nBufferSize4Market = sizeof(T_DAY_LINE) * s_nNumberInSection;
+			break;
+		case XDF_SZOPT:		///< 深圳期权
+			nBufferSize4Market = sizeof(T_DAY_LINE) * s_nNumberInSection;
+			break;
+		case XDF_CF:		///< 中金期货
+			nBufferSize4Market = sizeof(T_DAY_LINE) * s_nNumberInSection;
+			break;
+		case XDF_ZJOPT:		///< 中金期权
+			nBufferSize4Market = sizeof(T_DAY_LINE) * s_nNumberInSection;
+			break;
+		case XDF_CNF:		///< 商品期货(上海/郑州/大连)
+			nBufferSize4Market = sizeof(T_DAY_LINE) * s_nNumberInSection;
+			break;
+		case XDF_CNFOPT:	///< 商品期权(上海/郑州/大连)
+			nBufferSize4Market = sizeof(T_DAY_LINE) * s_nNumberInSection;
+			break;
+		default:
+			{
+				QuoCollector::GetCollector()->OnLog( TLV_ERROR, "DayLineArray::GrabCache() : unknow market id" );
+				return NULL;
+			}
+		}
+
+		if( (m_nAllocateSize + nBufferSize4Market) > m_nMaxCacheSize )
+		{
+			QuoCollector::GetCollector()->OnLog( TLV_ERROR, "DayLineArray::GrabCache() : not enough space." );
+			return NULL;
+		}
+
+		nOutSize = nBufferSize4Market;
+		pData = m_pDataCache + m_nAllocateSize;
+		m_nAllocateSize += nBufferSize4Market;
+	}
+	catch( std::exception& err )
 	{
-		throw std::runtime_error( "DayLineArray::GrabCache() : invalid buffer pointer." );
+		QuoCollector::GetCollector()->OnLog( TLV_ERROR, "DayLineArray::GrabCache() : an exceptin occur : %s", err.what() );
 	}
-
-	switch( eMkID )
+	catch( ... )
 	{
-	case XDF_SH:		///< 上海Lv1
-		nBufferSize4Market = sizeof(T_DAY_LINE) * s_nNumberInSection;
-		break;
-	case XDF_SHL2:		///< 上海Lv2(QuoteClientApi内部屏蔽)
-		nBufferSize4Market = sizeof(T_DAY_LINE) * s_nNumberInSection;
-		break;
-	case XDF_SHOPT:		///< 上海期权
-		nBufferSize4Market = sizeof(T_DAY_LINE) * s_nNumberInSection;
-		break;
-	case XDF_SZ:		///< 深证Lv1
-		nBufferSize4Market = sizeof(T_DAY_LINE) * s_nNumberInSection;
-		break;
-	case XDF_SZL2:		///< 深证Lv2(QuoteClientApi内部屏蔽)
-		nBufferSize4Market = sizeof(T_DAY_LINE) * s_nNumberInSection;
-		break;
-	case XDF_SZOPT:		///< 深圳期权
-		nBufferSize4Market = sizeof(T_DAY_LINE) * s_nNumberInSection;
-		break;
-	case XDF_CF:		///< 中金期货
-		nBufferSize4Market = sizeof(T_DAY_LINE) * s_nNumberInSection;
-		break;
-	case XDF_ZJOPT:		///< 中金期权
-		nBufferSize4Market = sizeof(T_DAY_LINE) * s_nNumberInSection;
-		break;
-	case XDF_CNF:		///< 商品期货(上海/郑州/大连)
-		nBufferSize4Market = sizeof(T_DAY_LINE) * s_nNumberInSection;
-		break;
-	case XDF_CNFOPT:	///< 商品期权(上海/郑州/大连)
-		nBufferSize4Market = sizeof(T_DAY_LINE) * s_nNumberInSection;
-		break;
-	default:
-		throw std::runtime_error( "DayLineArray::GrabCache() : unknow market id" );
+		QuoCollector::GetCollector()->OnLog( TLV_ERROR, "DayLineArray::GrabCache() : unknow exception" );
 	}
-
-	if( (m_nAllocateSize + nBufferSize4Market) > m_nMaxCacheSize )
-	{
-		throw std::runtime_error( "DayLineArray::GrabCache() : not enough space." );
-	}
-
-	nOutSize = nBufferSize4Market;
-	pData = m_pDataCache + m_nAllocateSize;
-	m_nAllocateSize += nBufferSize4Market;
 
 	return pData;
 }
@@ -144,7 +163,10 @@ void QuotationData::Release()
 void QuotationData::UpdateModuleStatus( enum XDFMarket eMarket, int nStatus )
 {
 	m_mapModuleStatus[eMarket] = nStatus;
+}
 
+void QuotationData::BeginDumpThread( enum XDFMarket eMarket, int nStatus )
+{
 	if( 5 == nStatus )
 	{
 		switch( eMarket )
@@ -163,74 +185,74 @@ void QuotationData::UpdateModuleStatus( enum XDFMarket eMarket, int nStatus )
 			break;
 		case XDF_SHOPT:		///< 上海期权
 			{
-				if( false == m_oThdSHOPT.IsAlive() )
+/*				if( false == m_oThdSHOPT.IsAlive() )
 				{
 					if( 0 != m_oThdSHOPT.Create( "ThreadDumpDayLine4SHOPT()", ThreadDumpDayLine4SHOPT, this ) ) {
 						QuoCollector::GetCollector()->OnLog( TLV_ERROR, "QuotationData::UpdateModuleStatus() : failed 2 create SHOPT day line thread" );
 					}
-				}
+				}*/
 			}
 			break;
 		case XDF_SZ:		///< 深证Lv1
 			{
-				if( false == m_oThdSZL1.IsAlive() )
+/*				if( false == m_oThdSZL1.IsAlive() )
 				{
 					if( 0 != m_oThdSZL1.Create( "ThreadDumpDayLine4SZL1()", ThreadDumpDayLine4SZL1, this ) ) {
 						QuoCollector::GetCollector()->OnLog( TLV_ERROR, "QuotationData::UpdateModuleStatus() : failed 2 create SZL1 day line thread" );
 					}
-				}
+				}*/
 			}
 			break;
 		case XDF_SZL2:		///< 深证Lv2(QuoteClientApi内部屏蔽)
 			break;
 		case XDF_SZOPT:		///< 深圳期权
 			{
-				if( false == m_oThdSZOPT.IsAlive() )
+/*				if( false == m_oThdSZOPT.IsAlive() )
 				{
 					if( 0 != m_oThdSZOPT.Create( "ThreadDumpDayLine4SZOPT()", ThreadDumpDayLine4SZOPT, this ) ) {
 						QuoCollector::GetCollector()->OnLog( TLV_ERROR, "QuotationData::UpdateModuleStatus() : failed 2 create SZL1 day line thread" );
 					}
-				}
+				}*/
 			}
 			break;
 		case XDF_CF:		///< 中金期货
 			{
-				if( false == m_oThdCFF.IsAlive() )
+/*				if( false == m_oThdCFF.IsAlive() )
 				{
 					if( 0 != m_oThdCFF.Create( "ThreadDumpDayLine4CFF()", ThreadDumpDayLine4CFF, this ) ) {
 						QuoCollector::GetCollector()->OnLog( TLV_ERROR, "QuotationData::UpdateModuleStatus() : failed 2 create CFF day line thread" );
 					}
-				}
+				}*/
 			}
 			break;
 		case XDF_ZJOPT:		///< 中金期权
 			{
-				if( false == m_oThdCFFOPT.IsAlive() )
+/*				if( false == m_oThdCFFOPT.IsAlive() )
 				{
 					if( 0 != m_oThdCFFOPT.Create( "ThreadDumpDayLine4CFFOPT()", ThreadDumpDayLine4CFFOPT, this ) ) {
 						QuoCollector::GetCollector()->OnLog( TLV_ERROR, "QuotationData::UpdateModuleStatus() : failed 2 create CFFOPT day line thread" );
 					}
-				}
+				}*/
 			}
 			break;
 		case XDF_CNF:		///< 商品期货(上海/郑州/大连)
 			{
-				if( false == m_oThdCNF.IsAlive() )
+/*				if( false == m_oThdCNF.IsAlive() )
 				{
 					if( 0 != m_oThdCNF.Create( "ThreadDumpDayLine4CNF()", ThreadDumpDayLine4CNF, this ) ) {
 						QuoCollector::GetCollector()->OnLog( TLV_ERROR, "QuotationData::UpdateModuleStatus() : failed 2 create CNF day line thread" );
 					}
-				}
+				}*/
 			}
 			break;
 		case XDF_CNFOPT:	///< 商品期权(上海/郑州/大连)
 			{
-				if( false == m_oThdCNFOPT.IsAlive() )
+/*				if( false == m_oThdCNFOPT.IsAlive() )
 				{
 					if( 0 != m_oThdCNFOPT.Create( "ThreadDumpDayLine4CNFOPT()", ThreadDumpDayLine4CNFOPT, this ) ) {
 						QuoCollector::GetCollector()->OnLog( TLV_ERROR, "QuotationData::UpdateModuleStatus() : failed 2 create CNFOPT day line thread" );
 					}
-				}
+				}*/
 			}
 			break;
 		default:
@@ -239,23 +261,102 @@ void QuotationData::UpdateModuleStatus( enum XDFMarket eMarket, int nStatus )
 	}
 }
 
+typedef char	STR_DAY_LINE[512];
+
 void* QuotationData::ThreadDumpDayLine4SHL1( void* pSelf )
 {
 	QuotationData&	refData = *(QuotationData*)pSelf;
+	char*			pBufPtr = CacheAlloc::GetObj().GetBufferPtr();
+	unsigned int	nBufLen = CacheAlloc::GetObj().GetDataLength();
+	unsigned int	nMaxDataNum = nBufLen / sizeof(T_DAY_LINE);
 
-	while( true == refData.m_oThdSHL1.IsAlive() )
+	while( false == SimpleThread::GetGlobalStopFlag() )
 	{
-		T_MAP_QUO&	refMapData = refData.m_mapSHL1;
+		std::string					sCode;
+		std::ofstream				oDumper;
+		STR_DAY_LINE				pszLine = { 0 };
 
 		SimpleThread::Sleep( 1000 * 1 );
-		for( T_MAP_QUO::iterator it = refMapData.begin(); it != refMapData.end(); it++ )
+		for( int n = 0; n < nMaxDataNum; n++ )
 		{
-			T_DAY_LINE			tagLine = { 0 };
-			T_DAYLINE_CACHE&	refDayLines = it->second.second;
+			T_DAY_LINE*				pDayLine = (T_DAY_LINE*)(pBufPtr + n * sizeof(T_DAY_LINE));
 
-			if( refDayLines.GetData( &tagLine, sizeof(T_DAY_LINE) ) <= 0 )
+			if( 0 == pDayLine->Valid )
 			{
-				break;
+				continue;
+			}
+			else
+			{
+				if( sCode != pDayLine->Code )
+				{
+					std::string			sMkName;
+					char				pszFile[512] = { 0 };
+					unsigned int		nDate = DateTime::Now().DateToLong();
+
+					switch( pDayLine->eMarketID )
+					{
+					case XDF_SH:		///< 上海Lv1
+						sMkName = "SSE";
+						break;
+					case XDF_SHL2:		///< 上海Lv2(QuoteClientApi内部屏蔽)
+						break;
+					case XDF_SHOPT:		///< 上海期权
+						sMkName = "SSE";
+						break;
+					case XDF_SZ:		///< 深证Lv1
+						sMkName = "SZSE";
+						break;
+					case XDF_SZL2:		///< 深证Lv2(QuoteClientApi内部屏蔽)
+						break;
+					case XDF_SZOPT:		///< 深圳期权
+						sMkName = "SZSE";
+						break;
+					case XDF_CF:		///< 中金期货
+						sMkName = "CFFEX";
+						break;
+					case XDF_ZJOPT:		///< 中金期权
+						sMkName = "CFFEX";
+						break;
+					case XDF_CNF:		///< 商品期货(上海/郑州/大连)
+						sMkName = "DCE";
+						break;
+					case XDF_CNFOPT:	///< 商品期权(上海/郑州/大连)SHFE
+						sMkName = "CZCE";
+						break;
+					}
+
+					::sprintf( pszFile, "-%s-TICK-%s-%u-TICK%u_%u.csv", sMkName.c_str(), pDayLine->Code, nDate, pDayLine->Code, nDate );
+					std::string				sFilePath = JoinPath( Configuration::GetConfig().GetDumpFolder(), pszFile );
+					oDumper.open( sFilePath.c_str() , std::ios::out|std::ios::binary|std::ios::app );
+
+					if( !oDumper.is_open() )
+					{
+						QuoCollector::GetCollector()->OnLog( TLV_ERROR, "QuotationData::ThreadDumpDayLine4SHL1() : cannot open file (%s)", sFilePath.c_str() );
+						SimpleThread::Sleep( 1000 * 30 );
+						continue;
+					}
+
+					sCode = pDayLine->Code;
+					oDumper.seekp( 0, std::ios::end );
+					if( 0 == oDumper.tellp() )
+					{
+						std::string		sTitle = "date,openpx,highpx,lowpx,closepx,settlepx,amount,volume,openinterest,numtrades,voip\r\n";
+						oDumper << sTitle;
+					}
+				}
+
+				if( !oDumper.is_open() )
+				{
+					QuoCollector::GetCollector()->OnLog( TLV_ERROR, "QuotationData::ThreadDumpDayLine4SHL1() : invalid file handle" );
+					SimpleThread::Sleep( 1000 * 30 );
+					continue;
+				}
+
+				int		nLen = ::sprintf( pszLine, "%u,%f,%f,%f,%f,%f,%f,%I64d,%I64d,%I64d,%f\r\n"
+					, pDayLine->Date, pDayLine->OpenPx, pDayLine->HighPx, pDayLine->LowPx, pDayLine->ClosePx, pDayLine->SettlePx
+					, pDayLine->Amount, pDayLine->Volume, pDayLine->OpenInterest, pDayLine->NumTrades, pDayLine->Voip );
+				oDumper.write( pszLine, nLen );
+				pDayLine->Valid = 0;
 			}
 		}
 	}
@@ -269,18 +370,41 @@ void* QuotationData::ThreadDumpDayLine4SHOPT( void* pSelf )
 
 	while( true == refData.m_oThdSHOPT.IsAlive() )
 	{
-		T_MAP_QUO&	refMapData = refData.m_mapSHOPT;
+		T_MAP_QUO&				refMapData = refData.m_mapSHOPT;
 
 		SimpleThread::Sleep( 1000 * 1 );
+		if( refMapData.empty() )
+		{
+			continue;
+		}
+
 		for( T_MAP_QUO::iterator it = refMapData.begin(); it != refMapData.end(); it++ )
 		{
 			T_DAY_LINE			tagLine = { 0 };
 			T_DAYLINE_CACHE&	refDayLines = it->second.second;
+			char				pszFile[512] = { 0 };
+			unsigned int		nDate = DateTime::Now().DateToLong();
 
-			if( refDayLines.GetData( &tagLine, sizeof(T_DAY_LINE) ) <= 0 )
+			::sprintf( pszFile, "/SSE/TICK/%s/%u/TICK%u_%u.CVS", it->first.c_str(), nDate, it->first, nDate );
+			std::string				sFilePath = JoinPath( Configuration::GetConfig().GetDumpFolder(), pszFile );
+			MemoDumper<T_DAY_LINE>	oDumper( false, sFilePath.c_str() );
+
+			if( false == oDumper.IsOpen() )
 			{
-				break;
+				QuoCollector::GetCollector()->OnLog( TLV_ERROR, "QuotationData::ThreadDumpDayLine4SHOPT() : cannot open file (%s)", sFilePath.c_str() );
+				SimpleThread::Sleep( 1000 * 30 );
+				continue;
 			}
+
+			while( true )
+			{
+				if( refDayLines.GetData( &tagLine, sizeof(T_DAY_LINE) ) <= 0 )
+				{
+					break;
+				}
+
+			}
+
 		}
 	}
 
@@ -293,17 +417,39 @@ void* QuotationData::ThreadDumpDayLine4SZL1( void* pSelf )
 
 	while( true == refData.m_oThdSZL1.IsAlive() )
 	{
-		T_MAP_QUO&	refMapData = refData.m_mapSZL1;
+		MemoDumper<T_DAY_LINE>	oDumper;
+		T_MAP_QUO&				refMapData = refData.m_mapSZL1;
 
 		SimpleThread::Sleep( 1000 * 1 );
+		if( refMapData.empty() )
+		{
+			continue;
+		}
+
 		for( T_MAP_QUO::iterator it = refMapData.begin(); it != refMapData.end(); it++ )
 		{
 			T_DAY_LINE			tagLine = { 0 };
 			T_DAYLINE_CACHE&	refDayLines = it->second.second;
+			char				pszFile[512] = { 0 };
+			unsigned int		nDate = DateTime::Now().DateToLong();
 
-			if( refDayLines.GetData( &tagLine, sizeof(T_DAY_LINE) ) <= 0 )
+			::sprintf( pszFile, "/SZSE/TICK/%s/%u/TICK%u_%u.CVS", it->first.c_str(), nDate, it->first, nDate );
+			std::string				sFilePath = JoinPath( Configuration::GetConfig().GetDumpFolder(), pszFile );
+			MemoDumper<T_DAY_LINE>	oDumper( false, sFilePath.c_str() );
+
+			if( false == oDumper.IsOpen() )
 			{
-				break;
+				QuoCollector::GetCollector()->OnLog( TLV_ERROR, "QuotationData::ThreadDumpDayLine4SZL1() : cannot open file (%s)", sFilePath.c_str() );
+				SimpleThread::Sleep( 1000 * 30 );
+				continue;
+			}
+
+			while( true )
+			{
+				if( refDayLines.GetData( &tagLine, sizeof(T_DAY_LINE) ) <= 0 )
+				{
+					break;
+				}
 			}
 		}
 	}
@@ -317,17 +463,39 @@ void* QuotationData::ThreadDumpDayLine4SZOPT( void* pSelf )
 
 	while( true == refData.m_oThdSZOPT.IsAlive() )
 	{
-		T_MAP_QUO&	refMapData = refData.m_mapSZOPT;
+		MemoDumper<T_DAY_LINE>	oDumper;
+		T_MAP_QUO&				refMapData = refData.m_mapSZOPT;
 
 		SimpleThread::Sleep( 1000 * 1 );
+		if( refMapData.empty() )
+		{
+			continue;
+		}
+
 		for( T_MAP_QUO::iterator it = refMapData.begin(); it != refMapData.end(); it++ )
 		{
 			T_DAY_LINE			tagLine = { 0 };
 			T_DAYLINE_CACHE&	refDayLines = it->second.second;
+			char				pszFile[512] = { 0 };
+			unsigned int		nDate = DateTime::Now().DateToLong();
 
-			if( refDayLines.GetData( &tagLine, sizeof(T_DAY_LINE) ) <= 0 )
+			::sprintf( pszFile, "/SZSE/TICK/%s/%u/TICK%u_%u.CVS", it->first.c_str(), nDate, it->first, nDate );
+			std::string				sFilePath = JoinPath( Configuration::GetConfig().GetDumpFolder(), pszFile );
+			MemoDumper<T_DAY_LINE>	oDumper( false, sFilePath.c_str() );
+
+			if( false == oDumper.IsOpen() )
 			{
-				break;
+				QuoCollector::GetCollector()->OnLog( TLV_ERROR, "QuotationData::ThreadDumpDayLine4SZOPT() : cannot open file (%s)", sFilePath.c_str() );
+				SimpleThread::Sleep( 1000 * 30 );
+				continue;
+			}
+
+			while( true )
+			{
+				if( refDayLines.GetData( &tagLine, sizeof(T_DAY_LINE) ) <= 0 )
+				{
+					break;
+				}
 			}
 		}
 	}
@@ -341,17 +509,39 @@ void* QuotationData::ThreadDumpDayLine4CFF( void* pSelf )
 
 	while( true == refData.m_oThdCFF.IsAlive() )
 	{
-		T_MAP_QUO&	refMapData = refData.m_mapCFF;
+		MemoDumper<T_DAY_LINE>	oDumper;
+		T_MAP_QUO&				refMapData = refData.m_mapCFF;
 
 		SimpleThread::Sleep( 1000 * 1 );
+		if( refMapData.empty() )
+		{
+			continue;
+		}
+
 		for( T_MAP_QUO::iterator it = refMapData.begin(); it != refMapData.end(); it++ )
 		{
 			T_DAY_LINE			tagLine = { 0 };
 			T_DAYLINE_CACHE&	refDayLines = it->second.second;
+			char				pszFile[512] = { 0 };
+			unsigned int		nDate = DateTime::Now().DateToLong();
 
-			if( refDayLines.GetData( &tagLine, sizeof(T_DAY_LINE) ) <= 0 )
+			::sprintf( pszFile, "/CFFEX/TICK/%s/%u/TICK%u_%u.CVS", it->first.c_str(), nDate, it->first, nDate );
+			std::string				sFilePath = JoinPath( Configuration::GetConfig().GetDumpFolder(), pszFile );
+			MemoDumper<T_DAY_LINE>	oDumper( false, sFilePath.c_str() );
+
+			if( false == oDumper.IsOpen() )
 			{
-				break;
+				QuoCollector::GetCollector()->OnLog( TLV_ERROR, "QuotationData::ThreadDumpDayLine4CFF() : cannot open file (%s)", sFilePath.c_str() );
+				SimpleThread::Sleep( 1000 * 30 );
+				continue;
+			}
+
+			while( true )
+			{
+				if( refDayLines.GetData( &tagLine, sizeof(T_DAY_LINE) ) <= 0 )
+				{
+					break;
+				}
 			}
 		}
 	}
@@ -365,17 +555,39 @@ void* QuotationData::ThreadDumpDayLine4CFFOPT( void* pSelf )
 
 	while( true == refData.m_oThdCFFOPT.IsAlive() )
 	{
-		T_MAP_QUO&	refMapData = refData.m_mapCFFOPT;
+		MemoDumper<T_DAY_LINE>	oDumper;
+		T_MAP_QUO&				refMapData = refData.m_mapCFFOPT;
 
 		SimpleThread::Sleep( 1000 * 1 );
+		if( refMapData.empty() )
+		{
+			continue;
+		}
+
 		for( T_MAP_QUO::iterator it = refMapData.begin(); it != refMapData.end(); it++ )
 		{
 			T_DAY_LINE			tagLine = { 0 };
 			T_DAYLINE_CACHE&	refDayLines = it->second.second;
+			char				pszFile[512] = { 0 };
+			unsigned int		nDate = DateTime::Now().DateToLong();
 
-			if( refDayLines.GetData( &tagLine, sizeof(T_DAY_LINE) ) <= 0 )
+			::sprintf( pszFile, "/CFFEX/TICK/%s/%u/TICK%u_%u.CVS", it->first.c_str(), nDate, it->first, nDate );
+			std::string				sFilePath = JoinPath( Configuration::GetConfig().GetDumpFolder(), pszFile );
+			MemoDumper<T_DAY_LINE>	oDumper( false, sFilePath.c_str() );
+
+			if( false == oDumper.IsOpen() )
 			{
-				break;
+				QuoCollector::GetCollector()->OnLog( TLV_ERROR, "QuotationData::ThreadDumpDayLine4CFFOPT() : cannot open file (%s)", sFilePath.c_str() );
+				SimpleThread::Sleep( 1000 * 30 );
+				continue;
+			}
+
+			while( true )
+			{
+				if( refDayLines.GetData( &tagLine, sizeof(T_DAY_LINE) ) <= 0 )
+				{
+					break;
+				}
 			}
 		}
 	}
@@ -389,17 +601,39 @@ void* QuotationData::ThreadDumpDayLine4CNF( void* pSelf )
 
 	while( true == refData.m_oThdCNF.IsAlive() )
 	{
-		T_MAP_QUO&	refMapData = refData.m_mapCNF;
+		MemoDumper<T_DAY_LINE>	oDumper;
+		T_MAP_QUO&				refMapData = refData.m_mapCNF;
 
 		SimpleThread::Sleep( 1000 * 1 );
+		if( refMapData.empty() )
+		{
+			continue;
+		}
+
 		for( T_MAP_QUO::iterator it = refMapData.begin(); it != refMapData.end(); it++ )
 		{
 			T_DAY_LINE			tagLine = { 0 };
 			T_DAYLINE_CACHE&	refDayLines = it->second.second;
+			char				pszFile[512] = { 0 };
+			unsigned int		nDate = DateTime::Now().DateToLong();
 
-			if( refDayLines.GetData( &tagLine, sizeof(T_DAY_LINE) ) <= 0 )
+			::sprintf( pszFile, "/SSE/TICK/%s/%u/TICK%u_%u.CVS", it->first.c_str(), nDate, it->first, nDate );
+			std::string				sFilePath = JoinPath( Configuration::GetConfig().GetDumpFolder(), pszFile );
+			MemoDumper<T_DAY_LINE>	oDumper( false, sFilePath.c_str() );
+
+			if( false == oDumper.IsOpen() )
 			{
-				break;
+				QuoCollector::GetCollector()->OnLog( TLV_ERROR, "QuotationData::ThreadDumpDayLine4CNF() : cannot open file (%s)", sFilePath.c_str() );
+				SimpleThread::Sleep( 1000 * 30 );
+				continue;
+			}
+
+			while( true )
+			{
+				if( refDayLines.GetData( &tagLine, sizeof(T_DAY_LINE) ) <= 0 )
+				{
+					break;
+				}
 			}
 		}
 	}
@@ -413,17 +647,39 @@ void* QuotationData::ThreadDumpDayLine4CNFOPT( void* pSelf )
 
 	while( true == refData.m_oThdCNFOPT.IsAlive() )
 	{
-		T_MAP_QUO&	refMapData = refData.m_mapCNFOPT;
+		MemoDumper<T_DAY_LINE>	oDumper;
+		T_MAP_QUO&				refMapData = refData.m_mapCNFOPT;
 
 		SimpleThread::Sleep( 1000 * 1 );
+		if( refMapData.empty() )
+		{
+			continue;
+		}
+
 		for( T_MAP_QUO::iterator it = refMapData.begin(); it != refMapData.end(); it++ )
 		{
 			T_DAY_LINE			tagLine = { 0 };
 			T_DAYLINE_CACHE&	refDayLines = it->second.second;
+			char				pszFile[512] = { 0 };
+			unsigned int		nDate = DateTime::Now().DateToLong();
 
-			if( refDayLines.GetData( &tagLine, sizeof(T_DAY_LINE) ) <= 0 )
+			::sprintf( pszFile, "/SSE/TICK/%s/%u/TICK%u_%u.CVS", it->first.c_str(), nDate, it->first, nDate );
+			std::string				sFilePath = JoinPath( Configuration::GetConfig().GetDumpFolder(), pszFile );
+			MemoDumper<T_DAY_LINE>	oDumper( false, sFilePath.c_str() );
+
+			if( false == oDumper.IsOpen() )
 			{
-				break;
+				QuoCollector::GetCollector()->OnLog( TLV_ERROR, "QuotationData::ThreadDumpDayLine4CNFOPT() : cannot open file (%s)", sFilePath.c_str() );
+				SimpleThread::Sleep( 1000 * 30 );
+				continue;
+			}
+
+			while( true )
+			{
+				if( refDayLines.GetData( &tagLine, sizeof(T_DAY_LINE) ) <= 0 )
+				{
+					break;
+				}
 			}
 		}
 	}
@@ -545,6 +801,7 @@ int QuotationData::UpdateDayLine( enum XDFMarket eMarket, char* pSnapData, unsig
 	int				nErrorCode = 0;
 	T_DAY_LINE		refDayLine = { 0 };
 
+	refDayLine.Valid = 1;
 	switch( refDayLine.eMarketID )
 	{
 	case XDF_SH:	///< 上证L1

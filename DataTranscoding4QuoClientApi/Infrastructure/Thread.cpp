@@ -24,8 +24,6 @@ int  SimpleThread::Create( std::string sThreadName, tagSimpleTheadFunction fpFun
 	s_bAllThreadStopFlag = false;
 	m_sThreadName = sThreadName.c_str();
 
-	Join();
-
 	#ifndef LINUXCODE
 		m_hHandle = (HANDLE)::_beginthreadex(	0,
 												0,
@@ -71,48 +69,48 @@ void SimpleThread::Join( unsigned long nWaitTime )
 	m_bThreadStopFlag = true;
 
 #ifndef LINUXCODE
-		if ( m_hHandle != 0 )
-		{
-			int	errorcode = ::WaitForSingleObject( m_hHandle, nWaitTime );
-			if( errorcode == WAIT_TIMEOUT || errorcode == WAIT_FAILED )	{
-				::TerminateThread( m_hHandle, 0 );
-			}
-
-			::CloseHandle( m_hHandle );
-			m_hHandle = NULL;
+	if ( m_hHandle != 0 )
+	{
+		int	errorcode = ::WaitForSingleObject( m_hHandle, nWaitTime );
+		if( errorcode == WAIT_TIMEOUT || errorcode == WAIT_FAILED )	{
+			::TerminateThread( m_hHandle, 0 );
 		}
+
+		::CloseHandle( m_hHandle );
+		m_hHandle = NULL;
+	}
 #else
-		if( m_hHandle != 0 )	{
-			int	i, iRet, smt = 1;
+	if( m_hHandle != 0 )	{
+		int	i, iRet, smt = 1;
 
-			for( i = 0; i < nWaitTime; i++ )
-			{
-				iRet = pthread_kill( m_hHandle, 0 );	///< 发送0信号,这通常是用来检查线程是否存在
-				if( iRet == 0 ) {
-					//	线程还存在
-					this->rv_CpuYield();
-				}
-				else if( iRet == ESRCH ) {
-					//	线程已经自我了断了.
-					break;
-				}
-				else {
-					this->rv_CpuYield();
-					continue;
-				}
+		for( i = 0; i < nWaitTime; i++ )
+		{
+			iRet = pthread_kill( m_hHandle, 0 );	///< 发送0信号,这通常是用来检查线程是否存在
+			if( iRet == 0 ) {
+				//	线程还存在
+				this->rv_CpuYield();
 			}
-			if( i == nWaitTime )	{
-				pthread_cancel( m_hHandle );			///< 超时了,KILL
+			else if( iRet == ESRCH ) {
+				//	线程已经自我了断了.
+				break;
 			}
-
-			m_hHandle = 0;
+			else {
+				this->rv_CpuYield();
+				continue;
+			}
 		}
+		if( i == nWaitTime )	{
+			pthread_cancel( m_hHandle );			///< 超时了,KILL
+		}
+
+		m_hHandle = 0;
+	}
 #endif
 }
 
 bool SimpleThread::IsAlive()
 {
-	if( true == s_bAllThreadStopFlag && true == m_bThreadStopFlag )
+	if( false == s_bAllThreadStopFlag && false == m_bThreadStopFlag )
 	{
 		return true;
 	}
@@ -120,6 +118,11 @@ bool SimpleThread::IsAlive()
 	{
 		return false;
 	}
+}
+
+bool SimpleThread::GetGlobalStopFlag()
+{
+	return s_bAllThreadStopFlag;
 }
 
 void SimpleThread::StopThread()

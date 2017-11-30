@@ -51,6 +51,8 @@ public:
 	 */
 	bool					IsAlive();
 
+	static bool				GetGlobalStopFlag();
+
 	/**
 	 * @brief				设置线程停止标识
 	 */

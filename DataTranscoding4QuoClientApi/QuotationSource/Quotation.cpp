@@ -1161,6 +1161,9 @@ bool __stdcall	Quotation::XDF_OnRspStatusChanged( unsigned char cMarket, int nSt
 		}
 	}
 
+	///< Æô¶¯ÂäÅÌÏß³Ì
+	m_oQuoDataCenter.BeginDumpThread( (enum XDFMarket)cMarket, nStatus );
+
 	return true;
 }
 
