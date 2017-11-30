@@ -22,6 +22,7 @@
 typedef struct
 {
 	unsigned char				Valid;			///< 是否有效数据, 1:有效，需要落盘 0:无效或已落盘
+	unsigned char				Type;			///< 类型
 	char						eMarketID;		///< 市场ID
 	char						Code[16];		///< 商品代码
 	unsigned int				Date;			///< 日期(YYYYMMDD)
@@ -43,6 +44,7 @@ typedef struct
  */
 typedef struct
 {
+	unsigned char				Type;			///< 类型
 	double						dPriceRate;		///< 放大倍数
 } T_LINE_PARAM;
 #pragma pack()
@@ -162,14 +164,7 @@ public:
 	int							UpdateDayLine( enum XDFMarket eMarket, char* pSnapData, unsigned int nSnapSize );
 
 protected:///< 日线落盘线程
-	static void*	__stdcall	ThreadDumpDayLine4SHL1( void* pSelf );
-	static void*	__stdcall	ThreadDumpDayLine4SHOPT( void* pSelf );
-	static void*	__stdcall	ThreadDumpDayLine4SZL1( void* pSelf );
-	static void*	__stdcall	ThreadDumpDayLine4SZOPT( void* pSelf );
-	static void*	__stdcall	ThreadDumpDayLine4CFF( void* pSelf );
-	static void*	__stdcall	ThreadDumpDayLine4CFFOPT( void* pSelf );
-	static void*	__stdcall	ThreadDumpDayLine4CNF( void* pSelf );
-	static void*	__stdcall	ThreadDumpDayLine4CNFOPT( void* pSelf );
+	static void*	__stdcall	ThreadDumpDayLine( void* pSelf );
 
 protected:
 	TMAP_MKID2STATUS			m_mapModuleStatus;				///< 模块状态表
@@ -184,14 +179,7 @@ protected:
 	T_MAP_QUO					m_mapCNF;						///< 商品期货(上海/郑州/大连)
 	T_MAP_QUO					m_mapCNFOPT;					///< 商品期权(上海/郑州/大连)
 protected:
-	SimpleThread				m_oThdSHL1;						///< 上证L1
-	SimpleThread				m_oThdSHOPT;					///< 上证期权
-	SimpleThread				m_oThdSZL1;						///< 深证L1
-	SimpleThread				m_oThdSZOPT;					///< 深证期权
-	SimpleThread				m_oThdCFF;						///< 中金期货
-	SimpleThread				m_oThdCFFOPT;					///< 中金期权
-	SimpleThread				m_oThdCNF;						///< 商品期货(上海/郑州/大连)
-	SimpleThread				m_oThdCNFOPT;					///< 商品期权(上海/郑州/大连)
+	SimpleThread				m_oThdDump;						///< 上证L1
 };
 
 

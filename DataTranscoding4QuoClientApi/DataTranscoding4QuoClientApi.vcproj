@@ -235,6 +235,14 @@
 				>
 			</File>
 			<File
+				RelativePath=".\Infrastructure\File.cpp"
+				>
+			</File>
+			<File
+				RelativePath=".\Infrastructure\File.h"
+				>
+			</File>
+			<File
 				RelativePath=".\Infrastructure\Hash.cpp"
 				>
 			</File>

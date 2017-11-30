@@ -908,6 +908,7 @@ int Quotation::ReloadCNF( enum XDFRunStat eStatus )
 					T_LINE_PARAM			tagParam = { 0 };
 					XDFAPI_NameTableCnf*	pData = (XDFAPI_NameTableCnf*)pbuf;
 
+					tagParam.Type = pData->SecKind;
 					tagParam.dPriceRate = ::pow(10.0, int(vctKindInfo[pData->SecKind].PriceRate) );
 					m_oQuoDataCenter.BuildSecurity( XDF_CNF, std::string( pData->Code, 6 ), tagParam );
 
@@ -1024,6 +1025,7 @@ int Quotation::ReloadCNFOPT( enum XDFRunStat eStatus )
 					T_LINE_PARAM			tagParam = { 0 };
 					XDFAPI_NameTableCnfOpt*	pData = (XDFAPI_NameTableCnfOpt*)pbuf;
 
+					tagParam.Type = pData->SecKind;
 					tagParam.dPriceRate = ::pow(10.0, int(vctKindInfo[pData->SecKind].PriceRate) );
 					m_oQuoDataCenter.BuildSecurity( XDF_CNFOPT, std::string( pData->Code ), tagParam );
 

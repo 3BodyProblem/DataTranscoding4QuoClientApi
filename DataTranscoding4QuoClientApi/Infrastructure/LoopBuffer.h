@@ -117,7 +117,7 @@ template<class tempclass>int  MLoopBufferSt<tempclass>::PutData(const tempclass 
 	}
 
 	errorcode = (m_lFirstRecord + m_lMaxRecord - m_lLastRecord - 1) % m_lMaxRecord;
-	if ( lInSize > errorcode )
+	if ( lInSize*sizeof(tempclass) > errorcode )
 	{
 #ifdef _DEBUG	//	GUOGUO TEMP
 //printf("FAIL:%d,%d, %d, %d, %d, %d\n", m_lFirstRecord, m_lMaxRecord, m_lLastRecord, m_lMaxRecord, errorcode, lInSize);fflush(stdout);
