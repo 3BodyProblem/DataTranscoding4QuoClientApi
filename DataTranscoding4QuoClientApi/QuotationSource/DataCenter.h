@@ -25,17 +25,33 @@ typedef struct
 	unsigned char				Type;			///< 类型
 	char						eMarketID;		///< 市场ID
 	char						Code[16];		///< 商品代码
-	unsigned int				Date;			///< 日期(YYYYMMDD)
+	unsigned int				Date;			///< YYYYMMDD（如20170705）
+	unsigned int				Time;			///< HHMMSSmmm（如093005000)
+	double						PreClosePx;		///< 昨收价
+	double						PreSettlePx;	///< 昨结价
 	double						OpenPx;			///< 开盘价
 	double						HighPx;			///< 最高价
 	double						LowPx;			///< 最低价
 	double						ClosePx;		///< 收盘价
+	double						NowPx;			///< 现价
 	double						SettlePx;		///< 结算价
+	double						UpperPx;		///< 涨停价
+	double						LowerPx;		///< 跌停价
 	double						Amount;			///< 成交额
-	unsigned __int64			Volume;			///< 成交量
-	unsigned __int64			OpenInterest;	///< 持仓量
+	unsigned __int64			Volume;			///< 成交量(股/张/份)
+	unsigned __int64			OpenInterest;	///< 持仓量(股/张/份)
 	unsigned __int64			NumTrades;		///< 成交笔数
+	double						BidPx1;			///< 委托买盘一价格
+	unsigned __int64			BidVol1;		///< 委托买盘一量(股/张/份)
+	double						BidPx2;			///< 委托买盘二价格
+	unsigned __int64			BidVol2;		///< 委托买盘二量(股/张/份)
+	double						AskPx1;			///< 委托卖盘一价格
+	unsigned __int64			AskVol1;		///< 委托卖盘一量(股/张/份)
+	double						AskPx2;			///< 委托卖盘二价格
+	unsigned __int64			AskVol2;		///< 委托卖盘二量(股/张/份)
 	double						Voip;			///< 基金模净、权证溢价
+	char						TradingPhaseCode[12];///< 交易状态
+	char						PreName[8];		///< 证券前缀
 } T_DAY_LINE;
 
 /**

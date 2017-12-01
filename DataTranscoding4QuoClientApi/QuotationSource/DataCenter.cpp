@@ -8,17 +8,17 @@
 
 
 ///< -------------------- Configuration ------------------------------------------------
-const int	XDF_SH_COUNT = 20000;					///< 上海Lv1
+const int	XDF_SH_COUNT = 16000;					///< 上海Lv1
 const int	XDF_SHL2_COUNT = 0;						///< 上海Lv2(QuoteClientApi内部屏蔽)
-const int	XDF_SHOPT_COUNT = 12000	;				///< 上海期权
-const int	XDF_SZ_COUNT = 12000;					///< 深证Lv1
+const int	XDF_SHOPT_COUNT = 500;					///< 上海期权
+const int	XDF_SZ_COUNT = 8000;					///< 深证Lv1
 const int	XDF_SZL2_COUNT = 0;						///< 深证Lv2(QuoteClientApi内部屏蔽)
 const int	XDF_SZOPT_COUNT = 0;					///< 深圳期权
-const int	XDF_CF_COUNT = 1000;					///< 中金期货
-const int	XDF_ZJOPT_COUNT = 1000;					///< 中金期权
-const int	XDF_CNF_COUNT = 1000;					///< 商品期货(上海/郑州/大连)
-const int	XDF_CNFOPT_COUNT = 1000;				///< 商品期权(上海/郑州/大连)
-static unsigned int	s_nNumberInSection = 120;		///< 一个市场有可以缓存多少个数据块
+const int	XDF_CF_COUNT = 500;					///< 中金期货
+const int	XDF_ZJOPT_COUNT = 500;					///< 中金期权
+const int	XDF_CNF_COUNT = 500;					///< 商品期货(上海/郑州/大连)
+const int	XDF_CNFOPT_COUNT = 500;				///< 商品期权(上海/郑州/大连)
+static unsigned int	s_nNumberInSection = 60;		///< 一个市场有可以缓存多少个数据块
 ///< -----------------------------------------------------------------------------------
 
 
@@ -116,7 +116,7 @@ char* CacheAlloc::GrabCache( enum XDFMarket eMkID, unsigned int& nOutSize )
 
 		if( (m_nAllocateSize + nBufferSize4Market) > m_nMaxCacheSize )
 		{
-			QuoCollector::GetCollector()->OnLog( TLV_ERROR, "DayLineArray::GrabCache() : not enough space." );
+			QuoCollector::GetCollector()->OnLog( TLV_ERROR, "DayLineArray::GrabCache() : not enough space ( %u > %u )", (m_nAllocateSize + nBufferSize4Market), m_nMaxCacheSize );
 			return NULL;
 		}
 
@@ -276,7 +276,7 @@ void* QuotationData::ThreadDumpDayLine( void* pSelf )
 					oDumper.seekp( 0, std::ios::end );
 					if( 0 == oDumper.tellp() )
 					{
-						std::string		sTitle = "date,openpx,highpx,lowpx,closepx,settlepx,amount,volume,openinterest,numtrades,voip\r\n";
+						std::string		sTitle = "date,time,preclosepx,presettlepx,openpx,highpx,lowpx,closepx,nowpx,settlepx,upperpx,lowerpx,amount,volume,openinterest,numtrades,bidpx1,bidvol1,bidpx2,bidvol2,askpx1,askvol1,askpx2,askvol2,voip,tradingphasecode,prename\n";
 						oDumper << sTitle;
 					}
 				}
@@ -288,9 +288,12 @@ void* QuotationData::ThreadDumpDayLine( void* pSelf )
 					continue;
 				}
 
-				int		nLen = ::sprintf( pszLine, "%u,%f,%f,%f,%f,%f,%f,%I64d,%I64d,%I64d,%f\r\n"
-					, pDayLine->Date, pDayLine->OpenPx, pDayLine->HighPx, pDayLine->LowPx, pDayLine->ClosePx, pDayLine->SettlePx
-					, pDayLine->Amount, pDayLine->Volume, pDayLine->OpenInterest, pDayLine->NumTrades, pDayLine->Voip );
+				int		nLen = ::sprintf( pszLine, "%u,%u,%f,%f,%f,%f,%f,%f,%f,%f,%f,%f,%f,%I64d,%I64d,%I64d,%f,%I64d,%f,%I64d,%f,%I64d,%f,%I64d,%f,%s,%s\n"
+					, pDayLine->Date, pDayLine->Time, pDayLine->PreClosePx, pDayLine->PreSettlePx
+					, pDayLine->OpenPx, pDayLine->HighPx, pDayLine->LowPx, pDayLine->ClosePx, pDayLine->NowPx, pDayLine->SettlePx
+					, pDayLine->UpperPx, pDayLine->LowerPx, pDayLine->Amount, pDayLine->Volume, pDayLine->OpenInterest, pDayLine->NumTrades
+					, pDayLine->BidPx1, pDayLine->BidVol1, pDayLine->BidPx2, pDayLine->BidVol2, pDayLine->AskPx1, pDayLine->AskVol1, pDayLine->AskPx2, pDayLine->AskVol2
+					, pDayLine->Voip, pDayLine->TradingPhaseCode, pDayLine->PreName );
 				oDumper.write( pszLine, nLen );
 				pDayLine->Valid = 0;
 			}
@@ -413,10 +416,13 @@ int QuotationData::UpdateDayLine( enum XDFMarket eMarket, char* pSnapData, unsig
 {
 	int				nErrorCode = 0;
 	T_DAY_LINE		refDayLine = { 0 };
-	unsigned int	nDate = DateTime::Now().DateToLong();
+	unsigned int	nMachineDate = DateTime::Now().DateToLong();
+	unsigned int	nMachineTime = DateTime::Now().TimeToLong() * 1000;
 
 	refDayLine.Valid = 1;
 	refDayLine.eMarketID = eMarket;
+	refDayLine.Date = nMachineDate;
+	refDayLine.Time = nMachineTime;
 	switch( eMarket )
 	{
 	case XDF_SH:	///< 上证L1
@@ -434,16 +440,28 @@ int QuotationData::UpdateDayLine( enum XDFMarket eMarket, char* pSnapData, unsig
 						T_DAYLINE_CACHE&	refDayLineCache = it->second.second;
 
 						::strncpy( refDayLine.Code, pStock->Code, 6 );
-						refDayLine.Date = nDate;
+						refDayLine.PreClosePx = pStock->PreClose / refParam.dPriceRate;
+						//refDayLine.PreSettlePx = 0;
 						refDayLine.OpenPx = pStock->Open / refParam.dPriceRate;
 						refDayLine.HighPx = pStock->High / refParam.dPriceRate;
 						refDayLine.LowPx = pStock->Low / refParam.dPriceRate;
 						refDayLine.ClosePx = pStock->Now / refParam.dPriceRate;
+						refDayLine.NowPx = refDayLine.ClosePx;
 						//refDayLine.SettlePx = 0;
+						refDayLine.UpperPx = pStock->HighLimit;
+						refDayLine.LowerPx = pStock->LowLimit;
 						refDayLine.Amount = pStock->Amount;
 						refDayLine.Volume = pStock->Volume;
 						//refDayLine.OpenInterest = 0;
 						refDayLine.NumTrades = pStock->Records;
+						refDayLine.BidPx1 = pStock->Buy[0].Price;
+						refDayLine.BidVol1 = pStock->Buy[0].Volume;
+						refDayLine.BidPx2 = pStock->Buy[1].Price;
+						refDayLine.BidVol2 = pStock->Buy[1].Volume;
+						refDayLine.AskPx1 = pStock->Sell[0].Price;
+						refDayLine.AskVol1 = pStock->Sell[0].Volume;
+						refDayLine.AskPx2 = pStock->Sell[1].Price;
+						refDayLine.AskVol2 = pStock->Sell[1].Volume;
 						refDayLine.Voip = pStock->Voip / refParam.dPriceRate;
 
 						nErrorCode = refDayLineCache.PutData( &refDayLine );
@@ -461,12 +479,16 @@ int QuotationData::UpdateDayLine( enum XDFMarket eMarket, char* pSnapData, unsig
 						T_DAYLINE_CACHE&	refDayLineCache = it->second.second;
 
 						::strncpy( refDayLine.Code, pStock->Code, 6 );
-						refDayLine.Date = nDate;
+						refDayLine.PreClosePx = pStock->PreClose / refParam.dPriceRate;
+						//refDayLine.PreSettlePx = 0;
 						refDayLine.OpenPx = pStock->Open / refParam.dPriceRate;
 						refDayLine.HighPx = pStock->High / refParam.dPriceRate;
 						refDayLine.LowPx = pStock->Low / refParam.dPriceRate;
 						refDayLine.ClosePx = pStock->Now / refParam.dPriceRate;
+						refDayLine.NowPx = refDayLine.ClosePx;
 						//refDayLine.SettlePx = 0;
+						//refDayLine.UpperPx = 0;
+						//refDayLine.LowerPx = 0;
 						refDayLine.Amount = pStock->Amount;
 						refDayLine.Volume = pStock->Volume;
 						//refDayLine.OpenInterest = 0;
@@ -491,17 +513,30 @@ int QuotationData::UpdateDayLine( enum XDFMarket eMarket, char* pSnapData, unsig
 				T_DAYLINE_CACHE&	refDayLineCache = it->second.second;
 
 				::strncpy( refDayLine.Code, pStock->Code, 6 );
-				refDayLine.Date = nDate;
+				//refDayLine.PreClosePx = 
+				refDayLine.PreSettlePx = pStock->PreSettlePx / refParam.dPriceRate;
 				refDayLine.OpenPx = pStock->OpenPx / refParam.dPriceRate;
 				refDayLine.HighPx = pStock->HighPx / refParam.dPriceRate;
 				refDayLine.LowPx = pStock->LowPx / refParam.dPriceRate;
 				refDayLine.ClosePx = pStock->Now / refParam.dPriceRate;
+				refDayLine.NowPx = refDayLine.ClosePx;
 				refDayLine.SettlePx = pStock->SettlePrice / refParam.dPriceRate;
+				//refDayLine.UpperPx = pStock-
+				//refDayLine.LowerPx = 
 				refDayLine.Amount = pStock->Amount;
 				refDayLine.Volume = pStock->Volume;
 				refDayLine.OpenInterest = pStock->Position;
 				//refDayLine.NumTrades = 0;
+				refDayLine.BidPx1 = pStock->Buy[0].Price;
+				refDayLine.BidVol1 = pStock->Buy[0].Volume;
+				refDayLine.BidPx2 = pStock->Buy[1].Price;
+				refDayLine.BidVol2 = pStock->Buy[1].Volume;
+				refDayLine.AskPx1 = pStock->Sell[0].Price;
+				refDayLine.AskVol1 = pStock->Sell[0].Volume;
+				refDayLine.AskPx2 = pStock->Sell[1].Price;
+				refDayLine.AskVol2 = pStock->Sell[1].Volume;
 				//refDayLine.Voip = pStock->Voip / refParam.dPriceRate;
+				::memcpy( refDayLine.TradingPhaseCode, pStock->TradingPhaseCode, sizeof(pStock->TradingPhaseCode) );
 
 				nErrorCode = refDayLineCache.PutData( &refDayLine );
 			}
@@ -522,16 +557,28 @@ int QuotationData::UpdateDayLine( enum XDFMarket eMarket, char* pSnapData, unsig
 						T_DAYLINE_CACHE&	refDayLineCache = it->second.second;
 
 						::strncpy( refDayLine.Code, pStock->Code, 6 );
-						refDayLine.Date = nDate;
+						refDayLine.PreClosePx = pStock->PreClose / refParam.dPriceRate;
+						//refDayLine.PreSettlePx = 0;
 						refDayLine.OpenPx = pStock->Open / refParam.dPriceRate;
 						refDayLine.HighPx = pStock->High / refParam.dPriceRate;
 						refDayLine.LowPx = pStock->Low / refParam.dPriceRate;
 						refDayLine.ClosePx = pStock->Now / refParam.dPriceRate;
+						refDayLine.NowPx = refDayLine.ClosePx;
 						//refDayLine.SettlePx = 0;
+						refDayLine.UpperPx = pStock->HighLimit;
+						refDayLine.LowerPx = pStock->LowLimit;
 						refDayLine.Amount = pStock->Amount;
 						refDayLine.Volume = pStock->Volume;
 						//refDayLine.OpenInterest = 0;
 						refDayLine.NumTrades = pStock->Records;
+						refDayLine.BidPx1 = pStock->Buy[0].Price;
+						refDayLine.BidVol1 = pStock->Buy[0].Volume;
+						refDayLine.BidPx2 = pStock->Buy[1].Price;
+						refDayLine.BidVol2 = pStock->Buy[1].Volume;
+						refDayLine.AskPx1 = pStock->Sell[0].Price;
+						refDayLine.AskVol1 = pStock->Sell[0].Volume;
+						refDayLine.AskPx2 = pStock->Sell[1].Price;
+						refDayLine.AskVol2 = pStock->Sell[1].Volume;
 						refDayLine.Voip = pStock->Voip / refParam.dPriceRate;
 
 						nErrorCode = refDayLineCache.PutData( &refDayLine );
@@ -549,12 +596,16 @@ int QuotationData::UpdateDayLine( enum XDFMarket eMarket, char* pSnapData, unsig
 						T_DAYLINE_CACHE&	refDayLineCache = it->second.second;
 
 						::strncpy( refDayLine.Code, pStock->Code, 6 );
-						refDayLine.Date = nDate;
+						refDayLine.PreClosePx = pStock->PreClose / refParam.dPriceRate;
+						//refDayLine.PreSettlePx = 0;
 						refDayLine.OpenPx = pStock->Open / refParam.dPriceRate;
 						refDayLine.HighPx = pStock->High / refParam.dPriceRate;
 						refDayLine.LowPx = pStock->Low / refParam.dPriceRate;
 						refDayLine.ClosePx = pStock->Now / refParam.dPriceRate;
+						refDayLine.NowPx = refDayLine.ClosePx;
 						//refDayLine.SettlePx = 0;
+						//refDayLine.UpperPx = 0;
+						//refDayLine.LowerPx = 0;
 						refDayLine.Amount = pStock->Amount;
 						refDayLine.Volume = pStock->Volume;
 						//refDayLine.OpenInterest = 0;
@@ -579,17 +630,30 @@ int QuotationData::UpdateDayLine( enum XDFMarket eMarket, char* pSnapData, unsig
 				T_DAYLINE_CACHE&	refDayLineCache = it->second.second;
 
 				::strncpy( refDayLine.Code, pStock->Code, 6 );
-				refDayLine.Date = nDate;
+				//refDayLine.PreClosePx = 
+				refDayLine.PreSettlePx = pStock->PreSettlePx / refParam.dPriceRate;
 				refDayLine.OpenPx = pStock->OpenPx / refParam.dPriceRate;
 				refDayLine.HighPx = pStock->HighPx / refParam.dPriceRate;
 				refDayLine.LowPx = pStock->LowPx / refParam.dPriceRate;
 				refDayLine.ClosePx = pStock->Now / refParam.dPriceRate;
+				refDayLine.NowPx = refDayLine.ClosePx;
 				refDayLine.SettlePx = pStock->SettlePrice / refParam.dPriceRate;
+				//refDayLine.UpperPx = pStock-
+				//refDayLine.LowerPx = 
 				refDayLine.Amount = pStock->Amount;
 				refDayLine.Volume = pStock->Volume;
 				refDayLine.OpenInterest = pStock->Position;
 				//refDayLine.NumTrades = 0;
+				refDayLine.BidPx1 = pStock->Buy[0].Price;
+				refDayLine.BidVol1 = pStock->Buy[0].Volume;
+				refDayLine.BidPx2 = pStock->Buy[1].Price;
+				refDayLine.BidVol2 = pStock->Buy[1].Volume;
+				refDayLine.AskPx1 = pStock->Sell[0].Price;
+				refDayLine.AskVol1 = pStock->Sell[0].Volume;
+				refDayLine.AskPx2 = pStock->Sell[1].Price;
+				refDayLine.AskVol2 = pStock->Sell[1].Volume;
 				//refDayLine.Voip = pStock->Voip / refParam.dPriceRate;
+				::memcpy( refDayLine.TradingPhaseCode, pStock->TradingPhaseCode, sizeof(pStock->TradingPhaseCode) );
 
 				nErrorCode = refDayLineCache.PutData( &refDayLine );
 			}
@@ -606,16 +670,29 @@ int QuotationData::UpdateDayLine( enum XDFMarket eMarket, char* pSnapData, unsig
 				T_DAYLINE_CACHE&	refDayLineCache = it->second.second;
 
 				::strncpy( refDayLine.Code, pStock->Code, 6 );
-				refDayLine.Date = nDate;
+				refDayLine.Time = pStock->DataTimeStamp;
+				refDayLine.PreClosePx = pStock->PreClose / refParam.dPriceRate;
+				refDayLine.PreSettlePx = pStock->PreSettlePrice / refParam.dPriceRate;
 				refDayLine.OpenPx = pStock->Open / refParam.dPriceRate;
 				refDayLine.HighPx = pStock->High / refParam.dPriceRate;
 				refDayLine.LowPx = pStock->Low / refParam.dPriceRate;
 				refDayLine.ClosePx = pStock->Now / refParam.dPriceRate;
+				refDayLine.NowPx = refDayLine.ClosePx;
 				refDayLine.SettlePx = pStock->SettlePrice / refParam.dPriceRate;
+				refDayLine.UpperPx = pStock->UpperPrice / refParam.dPriceRate;
+				refDayLine.LowerPx = pStock->LowerPrice / refParam.dPriceRate;
 				refDayLine.Amount = pStock->Amount;
 				refDayLine.Volume = pStock->Volume;
 				refDayLine.OpenInterest = pStock->OpenInterest;
 				//refDayLine.NumTrades = 0;
+				refDayLine.BidPx1 = pStock->Buy[0].Price;
+				refDayLine.BidVol1 = pStock->Buy[0].Volume;
+				refDayLine.BidPx2 = pStock->Buy[1].Price;
+				refDayLine.BidVol2 = pStock->Buy[1].Volume;
+				refDayLine.AskPx1 = pStock->Sell[0].Price;
+				refDayLine.AskVol1 = pStock->Sell[0].Volume;
+				refDayLine.AskPx2 = pStock->Sell[1].Price;
+				refDayLine.AskVol2 = pStock->Sell[1].Volume;
 				//refDayLine.Voip = pStock->Voip / refParam.dPriceRate;
 
 				nErrorCode = refDayLineCache.PutData( &refDayLine );
@@ -633,16 +710,29 @@ int QuotationData::UpdateDayLine( enum XDFMarket eMarket, char* pSnapData, unsig
 				T_DAYLINE_CACHE&	refDayLineCache = it->second.second;
 
 				::strncpy( refDayLine.Code, pStock->Code, 6 );
-				refDayLine.Date = nDate;
+				refDayLine.Time = pStock->DataTimeStamp;
+				refDayLine.PreClosePx = pStock->PreClose / refParam.dPriceRate;
+				refDayLine.PreSettlePx = pStock->PreSettlePrice / refParam.dPriceRate;
 				refDayLine.OpenPx = pStock->Open / refParam.dPriceRate;
 				refDayLine.HighPx = pStock->High / refParam.dPriceRate;
 				refDayLine.LowPx = pStock->Low / refParam.dPriceRate;
 				refDayLine.ClosePx = pStock->Now / refParam.dPriceRate;
+				refDayLine.NowPx = refDayLine.ClosePx;
 				refDayLine.SettlePx = pStock->SettlePrice / refParam.dPriceRate;
+				refDayLine.UpperPx = pStock->UpperPrice / refParam.dPriceRate;
+				refDayLine.LowerPx = pStock->LowerPrice / refParam.dPriceRate;
 				refDayLine.Amount = pStock->Amount;
 				refDayLine.Volume = pStock->Volume;
 				refDayLine.OpenInterest = pStock->OpenInterest;
 				//refDayLine.NumTrades = 0;
+				refDayLine.BidPx1 = pStock->Buy[0].Price;
+				refDayLine.BidVol1 = pStock->Buy[0].Volume;
+				refDayLine.BidPx2 = pStock->Buy[1].Price;
+				refDayLine.BidVol2 = pStock->Buy[1].Volume;
+				refDayLine.AskPx1 = pStock->Sell[0].Price;
+				refDayLine.AskVol1 = pStock->Sell[0].Volume;
+				refDayLine.AskPx2 = pStock->Sell[1].Price;
+				refDayLine.AskVol2 = pStock->Sell[1].Volume;
 				//refDayLine.Voip = pStock->Voip / refParam.dPriceRate;
 
 				nErrorCode = refDayLineCache.PutData( &refDayLine );
@@ -661,16 +751,30 @@ int QuotationData::UpdateDayLine( enum XDFMarket eMarket, char* pSnapData, unsig
 
 				refDayLine.Type = refParam.Type;
 				::strncpy( refDayLine.Code, pStock->Code, 6 );
-				refDayLine.Date = nDate;
+				refDayLine.Date = pStock->Date;
+				refDayLine.Time = pStock->DataTimeStamp;
+				refDayLine.PreClosePx = pStock->PreClose / refParam.dPriceRate;
+				refDayLine.PreSettlePx = pStock->PreSettlePrice / refParam.dPriceRate;
 				refDayLine.OpenPx = pStock->Open / refParam.dPriceRate;
 				refDayLine.HighPx = pStock->High / refParam.dPriceRate;
 				refDayLine.LowPx = pStock->Low / refParam.dPriceRate;
 				refDayLine.ClosePx = pStock->Now / refParam.dPriceRate;
+				refDayLine.NowPx = refDayLine.ClosePx;
 				refDayLine.SettlePx = pStock->SettlePrice / refParam.dPriceRate;
+				refDayLine.UpperPx = pStock->UpperPrice / refParam.dPriceRate;
+				refDayLine.LowerPx = pStock->LowerPrice / refParam.dPriceRate;
 				refDayLine.Amount = pStock->Amount;
 				refDayLine.Volume = pStock->Volume;
 				refDayLine.OpenInterest = pStock->OpenInterest;
 				//refDayLine.NumTrades = 0;
+				refDayLine.BidPx1 = pStock->Buy[0].Price;
+				refDayLine.BidVol1 = pStock->Buy[0].Volume;
+				refDayLine.BidPx2 = pStock->Buy[1].Price;
+				refDayLine.BidVol2 = pStock->Buy[1].Volume;
+				refDayLine.AskPx1 = pStock->Sell[0].Price;
+				refDayLine.AskVol1 = pStock->Sell[0].Volume;
+				refDayLine.AskPx2 = pStock->Sell[1].Price;
+				refDayLine.AskVol2 = pStock->Sell[1].Volume;
 				//refDayLine.Voip = pStock->Voip / refParam.dPriceRate;
 
 				nErrorCode = refDayLineCache.PutData( &refDayLine );
@@ -688,17 +792,31 @@ int QuotationData::UpdateDayLine( enum XDFMarket eMarket, char* pSnapData, unsig
 				T_DAYLINE_CACHE&	refDayLineCache = it->second.second;
 
 				refDayLine.Type = refParam.Type;
-				::strncpy( refDayLine.Code, pStock->Code, 6 );
-				refDayLine.Date = nDate;
+				::strcpy( refDayLine.Code, pStock->Code );
+				refDayLine.Date = pStock->Date;
+				refDayLine.Time = pStock->DataTimeStamp;
+				refDayLine.PreClosePx = pStock->PreClose / refParam.dPriceRate;
+				refDayLine.PreSettlePx = pStock->PreSettlePrice / refParam.dPriceRate;
 				refDayLine.OpenPx = pStock->Open / refParam.dPriceRate;
 				refDayLine.HighPx = pStock->High / refParam.dPriceRate;
 				refDayLine.LowPx = pStock->Low / refParam.dPriceRate;
 				refDayLine.ClosePx = pStock->Now / refParam.dPriceRate;
+				refDayLine.NowPx = refDayLine.ClosePx;
 				refDayLine.SettlePx = pStock->SettlePrice / refParam.dPriceRate;
+				refDayLine.UpperPx = pStock->UpperPrice / refParam.dPriceRate;
+				refDayLine.LowerPx = pStock->LowerPrice / refParam.dPriceRate;
 				refDayLine.Amount = pStock->Amount;
 				refDayLine.Volume = pStock->Volume;
 				refDayLine.OpenInterest = pStock->OpenInterest;
 				//refDayLine.NumTrades = 0;
+				refDayLine.BidPx1 = pStock->Buy[0].Price;
+				refDayLine.BidVol1 = pStock->Buy[0].Volume;
+				refDayLine.BidPx2 = pStock->Buy[1].Price;
+				refDayLine.BidVol2 = pStock->Buy[1].Volume;
+				refDayLine.AskPx1 = pStock->Sell[0].Price;
+				refDayLine.AskVol1 = pStock->Sell[0].Volume;
+				refDayLine.AskPx2 = pStock->Sell[1].Price;
+				refDayLine.AskVol2 = pStock->Sell[1].Volume;
 				//refDayLine.Voip = pStock->Voip / refParam.dPriceRate;
 
 				nErrorCode = refDayLineCache.PutData( &refDayLine );
