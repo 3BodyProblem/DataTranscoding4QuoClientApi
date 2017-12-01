@@ -180,11 +180,12 @@ public:
 	int							UpdateDayLine( enum XDFMarket eMarket, char* pSnapData, unsigned int nSnapSize );
 
 protected:///< 日线落盘线程
-	static void*	__stdcall	ThreadDumpDayLine( void* pSelf );
+	static void*	__stdcall	ThreadDumpDayLine1( void* pSelf );
 
 protected:
 	TMAP_MKID2STATUS			m_mapModuleStatus;				///< 模块状态表
 	std::ofstream				m_vctDataDump[MAX_WRITER_NUM];	///< 落盘文件句柄数组
+	static unsigned int			s_nDumpCount;					///< 落盘次数统计
 protected:
 	T_MAP_QUO					m_mapSHL1;						///< 上证L1
 	T_MAP_QUO					m_mapSHOPT;						///< 上证期权

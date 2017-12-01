@@ -79,6 +79,8 @@ int QuoCollector::RecoverQuotation()
 		return -1;
 	}
 
+	m_pCbDataHandle->OnImage( 234, (char*)&nSec, sizeof(nSec), true );		///< 将服务的数据库状态设置成“Builed”
+
 	return 0;
 }
 

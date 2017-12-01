@@ -146,6 +146,8 @@ void CacheAlloc::FreeCaches()
 }
 
 
+unsigned int QuotationData::s_nDumpCount = 0;
+
 QuotationData::QuotationData()
 {
 }
@@ -176,16 +178,92 @@ void QuotationData::BeginDumpThread( enum XDFMarket eMarket, int nStatus )
 	{
 		if( false == m_oThdDump.IsAlive() )
 		{
-			if( 0 != m_oThdDump.Create( "ThreadDumpDayLine()", ThreadDumpDayLine, this ) ) {
-				QuoCollector::GetCollector()->OnLog( TLV_ERROR, "QuotationData::UpdateModuleStatus() : failed 2 create SHL1 day line thread" );
+			if( 0 != m_oThdDump.Create( "ThreadDumpDayLine1()", ThreadDumpDayLine1, this ) ) {
+				QuoCollector::GetCollector()->OnLog( TLV_ERROR, "QuotationData::BeginDumpThread() : failed 2 create day line thread(1)" );
 			}
 		}
 	}
 }
 
+__inline bool	PrepareFile( T_DAY_LINE* pDayLine, std::string& sCode, std::ofstream& oDumper )
+{
+	char				pszFilePath[512] = { 0 };
+
+	switch( pDayLine->eMarketID )
+	{
+	case XDF_SH:		///< 上海Lv1
+	case XDF_SHOPT:		///< 上海期权
+	case XDF_SHL2:		///< 上海Lv2(QuoteClientApi内部屏蔽)
+		::sprintf( pszFilePath, "SSE/TICK/%s/%u/", pDayLine->Code, pDayLine->Date, pDayLine->Code, pDayLine->Date );
+		break;
+	case XDF_SZ:		///< 深证Lv1
+	case XDF_SZOPT:		///< 深圳期权
+	case XDF_SZL2:		///< 深证Lv2(QuoteClientApi内部屏蔽)
+		::sprintf( pszFilePath, "SZSE/TICK/%s/%u/", pDayLine->Code, pDayLine->Date, pDayLine->Code, pDayLine->Date );
+		break;
+	case XDF_CF:		///< 中金期货
+	case XDF_ZJOPT:		///< 中金期权
+		::sprintf( pszFilePath, "CFFEX/TICK/%s/%u/", pDayLine->Code, pDayLine->Date, pDayLine->Code, pDayLine->Date );
+		break;
+	case XDF_CNF:		///< 商品期货(上海/郑州/大连)
+	case XDF_CNFOPT:	///< 商品期权(上海/郑州/大连)
+		{
+			switch( pDayLine->Type )
+			{
+			case 1:
+			case 4:
+				::sprintf( pszFilePath, "CZCE/TICK/%s/%u/", pDayLine->Code, pDayLine->Date, pDayLine->Code, pDayLine->Date );
+				break;
+			case 2:
+			case 5:
+				::sprintf( pszFilePath, "DCE/TICK/%s/%u/", pDayLine->Code, pDayLine->Date, pDayLine->Code, pDayLine->Date );
+				break;
+			case 3:
+			case 6:
+				::sprintf( pszFilePath, "SHFE/TICK/%s/%u/", pDayLine->Code, pDayLine->Date, pDayLine->Code, pDayLine->Date );
+				break;
+			case 7:
+				::sprintf( pszFilePath, "INE/TICK/%s/%u/", pDayLine->Code, pDayLine->Date, pDayLine->Code, pDayLine->Date );
+				break;
+			default:
+				QuoCollector::GetCollector()->OnLog( TLV_ERROR, "QuotationData::ThreadDumpDayLine1() : invalid market subid (Type=%d)", pDayLine->Type );
+				return false;
+			}
+		}
+		break;
+	default:
+		QuoCollector::GetCollector()->OnLog( TLV_ERROR, "QuotationData::ThreadDumpDayLine1() : invalid market id (%s)", pDayLine->eMarketID );
+		return false;
+	}
+
+	if( oDumper.is_open() )	oDumper.close();
+	std::string				sFilePath = JoinPath( Configuration::GetConfig().GetDumpFolder(), pszFilePath );
+	File::CreateDirectoryTree( sFilePath );
+	char	pszFileName[128] = { 0 };
+	::sprintf( pszFileName, "TICK%s_%u.csv", pDayLine->Code, pDayLine->Date );
+	sFilePath += pszFileName;
+	oDumper.open( sFilePath.c_str() , std::ios::out|std::ios::app );
+
+	if( !oDumper.is_open() )
+	{
+		QuoCollector::GetCollector()->OnLog( TLV_ERROR, "QuotationData::ThreadDumpDayLine1() : cannot open file (%s)", sFilePath.c_str() );
+		return false;
+	}
+
+	sCode = pDayLine->Code;
+	oDumper.seekp( 0, std::ios::end );
+	if( 0 == oDumper.tellp() )
+	{
+		std::string		sTitle = "date,time,preclosepx,presettlepx,openpx,highpx,lowpx,closepx,nowpx,settlepx,upperpx,lowerpx,amount,volume,openinterest,numtrades,bidpx1,bidvol1,bidpx2,bidvol2,askpx1,askvol1,askpx2,askvol2,voip,tradingphasecode,prename\n";
+		oDumper << sTitle;
+	}
+
+	return true;
+}
+
 typedef char	STR_DAY_LINE[512];
 
-void* QuotationData::ThreadDumpDayLine( void* pSelf )
+void* QuotationData::ThreadDumpDayLine1( void* pSelf )
 {
 	QuotationData&	refData = *(QuotationData*)pSelf;
 	char*			pBufPtr = CacheAlloc::GetObj().GetBufferPtr();
@@ -198,7 +276,9 @@ void* QuotationData::ThreadDumpDayLine( void* pSelf )
 		std::ofstream				oDumper;
 		STR_DAY_LINE				pszLine = { 0 };
 
+		s_nDumpCount++;
 		SimpleThread::Sleep( 1000 * 1 );
+		QuoCollector::GetCollector()->OnLog( TLV_INFO, "QuotationData::ThreadDumpDayLine1() : dumping... ( Times=%u ) ( Count=%u )", s_nDumpCount, nMaxDataNum );
 		for( int n = 0; n < nMaxDataNum; n++ )
 		{
 			T_DAY_LINE*				pDayLine = (T_DAY_LINE*)(pBufPtr + n * sizeof(T_DAY_LINE));
@@ -211,79 +291,15 @@ void* QuotationData::ThreadDumpDayLine( void* pSelf )
 			{
 				if( sCode != pDayLine->Code )
 				{
-					std::string			sMkName;
-					char				pszFilePath[512] = { 0 };
-					unsigned int		nDate = DateTime::Now().DateToLong();
-
-					switch( pDayLine->eMarketID )
+					if( false == PrepareFile( pDayLine, sCode, oDumper ) )
 					{
-					case XDF_SH:		///< 上海Lv1
-					case XDF_SHOPT:		///< 上海期权
-					case XDF_SHL2:		///< 上海Lv2(QuoteClientApi内部屏蔽)
-						sMkName = "SSE";
-						break;
-					case XDF_SZ:		///< 深证Lv1
-					case XDF_SZOPT:		///< 深圳期权
-					case XDF_SZL2:		///< 深证Lv2(QuoteClientApi内部屏蔽)
-						sMkName = "SZSE";
-						break;
-					case XDF_CF:		///< 中金期货
-					case XDF_ZJOPT:		///< 中金期权
-						sMkName = "CFFEX";
-						break;
-					case XDF_CNF:		///< 商品期货(上海/郑州/大连)
-					case XDF_CNFOPT:	///< 商品期权(上海/郑州/大连)
-						{
-							switch( pDayLine->Type )
-							{
-							case 1:
-							case 4:
-								sMkName = "CZCE";
-								break;
-							case 2:
-							case 5:
-								sMkName = "DCE";
-								break;
-							case 3:
-							case 6:
-								sMkName = "SHFE";
-								break;
-							case 7:
-								sMkName = "INE";
-								break;
-							}
-						}
-						break;
-					}
-
-					if( oDumper.is_open() )	oDumper.close();
-					::sprintf( pszFilePath, "%s/TICK/%s/%u/", sMkName.c_str(), pDayLine->Code, nDate, pDayLine->Code, nDate );
-					std::string				sFilePath = JoinPath( Configuration::GetConfig().GetDumpFolder(), pszFilePath );
-					File::CreateDirectoryTree( sFilePath );
-					char	pszFileName[128] = { 0 };
-					::sprintf( pszFileName, "TICK%s_%u.csv", pDayLine->Code, nDate );
-					sFilePath += pszFileName;
-					oDumper.open( sFilePath.c_str() , std::ios::out|std::ios::app );
-
-					if( !oDumper.is_open() )
-					{
-						QuoCollector::GetCollector()->OnLog( TLV_ERROR, "QuotationData::ThreadDumpDayLine() : cannot open file (%s)", sFilePath.c_str() );
-						SimpleThread::Sleep( 1000 * 30 );
 						continue;
-					}
-
-					sCode = pDayLine->Code;
-					oDumper.seekp( 0, std::ios::end );
-					if( 0 == oDumper.tellp() )
-					{
-						std::string		sTitle = "date,time,preclosepx,presettlepx,openpx,highpx,lowpx,closepx,nowpx,settlepx,upperpx,lowerpx,amount,volume,openinterest,numtrades,bidpx1,bidvol1,bidpx2,bidvol2,askpx1,askvol1,askpx2,askvol2,voip,tradingphasecode,prename\n";
-						oDumper << sTitle;
 					}
 				}
 
 				if( !oDumper.is_open() )
 				{
-					QuoCollector::GetCollector()->OnLog( TLV_ERROR, "QuotationData::ThreadDumpDayLine() : invalid file handle" );
+					QuoCollector::GetCollector()->OnLog( TLV_ERROR, "QuotationData::ThreadDumpDayLine1() : invalid file handle" );
 					SimpleThread::Sleep( 1000 * 30 );
 					continue;
 				}
