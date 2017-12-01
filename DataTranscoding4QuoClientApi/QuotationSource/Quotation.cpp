@@ -1112,6 +1112,9 @@ bool __stdcall	Quotation::XDF_OnRspStatusChanged( unsigned char cMarket, int nSt
 	QuoCollector::GetCollector()->OnLog( TLV_INFO, "Quotation::XDF_OnRspStatusChanged() : Market(%d), Status=%s", (int)cMarket, pszDesc );
 	m_oQuoDataCenter.UpdateModuleStatus( (enum XDFMarket)cMarket, nStatus );	///< 更新模块工作状态
 
+	static CriticalObject	oLock;				///< 临界区对象
+	CriticalLock	section( oLock );
+
 	///< 判断是否需要重入加载过程
 	unsigned int	nNowT = ::time( NULL );
 	if( (nNowT - m_mapMkBuildTimeT[cMarket]) <= 3 )

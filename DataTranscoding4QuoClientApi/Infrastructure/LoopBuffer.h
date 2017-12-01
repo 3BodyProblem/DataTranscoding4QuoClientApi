@@ -124,7 +124,7 @@ template<class tempclass>int  MLoopBufferSt<tempclass>::PutData(const tempclass 
 #endif
 		return -2;
 	}
-	
+
 	icopysize = m_lMaxRecord - m_lLastRecord;
 	if ( icopysize >= lInSize )
 	{

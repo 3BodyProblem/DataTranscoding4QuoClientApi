@@ -41,11 +41,15 @@ CacheAlloc& CacheAlloc::GetObj()
 
 char* CacheAlloc::GetBufferPtr()
 {
+	CriticalLock	section( m_oLock );
+
 	return m_pDataCache;
 }
 
 unsigned int CacheAlloc::GetDataLength()
 {
+	CriticalLock	section( m_oLock );
+
 	return m_nAllocateSize;
 }
 
@@ -215,15 +219,13 @@ void* QuotationData::ThreadDumpDayLine( void* pSelf )
 					{
 					case XDF_SH:		///< 上海Lv1
 					case XDF_SHOPT:		///< 上海期权
-						sMkName = "SSE";
-						break;
 					case XDF_SHL2:		///< 上海Lv2(QuoteClientApi内部屏蔽)
+						sMkName = "SSE";
 						break;
 					case XDF_SZ:		///< 深证Lv1
 					case XDF_SZOPT:		///< 深圳期权
-						sMkName = "SZSE";
-						break;
 					case XDF_SZL2:		///< 深证Lv2(QuoteClientApi内部屏蔽)
+						sMkName = "SZSE";
 						break;
 					case XDF_CF:		///< 中金期货
 					case XDF_ZJOPT:		///< 中金期权
@@ -254,7 +256,7 @@ void* QuotationData::ThreadDumpDayLine( void* pSelf )
 						break;
 					}
 
-					oDumper.close();
+					if( oDumper.is_open() )	oDumper.close();
 					::sprintf( pszFilePath, "%s/TICK/%s/%u/", sMkName.c_str(), pDayLine->Code, nDate, pDayLine->Code, nDate );
 					std::string				sFilePath = JoinPath( Configuration::GetConfig().GetDumpFolder(), pszFilePath );
 					File::CreateDirectoryTree( sFilePath );
@@ -414,11 +416,11 @@ int QuotationData::UpdateDayLine( enum XDFMarket eMarket, char* pSnapData, unsig
 	unsigned int	nDate = DateTime::Now().DateToLong();
 
 	refDayLine.Valid = 1;
-	switch( refDayLine.eMarketID )
+	refDayLine.eMarketID = eMarket;
+	switch( eMarket )
 	{
 	case XDF_SH:	///< 上证L1
 		{
-			refDayLine.eMarketID = XDF_SH;
 			switch( nSnapSize )
 			{
 			case sizeof(XDFAPI_StockData5):
@@ -483,7 +485,6 @@ int QuotationData::UpdateDayLine( enum XDFMarket eMarket, char* pSnapData, unsig
 			XDFAPI_ShOptData*		pStock = (XDFAPI_ShOptData*)pSnapData;
 			T_MAP_QUO::iterator		it = m_mapSHOPT.find( std::string(pStock->Code, 8 ) );
 
-			refDayLine.eMarketID = XDF_SHOPT;
 			if( it != m_mapSHOPT.end() )
 			{
 				T_LINE_PARAM&		refParam = it->second.first;
@@ -508,7 +509,6 @@ int QuotationData::UpdateDayLine( enum XDFMarket eMarket, char* pSnapData, unsig
 		break;
 	case XDF_SZ:	///< 深证L1
 		{
-			refDayLine.eMarketID = XDF_SZ;
 			switch( nSnapSize )
 			{
 			case sizeof(XDFAPI_StockData5):
@@ -516,7 +516,7 @@ int QuotationData::UpdateDayLine( enum XDFMarket eMarket, char* pSnapData, unsig
 					XDFAPI_StockData5*		pStock = (XDFAPI_StockData5*)pSnapData;
 					T_MAP_QUO::iterator		it = m_mapSZL1.find( std::string(pStock->Code, 6 ) );
 
-					if( it != m_mapSHL1.end() )
+					if( it != m_mapSZL1.end() )
 					{
 						T_LINE_PARAM&		refParam = it->second.first;
 						T_DAYLINE_CACHE&	refDayLineCache = it->second.second;
@@ -573,7 +573,6 @@ int QuotationData::UpdateDayLine( enum XDFMarket eMarket, char* pSnapData, unsig
 			XDFAPI_SzOptData*		pStock = (XDFAPI_SzOptData*)pSnapData;
 			T_MAP_QUO::iterator		it = m_mapSZOPT.find( std::string(pStock->Code,8) );
 
-			refDayLine.eMarketID = XDF_SZOPT;
 			if( it != m_mapSZOPT.end() )
 			{
 				T_LINE_PARAM&		refParam = it->second.first;
@@ -601,7 +600,6 @@ int QuotationData::UpdateDayLine( enum XDFMarket eMarket, char* pSnapData, unsig
 			XDFAPI_CffexData*		pStock = (XDFAPI_CffexData*)pSnapData;
 			T_MAP_QUO::iterator		it = m_mapCFF.find( std::string(pStock->Code,6) );
 
-			refDayLine.eMarketID = XDF_CF;
 			if( it != m_mapCFF.end() )
 			{
 				T_LINE_PARAM&		refParam = it->second.first;
@@ -629,7 +627,6 @@ int QuotationData::UpdateDayLine( enum XDFMarket eMarket, char* pSnapData, unsig
 			XDFAPI_ZjOptData*		pStock = (XDFAPI_ZjOptData*)pSnapData;
 			T_MAP_QUO::iterator		it = m_mapCFFOPT.find( std::string(pStock->Code) );
 
-			refDayLine.eMarketID = XDF_ZJOPT;
 			if( it != m_mapCFFOPT.end() )
 			{
 				T_LINE_PARAM&		refParam = it->second.first;
@@ -662,7 +659,6 @@ int QuotationData::UpdateDayLine( enum XDFMarket eMarket, char* pSnapData, unsig
 				T_LINE_PARAM&		refParam = it->second.first;
 				T_DAYLINE_CACHE&	refDayLineCache = it->second.second;
 
-				refDayLine.eMarketID = XDF_CNF;
 				refDayLine.Type = refParam.Type;
 				::strncpy( refDayLine.Code, pStock->Code, 6 );
 				refDayLine.Date = nDate;
@@ -691,7 +687,6 @@ int QuotationData::UpdateDayLine( enum XDFMarket eMarket, char* pSnapData, unsig
 				T_LINE_PARAM&		refParam = it->second.first;
 				T_DAYLINE_CACHE&	refDayLineCache = it->second.second;
 
-				refDayLine.eMarketID = XDF_CNFOPT;
 				refDayLine.Type = refParam.Type;
 				::strncpy( refDayLine.Code, pStock->Code, 6 );
 				refDayLine.Date = nDate;
@@ -717,7 +712,7 @@ int QuotationData::UpdateDayLine( enum XDFMarket eMarket, char* pSnapData, unsig
 
 	if( nErrorCode < 0 )
 	{
-		QuoCollector::GetCollector()->OnLog( TLV_ERROR, "QuotationData::UpdateDayLine() : an error occur while updating day line(%s), marketid=%d, errorcode=%d", refDayLine.Code, (int)refDayLine.eMarketID, nErrorCode );
+		QuoCollector::GetCollector()->OnLog( TLV_ERROR, "QuotationData::UpdateDayLine() : an error occur while updating day line(%s), marketid=%d, errorcode=%d", refDayLine.Code, (int)eMarket, nErrorCode );
 		return -1;
 	}
 
