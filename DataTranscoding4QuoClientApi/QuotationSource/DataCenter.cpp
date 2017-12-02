@@ -55,9 +55,9 @@ unsigned int CacheAlloc::GetDataLength()
 
 char* CacheAlloc::GrabCache( enum XDFMarket eMkID, unsigned int& nOutSize )
 {
-	char*			pData = NULL;
-	unsigned int	nBufferSize4Market = 0;
-	CriticalLock	section( m_oLock );
+	char*					pData = NULL;
+	unsigned int			nBufferSize4Market = 0;
+	CriticalLock			section( m_oLock );
 
 	try
 	{
@@ -265,16 +265,16 @@ typedef char	STR_DAY_LINE[512];
 
 void* QuotationData::ThreadDumpDayLine1( void* pSelf )
 {
-	QuotationData&	refData = *(QuotationData*)pSelf;
-	char*			pBufPtr = CacheAlloc::GetObj().GetBufferPtr();
-	unsigned int	nBufLen = CacheAlloc::GetObj().GetDataLength();
-	unsigned int	nMaxDataNum = nBufLen / sizeof(T_DAY_LINE);
+	QuotationData&				refData = *(QuotationData*)pSelf;
 
 	while( false == SimpleThread::GetGlobalStopFlag() )
 	{
-		std::string					sCode;
-		std::ofstream				oDumper;
-		STR_DAY_LINE				pszLine = { 0 };
+		char*					pBufPtr = CacheAlloc::GetObj().GetBufferPtr();
+		unsigned int			nBufLen = CacheAlloc::GetObj().GetDataLength();
+		unsigned int			nMaxDataNum = nBufLen / sizeof(T_DAY_LINE);
+		std::string				sCode;
+		std::ofstream			oDumper;
+		STR_DAY_LINE			pszLine = { 0 };
 
 		s_nDumpCount++;
 		SimpleThread::Sleep( 1000 * 1 );
@@ -329,9 +329,10 @@ int QuotationData::BuildSecurity( enum XDFMarket eMarket, std::string& sCode, T_
 	{
 	case XDF_SH:	///< 上证L1
 		{
-			T_QUO_DATA&	refData = m_mapSHL1[sCode];
-			if( refData.first.dPriceRate == 0 )
+			T_MAP_QUO::iterator it = m_mapSHL1.find( sCode );
+			if( it == m_mapSHL1.end() )
 			{
+				T_QUO_DATA&		refData = m_mapSHL1[sCode];
 				pDataPtr = CacheAlloc::GetObj().GrabCache( eMarket, nBufSize );
 				refData.first = refParam;
 				nErrorCode = refData.second.Instance( pDataPtr, nBufSize );
@@ -340,9 +341,10 @@ int QuotationData::BuildSecurity( enum XDFMarket eMarket, std::string& sCode, T_
 		break;
 	case XDF_SHOPT:	///< 上期
 		{
-			T_QUO_DATA&	refData = m_mapSHOPT[sCode];
-			if( refData.first.dPriceRate == 0 )
+			T_MAP_QUO::iterator it = m_mapSHOPT.find( sCode );
+			if( it == m_mapSHOPT.end() )
 			{
+				T_QUO_DATA&		refData = m_mapSHOPT[sCode];
 				pDataPtr = CacheAlloc::GetObj().GrabCache( eMarket, nBufSize );
 				refData.first = refParam;
 				nErrorCode = refData.second.Instance( pDataPtr, nBufSize );
@@ -351,9 +353,10 @@ int QuotationData::BuildSecurity( enum XDFMarket eMarket, std::string& sCode, T_
 		break;
 	case XDF_SZ:	///< 深证L1
 		{
-			T_QUO_DATA&	refData = m_mapSZL1[sCode];
-			if( refData.first.dPriceRate == 0 )
+			T_MAP_QUO::iterator it = m_mapSZL1.find( sCode );
+			if( it == m_mapSZL1.end() )
 			{
+				T_QUO_DATA&		refData = m_mapSZL1[sCode];
 				pDataPtr = CacheAlloc::GetObj().GrabCache( eMarket, nBufSize );
 				refData.first = refParam;
 				nErrorCode = refData.second.Instance( pDataPtr, nBufSize );
@@ -362,9 +365,10 @@ int QuotationData::BuildSecurity( enum XDFMarket eMarket, std::string& sCode, T_
 		break;
 	case XDF_SZOPT:	///< 深期
 		{
-			T_QUO_DATA&	refData = m_mapSZOPT[sCode];
-			if( refData.first.dPriceRate == 0 )
+			T_MAP_QUO::iterator it = m_mapSZOPT.find( sCode );
+			if( it == m_mapSZOPT.end() )
 			{
+				T_QUO_DATA&		refData = m_mapSZOPT[sCode];
 				pDataPtr = CacheAlloc::GetObj().GrabCache( eMarket, nBufSize );
 				refData.first = refParam;
 				nErrorCode = refData.second.Instance( pDataPtr, nBufSize );
@@ -373,9 +377,10 @@ int QuotationData::BuildSecurity( enum XDFMarket eMarket, std::string& sCode, T_
 		break;
 	case XDF_CF:	///< 中金期货
 		{
-			T_QUO_DATA&	refData = m_mapCFF[sCode];
-			if( refData.first.dPriceRate == 0 )
+			T_MAP_QUO::iterator it = m_mapCFF.find( sCode );
+			if( it == m_mapCFF.end() )
 			{
+				T_QUO_DATA&		refData = m_mapCFF[sCode];
 				pDataPtr = CacheAlloc::GetObj().GrabCache( eMarket, nBufSize );
 				refData.first = refParam;
 				nErrorCode = refData.second.Instance( pDataPtr, nBufSize );
@@ -384,9 +389,10 @@ int QuotationData::BuildSecurity( enum XDFMarket eMarket, std::string& sCode, T_
 		break;
 	case XDF_ZJOPT:	///< 中金期权
 		{
-			T_QUO_DATA&	refData = m_mapCFFOPT[sCode];
-			if( refData.first.dPriceRate == 0 )
+			T_MAP_QUO::iterator it = m_mapCFFOPT.find( sCode );
+			if( it == m_mapCFFOPT.end() )
 			{
+				T_QUO_DATA&		refData = m_mapCFFOPT[sCode];
 				pDataPtr = CacheAlloc::GetObj().GrabCache( eMarket, nBufSize );
 				refData.first = refParam;
 				nErrorCode = refData.second.Instance( pDataPtr, nBufSize );
@@ -395,9 +401,10 @@ int QuotationData::BuildSecurity( enum XDFMarket eMarket, std::string& sCode, T_
 		break;
 	case XDF_CNF:	///< 商品期货(上海/郑州/大连)
 		{
-			T_QUO_DATA&	refData = m_mapCNF[sCode];
-			if( refData.first.dPriceRate == 0 )
+			T_MAP_QUO::iterator it = m_mapCNF.find( sCode );
+			if( it == m_mapCNF.end() )
 			{
+				T_QUO_DATA&		refData = m_mapCNF[sCode];
 				pDataPtr = CacheAlloc::GetObj().GrabCache( eMarket, nBufSize );
 				refData.first = refParam;
 				nErrorCode = refData.second.Instance( pDataPtr, nBufSize );
@@ -406,9 +413,10 @@ int QuotationData::BuildSecurity( enum XDFMarket eMarket, std::string& sCode, T_
 		break;
 	case XDF_CNFOPT:///< 商品期权(上海/郑州/大连)
 		{
-			T_QUO_DATA&	refData = m_mapCNFOPT[sCode];
-			if( refData.first.dPriceRate == 0 )
+			T_MAP_QUO::iterator it = m_mapCNFOPT.find( sCode );
+			if( it == m_mapCNFOPT.end() )
 			{
+				T_QUO_DATA&		refData = m_mapCNFOPT[sCode];
 				pDataPtr = CacheAlloc::GetObj().GrabCache( eMarket, nBufSize );
 				refData.first = refParam;
 				nErrorCode = refData.second.Instance( pDataPtr, nBufSize );
@@ -528,7 +536,7 @@ int QuotationData::UpdateDayLine( enum XDFMarket eMarket, char* pSnapData, unsig
 				T_LINE_PARAM&		refParam = it->second.first;
 				T_DAYLINE_CACHE&	refDayLineCache = it->second.second;
 
-				::strncpy( refDayLine.Code, pStock->Code, 6 );
+				::strncpy( refDayLine.Code, pStock->Code, 8 );
 				//refDayLine.PreClosePx = 
 				refDayLine.PreSettlePx = pStock->PreSettlePx / refParam.dPriceRate;
 				refDayLine.OpenPx = pStock->OpenPx / refParam.dPriceRate;
@@ -725,7 +733,7 @@ int QuotationData::UpdateDayLine( enum XDFMarket eMarket, char* pSnapData, unsig
 				T_LINE_PARAM&		refParam = it->second.first;
 				T_DAYLINE_CACHE&	refDayLineCache = it->second.second;
 
-				::strncpy( refDayLine.Code, pStock->Code, 6 );
+				::strcpy( refDayLine.Code, pStock->Code );
 				refDayLine.Time = pStock->DataTimeStamp;
 				refDayLine.PreClosePx = pStock->PreClose / refParam.dPriceRate;
 				refDayLine.PreSettlePx = pStock->PreSettlePrice / refParam.dPriceRate;

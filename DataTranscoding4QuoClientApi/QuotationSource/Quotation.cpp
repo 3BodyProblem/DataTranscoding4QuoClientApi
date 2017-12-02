@@ -148,6 +148,7 @@ int Quotation::ReloadShLv1( enum XDFRunStat eStatus )
 		return -1;
 	}
 
+	int						nNum = 0;
 	int						nCodeCount = 0;
 	int						nKindCount = 0;
 	XDFAPI_MarketKindInfo	vctKindInfo[32] = { 0 };
@@ -162,7 +163,7 @@ int Quotation::ReloadShLv1( enum XDFRunStat eStatus )
 	}
 
 	XDFAPI_MarketKindHead* pKindHead = (XDFAPI_MarketKindHead*)(tempbuf+ sizeof(XDFAPI_MsgHead));
-	QuoCollector::GetCollector()->OnLog( TLV_INFO, "Quotation::ReloadShLv1() : SHL1 WareCount = %d", pKindHead->WareCount );
+	QuoCollector::GetCollector()->OnLog( TLV_INFO, "Quotation::ReloadShLv1() : Loading... SHL1 WareCount = %d", pKindHead->WareCount );
 
 	int m = sizeof(XDFAPI_MsgHead)+sizeof(XDFAPI_MarketKindHead);
 	for( int i = 0; m < nErrorCode; )
@@ -204,6 +205,7 @@ int Quotation::ReloadShLv1( enum XDFRunStat eStatus )
 
 					tagParam.dPriceRate = ::pow(10.0, int(vctKindInfo[pData->SecKind].PriceRate) );
 					m_oQuoDataCenter.BuildSecurity( XDF_SH, std::string( pData->Code, 6 ), tagParam );
+					nNum++;
 
 					pbuf += sizeof(XDFAPI_NameTableSh);
 				}
@@ -224,7 +226,9 @@ int Quotation::ReloadShLv1( enum XDFRunStat eStatus )
 		return -3;
 	}
 
+	QuoCollector::GetCollector()->OnLog( TLV_INFO, "Quotation::ReloadShLv1() : Loading... SHL1 Nametable Size = %d", nNum );
 	m_vctMkSvrStatus[XDF_SH] = ET_SS_WORKING;				///< 设置“可服务”状态标识
+	nNum = 0;
 	///< ---------------- 获取快照表数据 -------------------------------------------
 	int		noffset = (sizeof(XDFAPI_StockData5) + sizeof(XDFAPI_UniMsgHead)) * nCodeCount;	///< 根据商品数量，分配获取快照表需要的缓存
 	char*	pszCodeBuf = new char[noffset];
@@ -242,11 +246,13 @@ int Quotation::ReloadShLv1( enum XDFRunStat eStatus )
 			{
 				m_oQuoDataCenter.UpdateDayLine( XDF_SH, pbuf, sizeof(XDFAPI_IndexData) );
 				pbuf += sizeof(XDFAPI_IndexData);
+				nNum++;
 			}
 			else if( abs(pMsgHead->MsgType) == 22 )		///< 快照数据
 			{
 				m_oQuoDataCenter.UpdateDayLine( XDF_SH, pbuf, sizeof(XDFAPI_StockData5) );
 				pbuf += sizeof(XDFAPI_StockData5);
+				nNum++;
 			}
 		}
 
@@ -259,6 +265,8 @@ int Quotation::ReloadShLv1( enum XDFRunStat eStatus )
 		pszCodeBuf = NULL;
 	}
 
+	QuoCollector::GetCollector()->OnLog( TLV_INFO, "Quotation::ReloadShLv1() : Loading... SHL1 Snaptable Size = %d", nNum );
+
 	return 0;
 }
 
@@ -269,6 +277,7 @@ int Quotation::ReloadShOpt( enum XDFRunStat eStatus )
 		return -1;
 	}
 
+	int						nNum = 0;
 	int						nCodeCount = 0;
 	int						nKindCount = 0;
 	XDFAPI_MarketKindInfo	vctKindInfo[32] = { 0 };
@@ -283,7 +292,7 @@ int Quotation::ReloadShOpt( enum XDFRunStat eStatus )
 	}
 
 	XDFAPI_MarketKindHead* pKindHead = (XDFAPI_MarketKindHead*)(tempbuf+ sizeof(XDFAPI_MsgHead));
-	QuoCollector::GetCollector()->OnLog( TLV_INFO, "Quotation::ReloadShOpt() : SHOPT WareCount = %d", pKindHead->WareCount );
+	QuoCollector::GetCollector()->OnLog( TLV_INFO, "Quotation::ReloadShOpt() : Loading... SHOPT WareCount = %d", pKindHead->WareCount );
 
 	int m = sizeof(XDFAPI_MsgHead)+sizeof(XDFAPI_MarketKindHead);
 	for( int i = 0; m < nErrorCode; )
@@ -306,7 +315,7 @@ int Quotation::ReloadShOpt( enum XDFRunStat eStatus )
 	nErrorCode = m_oQuotPlugin->GetCodeTable( XDF_SHOPT, NULL, NULL, nCodeCount );				///< 先获取一下商品数量
 	if( nErrorCode > 0 && nCodeCount > 0 )
 	{
-		int		noffset = (sizeof(XDFAPI_NameTableSz) + sizeof(XDFAPI_UniMsgHead)) * nCodeCount;///< 根据商品数量，分配获取快照表需要的缓存
+		int		noffset = (sizeof(XDFAPI_NameTableShOpt) + sizeof(XDFAPI_UniMsgHead)) * nCodeCount;///< 根据商品数量，分配获取快照表需要的缓存
 		char*	pszCodeBuf = new char[noffset];
 
 		nErrorCode = m_oQuotPlugin->GetCodeTable( XDF_SHOPT, pszCodeBuf, noffset, nCodeCount );	///< 获取码表
@@ -324,9 +333,10 @@ int Quotation::ReloadShOpt( enum XDFRunStat eStatus )
 					XDFAPI_NameTableShOpt*	pData = (XDFAPI_NameTableShOpt*)pbuf;
 
 					tagParam.dPriceRate = ::pow(10.0, int(vctKindInfo[pData->SecKind].PriceRate) );
-					m_oQuoDataCenter.BuildSecurity( XDF_SHOPT, std::string( pData->Code, 6 ), tagParam );
+					m_oQuoDataCenter.BuildSecurity( XDF_SHOPT, std::string( pData->Code, 8 ), tagParam );
 
 					pbuf += sizeof(XDFAPI_NameTableShOpt);
+					nNum++;
 				}
 			}
 
@@ -345,7 +355,9 @@ int Quotation::ReloadShOpt( enum XDFRunStat eStatus )
 		return -3;
 	}
 
+	QuoCollector::GetCollector()->OnLog( TLV_INFO, "Quotation::ReloadShOpt() : Loading... SHOPT Nametable Size = %d", nNum );
 	m_vctMkSvrStatus[XDF_SHOPT] = ET_SS_WORKING;				///< 设置“可服务”状态标识
+	nNum = 0;
 	///< ---------------- 获取快照表数据 -------------------------------------------
 	int		noffset = (sizeof(XDFAPI_ShOptData) + sizeof(XDFAPI_UniMsgHead)) * nCodeCount;	///< 根据商品数量，分配获取快照表需要的缓存
 	char*	pszCodeBuf = new char[noffset];
@@ -363,6 +375,7 @@ int Quotation::ReloadShOpt( enum XDFRunStat eStatus )
 			{
 				m_oQuoDataCenter.UpdateDayLine( XDF_SHOPT, pbuf, sizeof(XDFAPI_ShOptData) );
 				pbuf += sizeof(XDFAPI_ShOptData);
+				nNum++;
 			}
 		}
 
@@ -375,6 +388,8 @@ int Quotation::ReloadShOpt( enum XDFRunStat eStatus )
 		pszCodeBuf = NULL;
 	}
 
+	QuoCollector::GetCollector()->OnLog( TLV_INFO, "Quotation::ReloadSHOPT() : Loading... SHLOPT Snaptable Size = %d", nNum );
+
 	return 0;
 }
 
@@ -385,6 +400,7 @@ int Quotation::ReloadSzLv1( enum XDFRunStat eStatus )
 		return -1;
 	}
 
+	int						nNum = 0;
 	int						nCodeCount = 0;
 	int						nKindCount = 0;
 	XDFAPI_MarketKindInfo	vctKindInfo[32] = { 0 };
@@ -399,7 +415,7 @@ int Quotation::ReloadSzLv1( enum XDFRunStat eStatus )
 	}
 
 	XDFAPI_MarketKindHead* pKindHead = (XDFAPI_MarketKindHead*)(tempbuf+ sizeof(XDFAPI_MsgHead));
-	QuoCollector::GetCollector()->OnLog( TLV_INFO, "Quotation::ReloadSzLv1() : SZL1 WareCount = %d", pKindHead->WareCount );
+	QuoCollector::GetCollector()->OnLog( TLV_INFO, "Quotation::ReloadSzLv1() : Loading... SZL1 WareCount = %d", pKindHead->WareCount );
 
 	int m = sizeof(XDFAPI_MsgHead)+sizeof(XDFAPI_MarketKindHead);
 	for( int i = 0; m < nErrorCode; )
@@ -443,6 +459,7 @@ int Quotation::ReloadSzLv1( enum XDFRunStat eStatus )
 					m_oQuoDataCenter.BuildSecurity( XDF_SZ, std::string( pData->Code, 6 ), tagParam );
 
 					pbuf += sizeof(XDFAPI_NameTableSz);
+					nNum++;
 				}
 			}
 
@@ -461,7 +478,9 @@ int Quotation::ReloadSzLv1( enum XDFRunStat eStatus )
 		return -3;
 	}
 
+	QuoCollector::GetCollector()->OnLog( TLV_INFO, "Quotation::ReloadSzLv1() : Loading... SZL1 Nametable Size = %d", nNum );
 	m_vctMkSvrStatus[XDF_SZ] = ET_SS_WORKING;				///< 设置“可服务”状态标识
+	nNum = 0;
 	///< ---------------- 获取快照表数据 -------------------------------------------
 	int		noffset = (sizeof(XDFAPI_StockData5) + sizeof(XDFAPI_UniMsgHead)) * nCodeCount;	///< 根据商品数量，分配获取快照表需要的缓存
 	char*	pszCodeBuf = new char[noffset];
@@ -479,11 +498,13 @@ int Quotation::ReloadSzLv1( enum XDFRunStat eStatus )
 			{
 				m_oQuoDataCenter.UpdateDayLine( XDF_SZ, pbuf, sizeof(XDFAPI_IndexData) );
 				pbuf += sizeof(XDFAPI_IndexData);
+				nNum++;
 			}
 			else if( abs(pMsgHead->MsgType) == 22 )		///< 快照数据
 			{
 				m_oQuoDataCenter.UpdateDayLine( XDF_SZ, pbuf, sizeof(XDFAPI_StockData5) );
 				pbuf += sizeof(XDFAPI_StockData5);
+				nNum++;
 			}
 		}
 
@@ -496,6 +517,8 @@ int Quotation::ReloadSzLv1( enum XDFRunStat eStatus )
 		pszCodeBuf = NULL;
 	}
 
+	QuoCollector::GetCollector()->OnLog( TLV_INFO, "Quotation::ReloadSzLv1() : Loading... SZL1 Snaptable Size = %d", nNum );
+
 	return 0;
 }
 
@@ -506,6 +529,7 @@ int Quotation::ReloadSzOpt( enum XDFRunStat eStatus )
 		return -1;
 	}
 
+	int						nNum = 0;
 	int						nCodeCount = 0;
 	int						nKindCount = 0;
 	XDFAPI_MarketKindInfo	vctKindInfo[32] = { 0 };
@@ -520,7 +544,7 @@ int Quotation::ReloadSzOpt( enum XDFRunStat eStatus )
 	}
 
 	XDFAPI_MarketKindHead* pKindHead = (XDFAPI_MarketKindHead*)(tempbuf+ sizeof(XDFAPI_MsgHead));
-	QuoCollector::GetCollector()->OnLog( TLV_INFO, "Quotation::ReloadSzOpt() : SZOPT WareCount = %d", pKindHead->WareCount );
+	QuoCollector::GetCollector()->OnLog( TLV_INFO, "Quotation::ReloadSzOpt() : Loading... SZOPT WareCount = %d", pKindHead->WareCount );
 
 	int m = sizeof(XDFAPI_MsgHead)+sizeof(XDFAPI_MarketKindHead);
 	for( int i = 0; m < nErrorCode; )
@@ -543,7 +567,7 @@ int Quotation::ReloadSzOpt( enum XDFRunStat eStatus )
 	nErrorCode = m_oQuotPlugin->GetCodeTable( XDF_SZOPT, NULL, NULL, nCodeCount );				///< 先获取一下商品数量
 	if( nErrorCode > 0 && nCodeCount > 0 )
 	{
-		int		noffset = (sizeof(XDFAPI_NameTableSz) + sizeof(XDFAPI_UniMsgHead)) * nCodeCount;///< 根据商品数量，分配获取快照表需要的缓存
+		int		noffset = (sizeof(XDFAPI_NameTableSzOpt) + sizeof(XDFAPI_UniMsgHead)) * nCodeCount;///< 根据商品数量，分配获取快照表需要的缓存
 		char*	pszCodeBuf = new char[noffset];
 
 		nErrorCode = m_oQuotPlugin->GetCodeTable( XDF_SZOPT, pszCodeBuf, noffset, nCodeCount );	///< 获取码表
@@ -564,6 +588,7 @@ int Quotation::ReloadSzOpt( enum XDFRunStat eStatus )
 					m_oQuoDataCenter.BuildSecurity( XDF_SZOPT, std::string( pData->Code, 8 ), tagParam );
 
 					pbuf += sizeof(XDFAPI_NameTableSzOpt);
+					nNum++;
 				}
 			}
 
@@ -582,7 +607,9 @@ int Quotation::ReloadSzOpt( enum XDFRunStat eStatus )
 		return -3;
 	}
 
+	QuoCollector::GetCollector()->OnLog( TLV_INFO, "Quotation::ReloadSZOPT() : Loading... SZOPT Nametable Size = %d", nNum );
 	m_vctMkSvrStatus[XDF_SZOPT] = ET_SS_WORKING;				///< 设置“可服务”状态标识
+	nNum = 0;
 	///< ---------------- 获取快照表数据 -------------------------------------------
 	int		noffset = (sizeof(XDFAPI_SzOptData) + sizeof(XDFAPI_UniMsgHead)) * nCodeCount;	///< 根据商品数量，分配获取快照表需要的缓存
 	char*	pszCodeBuf = new char[noffset];
@@ -600,6 +627,7 @@ int Quotation::ReloadSzOpt( enum XDFRunStat eStatus )
 			{
 				m_oQuoDataCenter.UpdateDayLine( XDF_SZOPT, pbuf, sizeof(XDFAPI_SzOptData) );
 				pbuf += sizeof(XDFAPI_SzOptData);
+				nNum++;
 			}
 		}
 
@@ -612,6 +640,8 @@ int Quotation::ReloadSzOpt( enum XDFRunStat eStatus )
 		pszCodeBuf = NULL;
 	}
 
+	QuoCollector::GetCollector()->OnLog( TLV_INFO, "Quotation::ReloadSZOPT() : Loading... SZOPT Snaptable Size = %d", nNum );
+
 	return 0;
 }
 
@@ -622,6 +652,7 @@ int Quotation::ReloadCFF( enum XDFRunStat eStatus )
 		return -1;
 	}
 
+	int						nNum = 0;
 	int						nCodeCount = 0;
 	int						nKindCount = 0;
 	XDFAPI_MarketKindInfo	vctKindInfo[32] = { 0 };
@@ -636,7 +667,7 @@ int Quotation::ReloadCFF( enum XDFRunStat eStatus )
 	}
 
 	XDFAPI_MarketKindHead* pKindHead = (XDFAPI_MarketKindHead*)(tempbuf+ sizeof(XDFAPI_MsgHead));
-	QuoCollector::GetCollector()->OnLog( TLV_INFO, "Quotation::ReloadCFF() : CFF WareCount = %d", pKindHead->WareCount );
+	QuoCollector::GetCollector()->OnLog( TLV_INFO, "Quotation::ReloadCFF() : Loading... CFF WareCount = %d", pKindHead->WareCount );
 
 	int m = sizeof(XDFAPI_MsgHead)+sizeof(XDFAPI_MarketKindHead);
 	for( int i = 0; m < nErrorCode; )
@@ -680,6 +711,7 @@ int Quotation::ReloadCFF( enum XDFRunStat eStatus )
 					m_oQuoDataCenter.BuildSecurity( XDF_CF, std::string( pData->Code, 6 ), tagParam );
 
 					pbuf += sizeof(XDFAPI_NameTableZjqh);
+					nNum++;
 				}
 			}
 
@@ -698,7 +730,9 @@ int Quotation::ReloadCFF( enum XDFRunStat eStatus )
 		return -3;
 	}
 
+	QuoCollector::GetCollector()->OnLog( TLV_INFO, "Quotation::ReloadCFF() : Loading... CFF Nametable Size = %d", nNum );
 	m_vctMkSvrStatus[XDF_CF] = ET_SS_WORKING;				///< 设置“可服务”状态标识
+	nNum = 0;
 	///< ---------------- 获取快照表数据 -------------------------------------------
 	int		noffset = (sizeof(XDFAPI_CffexData) + sizeof(XDFAPI_UniMsgHead)) * nCodeCount;	///< 根据商品数量，分配获取快照表需要的缓存
 	char*	pszCodeBuf = new char[noffset];
@@ -716,6 +750,7 @@ int Quotation::ReloadCFF( enum XDFRunStat eStatus )
 			{
 				m_oQuoDataCenter.UpdateDayLine( XDF_CF, pbuf, sizeof(XDFAPI_CffexData) );
 				pbuf += sizeof(XDFAPI_CffexData);
+				nNum++;
 			}
 		}
 
@@ -728,6 +763,8 @@ int Quotation::ReloadCFF( enum XDFRunStat eStatus )
 		pszCodeBuf = NULL;
 	}
 
+	QuoCollector::GetCollector()->OnLog( TLV_INFO, "Quotation::ReloadCFF() : Loading... CFF Snaptable Size = %d", nNum );
+
 	return 0;
 }
 
@@ -738,6 +775,7 @@ int Quotation::ReloadCFFOPT( enum XDFRunStat eStatus )
 		return -1;
 	}
 
+	int						nNum = 0;
 	int						nCodeCount = 0;
 	int						nKindCount = 0;
 	XDFAPI_MarketKindInfo	vctKindInfo[32] = { 0 };
@@ -752,7 +790,7 @@ int Quotation::ReloadCFFOPT( enum XDFRunStat eStatus )
 	}
 
 	XDFAPI_MarketKindHead* pKindHead = (XDFAPI_MarketKindHead*)(tempbuf+ sizeof(XDFAPI_MsgHead));
-	QuoCollector::GetCollector()->OnLog( TLV_INFO, "Quotation::ReloadCFFOPT() : CFFOPT WareCount = %d", pKindHead->WareCount );
+	QuoCollector::GetCollector()->OnLog( TLV_INFO, "Quotation::ReloadCFFOPT() : Loading... CFFOPT WareCount = %d", pKindHead->WareCount );
 
 	int m = sizeof(XDFAPI_MsgHead)+sizeof(XDFAPI_MarketKindHead);
 	for( int i = 0; m < nErrorCode; )
@@ -775,7 +813,7 @@ int Quotation::ReloadCFFOPT( enum XDFRunStat eStatus )
 	nErrorCode = m_oQuotPlugin->GetCodeTable( XDF_ZJOPT, NULL, NULL, nCodeCount );				///< 先获取一下商品数量
 	if( nErrorCode > 0 && nCodeCount > 0 )
 	{
-		int		noffset = (sizeof(XDFAPI_NameTableZjqh) + sizeof(XDFAPI_UniMsgHead))*nCodeCount;///< 根据商品数量，分配获取快照表需要的缓存
+		int		noffset = (sizeof(XDFAPI_NameTableZjOpt) + sizeof(XDFAPI_UniMsgHead))*nCodeCount;///< 根据商品数量，分配获取快照表需要的缓存
 		char*	pszCodeBuf = new char[noffset];
 
 		nErrorCode = m_oQuotPlugin->GetCodeTable( XDF_ZJOPT, pszCodeBuf, noffset, nCodeCount );	///< 获取码表
@@ -793,9 +831,10 @@ int Quotation::ReloadCFFOPT( enum XDFRunStat eStatus )
 					XDFAPI_NameTableZjOpt*	pData = (XDFAPI_NameTableZjOpt*)pbuf;
 
 					tagParam.dPriceRate = ::pow(10.0, int(vctKindInfo[pData->SecKind].PriceRate) );
-					m_oQuoDataCenter.BuildSecurity( XDF_ZJOPT, std::string( pData->Code, 6 ), tagParam );
+					m_oQuoDataCenter.BuildSecurity( XDF_ZJOPT, std::string( pData->Code ), tagParam );
 
 					pbuf += sizeof(XDFAPI_NameTableZjOpt);
+					nNum++;
 				}
 			}
 
@@ -814,7 +853,9 @@ int Quotation::ReloadCFFOPT( enum XDFRunStat eStatus )
 		return -3;
 	}
 
+	QuoCollector::GetCollector()->OnLog( TLV_INFO, "Quotation::ReloadCFFOPT() : Loading... CFFOPT Nametable Size = %d", nNum );
 	m_vctMkSvrStatus[XDF_ZJOPT] = ET_SS_WORKING;				///< 设置“可服务”状态标识
+	nNum = 0;
 	///< ---------------- 获取快照表数据 -------------------------------------------
 	int		noffset = (sizeof(XDFAPI_ZjOptData) + sizeof(XDFAPI_UniMsgHead)) * nCodeCount;	///< 根据商品数量，分配获取快照表需要的缓存
 	char*	pszCodeBuf = new char[noffset];
@@ -832,6 +873,7 @@ int Quotation::ReloadCFFOPT( enum XDFRunStat eStatus )
 			{
 				m_oQuoDataCenter.UpdateDayLine( XDF_ZJOPT, pbuf, sizeof(XDFAPI_ZjOptData) );
 				pbuf += sizeof(XDFAPI_ZjOptData);
+				nNum++;
 			}
 		}
 
@@ -844,6 +886,8 @@ int Quotation::ReloadCFFOPT( enum XDFRunStat eStatus )
 		pszCodeBuf = NULL;
 	}
 
+	QuoCollector::GetCollector()->OnLog( TLV_INFO, "Quotation::ReloadCFFOPT() : Loading... CFFOPT Snaptable Size = %d", nNum );
+
 	return 0;
 }
 
@@ -854,6 +898,7 @@ int Quotation::ReloadCNF( enum XDFRunStat eStatus )
 		return -1;
 	}
 
+	int						nNum = 0;
 	int						nCodeCount = 0;
 	int						nKindCount = 0;
 	XDFAPI_MarketKindInfo	vctKindInfo[32] = { 0 };
@@ -868,7 +913,7 @@ int Quotation::ReloadCNF( enum XDFRunStat eStatus )
 	}
 
 	XDFAPI_MarketKindHead* pKindHead = (XDFAPI_MarketKindHead*)(tempbuf+ sizeof(XDFAPI_MsgHead));
-	QuoCollector::GetCollector()->OnLog( TLV_INFO, "Quotation::ReloadCNF() : CNF WareCount = %d", pKindHead->WareCount );
+	QuoCollector::GetCollector()->OnLog( TLV_INFO, "Quotation::ReloadCNF() : Loading... CNF WareCount = %d", pKindHead->WareCount );
 
 	int m = sizeof(XDFAPI_MsgHead)+sizeof(XDFAPI_MarketKindHead);
 	for( int i = 0; m < nErrorCode; )
@@ -913,6 +958,7 @@ int Quotation::ReloadCNF( enum XDFRunStat eStatus )
 					m_oQuoDataCenter.BuildSecurity( XDF_CNF, std::string( pData->Code, 6 ), tagParam );
 
 					pbuf += sizeof(XDFAPI_NameTableCnf);
+					nNum++;
 				}
 			}
 
@@ -931,7 +977,9 @@ int Quotation::ReloadCNF( enum XDFRunStat eStatus )
 		return -3;
 	}
 
+	QuoCollector::GetCollector()->OnLog( TLV_INFO, "Quotation::ReloadCNF() : Loading... CNF Nametable Size = %d", nNum );
 	m_vctMkSvrStatus[XDF_CNF] = ET_SS_WORKING;				///< 设置“可服务”状态标识
+	nNum = 0;
 	///< ---------------- 获取快照表数据 -------------------------------------------
 	int		noffset = (sizeof(XDFAPI_CNFutureData) + sizeof(XDFAPI_UniMsgHead)) * nCodeCount;	///< 根据商品数量，分配获取快照表需要的缓存
 	char*	pszCodeBuf = new char[noffset];
@@ -949,6 +997,7 @@ int Quotation::ReloadCNF( enum XDFRunStat eStatus )
 			{
 				m_oQuoDataCenter.UpdateDayLine( XDF_CNF, pbuf, sizeof(XDFAPI_CNFutureData) );
 				pbuf += sizeof(XDFAPI_CNFutureData);
+				nNum++;
 			}
 		}
 
@@ -961,6 +1010,8 @@ int Quotation::ReloadCNF( enum XDFRunStat eStatus )
 		pszCodeBuf = NULL;
 	}
 
+	QuoCollector::GetCollector()->OnLog( TLV_INFO, "Quotation::ReloadCNF() : Loading... CNF Snaptable Size = %d", nNum );
+
 	return 0;
 }
 
@@ -971,6 +1022,7 @@ int Quotation::ReloadCNFOPT( enum XDFRunStat eStatus )
 		return -1;
 	}
 
+	int						nNum = 0;
 	int						nCodeCount = 0;
 	int						nKindCount = 0;
 	XDFAPI_MarketKindInfo	vctKindInfo[32] = { 0 };
@@ -985,7 +1037,7 @@ int Quotation::ReloadCNFOPT( enum XDFRunStat eStatus )
 	}
 
 	XDFAPI_MarketKindHead* pKindHead = (XDFAPI_MarketKindHead*)(tempbuf+ sizeof(XDFAPI_MsgHead));
-	QuoCollector::GetCollector()->OnLog( TLV_INFO, "Quotation::ReloadCNFOPT() : CNFOPT WareCount = %d", pKindHead->WareCount );
+	QuoCollector::GetCollector()->OnLog( TLV_INFO, "Quotation::ReloadCNFOPT() : Loading... CNFOPT WareCount = %d", pKindHead->WareCount );
 
 	int m = sizeof(XDFAPI_MsgHead)+sizeof(XDFAPI_MarketKindHead);
 	for( int i = 0; m < nErrorCode; )
@@ -1008,7 +1060,7 @@ int Quotation::ReloadCNFOPT( enum XDFRunStat eStatus )
 	nErrorCode = m_oQuotPlugin->GetCodeTable( XDF_CNFOPT, NULL, NULL, nCodeCount );					///< 先获取一下商品数量
 	if( nErrorCode > 0 && nCodeCount > 0 )
 	{
-		int		noffset = (sizeof(XDFAPI_NameTableCnf) + sizeof(XDFAPI_UniMsgHead))*nCodeCount;		///< 根据商品数量，分配获取快照表需要的缓存
+		int		noffset = (sizeof(XDFAPI_NameTableCnfOpt) + sizeof(XDFAPI_UniMsgHead))*nCodeCount;	///< 根据商品数量，分配获取快照表需要的缓存
 		char*	pszCodeBuf = new char[noffset];
 
 		nErrorCode = m_oQuotPlugin->GetCodeTable( XDF_CNFOPT, pszCodeBuf, noffset, nCodeCount );	///< 获取码表
@@ -1030,6 +1082,7 @@ int Quotation::ReloadCNFOPT( enum XDFRunStat eStatus )
 					m_oQuoDataCenter.BuildSecurity( XDF_CNFOPT, std::string( pData->Code ), tagParam );
 
 					pbuf += sizeof(XDFAPI_NameTableCnfOpt);
+					nNum++;
 				}
 			}
 
@@ -1048,7 +1101,9 @@ int Quotation::ReloadCNFOPT( enum XDFRunStat eStatus )
 		return -3;
 	}
 
+	QuoCollector::GetCollector()->OnLog( TLV_INFO, "Quotation::ReloadCNFOPT() : Loading... CNFOPT Nametable Size = %d", nNum );
 	m_vctMkSvrStatus[XDF_CNFOPT] = ET_SS_WORKING;				///< 设置“可服务”状态标识
+	nNum = 0;
 	///< ---------------- 获取快照表数据 -------------------------------------------
 	int		noffset = (sizeof(XDFAPI_CNFutOptData) + sizeof(XDFAPI_UniMsgHead)) * nCodeCount;	///< 根据商品数量，分配获取快照表需要的缓存
 	char*	pszCodeBuf = new char[noffset];
@@ -1066,6 +1121,7 @@ int Quotation::ReloadCNFOPT( enum XDFRunStat eStatus )
 			{
 				m_oQuoDataCenter.UpdateDayLine( XDF_CNFOPT, pbuf, sizeof(XDFAPI_CNFutOptData) );
 				pbuf += sizeof(XDFAPI_CNFutOptData);
+				nNum++;
 			}
 		}
 
@@ -1078,6 +1134,8 @@ int Quotation::ReloadCNFOPT( enum XDFRunStat eStatus )
 		pszCodeBuf = NULL;
 	}
 
+	QuoCollector::GetCollector()->OnLog( TLV_INFO, "Quotation::ReloadCNFOPT() : Loading... CNFOPT Snaptable Size = %d", nNum );
+
 	return 0;
 }
 
@@ -1085,6 +1143,12 @@ bool __stdcall	Quotation::XDF_OnRspStatusChanged( unsigned char cMarket, int nSt
 {
 	bool	bNormalStatus = false;
 	char	pszDesc[128] = { 0 };
+
+	if( XDF_CF == cMarket && nStatus >= 2 )		///< 此处为特别处理，中金期货不会有“可服务”状态的通知(BUG)
+	{
+		nStatus = XRS_Normal;
+		bNormalStatus = true;
+	}
 
 	switch( nStatus )
 	{
@@ -1113,7 +1177,7 @@ bool __stdcall	Quotation::XDF_OnRspStatusChanged( unsigned char cMarket, int nSt
 	m_oQuoDataCenter.UpdateModuleStatus( (enum XDFMarket)cMarket, nStatus );	///< 更新模块工作状态
 
 	static CriticalObject	oLock;				///< 临界区对象
-	CriticalLock	section( oLock );
+	CriticalLock			section( oLock );
 
 	///< 判断是否需要重入加载过程
 	unsigned int	nNowT = ::time( NULL );
