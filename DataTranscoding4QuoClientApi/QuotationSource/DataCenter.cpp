@@ -275,10 +275,15 @@ void* QuotationData::ThreadDumpDayLine1( void* pSelf )
 		std::string				sCode;
 		std::ofstream			oDumper;
 		STR_DAY_LINE			pszLine = { 0 };
+		static unsigned __int64	nDumpNumber = 0;
 
 		s_nDumpCount++;
 		SimpleThread::Sleep( 1000 * 1 );
-		QuoCollector::GetCollector()->OnLog( TLV_INFO, "QuotationData::ThreadDumpDayLine1() : dumping... ( Times=%u ) ( Count=%u )", s_nDumpCount, nMaxDataNum );
+		if( nDumpNumber > 0 ) {
+			QuoCollector::GetCollector()->OnLog( TLV_INFO, "QuotationData::ThreadDumpDayLine1() : (%I64d) dumped... ( Times=%u ) ( Count=%u )", nDumpNumber, s_nDumpCount, nMaxDataNum );
+			nDumpNumber = 0;
+		}
+
 		for( int n = 0; n < nMaxDataNum; n++ )
 		{
 			T_DAY_LINE*				pDayLine = (T_DAY_LINE*)(pBufPtr + n * sizeof(T_DAY_LINE));
@@ -300,7 +305,7 @@ void* QuotationData::ThreadDumpDayLine1( void* pSelf )
 				if( !oDumper.is_open() )
 				{
 					QuoCollector::GetCollector()->OnLog( TLV_ERROR, "QuotationData::ThreadDumpDayLine1() : invalid file handle" );
-					SimpleThread::Sleep( 1000 * 30 );
+					SimpleThread::Sleep( 1000 * 10 );
 					continue;
 				}
 
@@ -312,6 +317,7 @@ void* QuotationData::ThreadDumpDayLine1( void* pSelf )
 					, pDayLine->Voip, pDayLine->TradingPhaseCode, pDayLine->PreName );
 				oDumper.write( pszLine, nLen );
 				pDayLine->Valid = 0;
+				nDumpNumber++;
 			}
 		}
 	}
