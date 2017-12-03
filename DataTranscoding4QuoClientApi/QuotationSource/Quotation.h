@@ -78,6 +78,11 @@ public:
 	 */
 	WorkStatus&					GetWorkStatus();
 
+	/**
+	 * @brief					把收盘后快照刷新落盘
+	 */
+	void						FlushSnapOnCloseTime();
+
 public:
 	virtual bool __stdcall		XDF_OnRspStatusChanged( unsigned char cMarket, int nStatus );
 	virtual void __stdcall		XDF_OnRspRecvData( XDFAPI_PkgHead * pHead, const char * pszBuf, int nBytes );
@@ -91,7 +96,7 @@ protected:
 	 * @return					==0			成功
 								!=0			失败
 	 */
-	int							ReloadShLv1( enum XDFRunStat eStatus );
+	int							ReloadShLv1( enum XDFRunStat eStatus, bool bBuild );
 
 	/**
 	 * @brief					加载上海Option的基础信息
@@ -99,7 +104,7 @@ protected:
 	 * @return					==0			成功
 								!=0			失败
 	 */
-	int							ReloadShOpt( enum XDFRunStat eStatus );
+	int							ReloadShOpt( enum XDFRunStat eStatus, bool bBuild );
 
 	/**
 	 * @brief					加载深圳Lv1的基础信息
@@ -107,7 +112,7 @@ protected:
 	 * @return					==0			成功
 								!=0			失败
 	 */
-	int							ReloadSzLv1( enum XDFRunStat eStatus );
+	int							ReloadSzLv1( enum XDFRunStat eStatus, bool bBuild );
 
 	/**
 	 * @brief					加载深圳期权的基础信息
@@ -115,7 +120,7 @@ protected:
 	 * @return					==0			成功
 								!=0			失败
 	 */
-	int							ReloadSzOpt( enum XDFRunStat eStatus );
+	int							ReloadSzOpt( enum XDFRunStat eStatus, bool bBuild );
 
 	/**
 	 * @brief					加载中金期货的基础信息
@@ -123,7 +128,7 @@ protected:
 	 * @return					==0			成功
 								!=0			失败
 	 */
-	int							ReloadCFF( enum XDFRunStat eStatus );
+	int							ReloadCFF( enum XDFRunStat eStatus, bool bBuild );
 
 	/**
 	 * @brief					加载中金期权的基础信息
@@ -131,7 +136,7 @@ protected:
 	 * @return					==0			成功
 								!=0			失败
 	 */
-	int							ReloadCFFOPT( enum XDFRunStat eStatus );
+	int							ReloadCFFOPT( enum XDFRunStat eStatus, bool bBuild );
 
 	/**
 	 * @brief					加载商品期货的基础信息
@@ -139,7 +144,7 @@ protected:
 	 * @return					==0			成功
 								!=0			失败
 	 */
-	int							ReloadCNF( enum XDFRunStat eStatus );
+	int							ReloadCNF( enum XDFRunStat eStatus, bool bBuild );
 
 	/**
 	 * @brief					加载商品期权的基础信息
@@ -147,7 +152,7 @@ protected:
 	 * @return					==0			成功
 								!=0			失败
 	 */
-	int							ReloadCNFOPT( enum XDFRunStat eStatus );
+	int							ReloadCNFOPT( enum XDFRunStat eStatus, bool bBuild );
 
 private:
 	WorkStatus					m_vctMkSvrStatus[64];	///< 各市场服务状态

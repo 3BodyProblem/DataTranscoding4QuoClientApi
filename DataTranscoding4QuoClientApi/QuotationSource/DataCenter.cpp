@@ -167,8 +167,23 @@ void QuotationData::Release()
 {
 }
 
+short QuotationData::GetModuleStatus( enum XDFMarket eMarket )
+{
+	CriticalLock				section( m_oLock );
+	TMAP_MKID2STATUS::iterator	it = m_mapModuleStatus.find( eMarket );
+
+	if( m_mapModuleStatus.end() == it )
+	{
+		return -1;
+	}
+
+	return it->second;
+}
+
 void QuotationData::UpdateModuleStatus( enum XDFMarket eMarket, int nStatus )
 {
+	CriticalLock	section( m_oLock );
+
 	m_mapModuleStatus[eMarket] = nStatus;
 }
 

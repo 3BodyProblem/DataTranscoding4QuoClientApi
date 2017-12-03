@@ -93,6 +93,11 @@ enum E_SS_Status QuoCollector::GetCollectorStatus( char* pszStatusDesc, unsigned
 	nStrLen = ::sprintf( pszStatusDesc, "模块名=上海Lv1源驱动,Version=%s,快照路径=%s,连接状态=%s"
 						, g_sVersion.c_str(), refCnf.GetDumpFolder().c_str(), sStatus.c_str() );
 
+	if( refStatus == ET_SS_WORKING )
+	{
+		m_oQuotationData.FlushSnapOnCloseTime();
+	}
+
 	return refStatus;
 }
 

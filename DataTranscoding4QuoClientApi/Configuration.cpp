@@ -61,6 +61,18 @@ HMODULE						g_oModule;
 Configuration::Configuration()
  : m_bBroadcastModel( false ), m_nBcBeginTime( 0 )
 {
+	CLOSE_CFG		objDefaultCfg = { 0, 160100 };
+
+	m_mapMkCloseCfg[XDF_SH].push_back( objDefaultCfg );
+//	m_mapMkCloseCfg[XDF_SHL2].push_back( objDefaultCfg );
+	m_mapMkCloseCfg[XDF_SHOPT].push_back( objDefaultCfg );
+	m_mapMkCloseCfg[XDF_SZ].push_back( objDefaultCfg );
+//	m_mapMkCloseCfg[XDF_SZL2].push_back( objDefaultCfg );
+	m_mapMkCloseCfg[XDF_SZOPT].push_back( objDefaultCfg );
+	m_mapMkCloseCfg[XDF_CF].push_back( objDefaultCfg );
+	m_mapMkCloseCfg[XDF_ZJOPT].push_back( objDefaultCfg );
+	m_mapMkCloseCfg[XDF_CNF].push_back( objDefaultCfg );
+	m_mapMkCloseCfg[XDF_CNFOPT].push_back( objDefaultCfg );
 }
 
 Configuration& Configuration::GetConfig()
@@ -157,6 +169,11 @@ std::string Configuration::GetQuotationFilePath() const
 bool Configuration::IsBroadcastModel() const
 {
 	return m_bBroadcastModel;
+}
+
+MAP_MK_CLOSECFG& Configuration::GetMkCloseCfg()
+{
+	return m_mapMkCloseCfg;
 }
 
 
