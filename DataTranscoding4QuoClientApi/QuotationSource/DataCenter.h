@@ -61,6 +61,11 @@ typedef struct
 typedef struct
 {
 	unsigned char				Type;			///< 类型
+	unsigned int				UpperPrice;		///< 涨停价
+	unsigned int				LowerPrice;		///< 跌停价
+	unsigned int				PreClosePx;		///< 昨收
+	unsigned int				PreSettlePx;	///< 昨结
+	unsigned int				PrePosition;	///< 昨持
 	double						dPriceRate;		///< 放大倍数
 } T_LINE_PARAM;
 #pragma pack()

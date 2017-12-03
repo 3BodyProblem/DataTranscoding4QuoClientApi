@@ -558,7 +558,7 @@ int QuotationData::UpdateDayLine( enum XDFMarket eMarket, char* pSnapData, unsig
 				T_DAYLINE_CACHE&	refDayLineCache = it->second.second;
 
 				::strncpy( refDayLine.Code, pStock->Code, 8 );
-				//refDayLine.PreClosePx = 
+				refDayLine.PreClosePx = refParam.PreClosePx / refParam.dPriceRate;
 				refDayLine.PreSettlePx = pStock->PreSettlePx / refParam.dPriceRate;
 				refDayLine.OpenPx = pStock->OpenPx / refParam.dPriceRate;
 				refDayLine.HighPx = pStock->HighPx / refParam.dPriceRate;
@@ -566,8 +566,8 @@ int QuotationData::UpdateDayLine( enum XDFMarket eMarket, char* pSnapData, unsig
 				refDayLine.ClosePx = pStock->Now / refParam.dPriceRate;
 				refDayLine.NowPx = refDayLine.ClosePx;
 				refDayLine.SettlePx = pStock->SettlePrice / refParam.dPriceRate;
-				//refDayLine.UpperPx = pStock-
-				//refDayLine.LowerPx = 
+				refDayLine.UpperPx = refParam.UpperPrice / refParam.dPriceRate;
+				refDayLine.LowerPx = refParam.LowerPrice / refParam.dPriceRate;
 				refDayLine.Amount = pStock->Amount;
 				refDayLine.Volume = pStock->Volume;
 				refDayLine.OpenInterest = pStock->Position;
@@ -675,7 +675,7 @@ int QuotationData::UpdateDayLine( enum XDFMarket eMarket, char* pSnapData, unsig
 				T_DAYLINE_CACHE&	refDayLineCache = it->second.second;
 
 				::strncpy( refDayLine.Code, pStock->Code, 6 );
-				//refDayLine.PreClosePx = 
+				refDayLine.PreClosePx = refParam.PreClosePx / refParam.dPriceRate;
 				refDayLine.PreSettlePx = pStock->PreSettlePx / refParam.dPriceRate;
 				refDayLine.OpenPx = pStock->OpenPx / refParam.dPriceRate;
 				refDayLine.HighPx = pStock->HighPx / refParam.dPriceRate;
@@ -683,8 +683,8 @@ int QuotationData::UpdateDayLine( enum XDFMarket eMarket, char* pSnapData, unsig
 				refDayLine.ClosePx = pStock->Now / refParam.dPriceRate;
 				refDayLine.NowPx = refDayLine.ClosePx;
 				refDayLine.SettlePx = pStock->SettlePrice / refParam.dPriceRate;
-				//refDayLine.UpperPx = pStock-
-				//refDayLine.LowerPx = 
+				refDayLine.UpperPx = refParam.UpperPrice / refParam.dPriceRate;
+				refDayLine.LowerPx = refParam.LowerPrice / refParam.dPriceRate;
 				refDayLine.Amount = pStock->Amount;
 				refDayLine.Volume = pStock->Volume;
 				refDayLine.OpenInterest = pStock->Position;

@@ -339,6 +339,11 @@ int Quotation::ReloadShOpt( enum XDFRunStat eStatus, bool bBuild )
 						XDFAPI_NameTableShOpt*	pData = (XDFAPI_NameTableShOpt*)pbuf;
 
 						tagParam.dPriceRate = ::pow(10.0, int(vctKindInfo[pData->SecKind].PriceRate) );
+						tagParam.LowerPrice = pData->DownLimit;
+						tagParam.UpperPrice = pData->UpLimit;
+						tagParam.PreClosePx = pData->PreClosePx;
+						tagParam.PreSettlePx = pData->PreSettlePx;
+						tagParam.PrePosition = pData->LeavesQty;
 						m_oQuoDataCenter.BuildSecurity( XDF_SHOPT, std::string( pData->Code, 8 ), tagParam );
 
 						pbuf += sizeof(XDFAPI_NameTableShOpt);
@@ -576,7 +581,7 @@ int Quotation::ReloadSzOpt( enum XDFRunStat eStatus, bool bBuild )
 	}
 
 	///< ---------------- 获取深圳期权市场码表数据 ----------------------------------------
-	nErrorCode = m_oQuotPlugin->GetCodeTable( XDF_SZOPT, NULL, NULL, nCodeCount );				///< 先获取一下商品数量
+	nErrorCode = m_oQuotPlugin->GetCodeTable( XDF_SZOPT, NULL, NULL, nCodeCount );					///< 先获取一下商品数量
 	if( nErrorCode > 0 && nCodeCount > 0 )
 	{
 		if( true == bBuild )
@@ -599,6 +604,11 @@ int Quotation::ReloadSzOpt( enum XDFRunStat eStatus, bool bBuild )
 						XDFAPI_NameTableSzOpt*	pData = (XDFAPI_NameTableSzOpt*)pbuf;
 
 						tagParam.dPriceRate = ::pow(10.0, int(vctKindInfo[pData->SecKind].PriceRate) );
+						tagParam.UpperPrice = pData->UpLimit;
+						tagParam.LowerPrice = pData->DownLimit;
+						tagParam.PreClosePx = pData->PreClosePx;
+						tagParam.PreSettlePx = pData->PreSettlePx;
+						tagParam.PrePosition = pData->LeavesQty;
 						m_oQuoDataCenter.BuildSecurity( XDF_SZOPT, std::string( pData->Code, 8 ), tagParam );
 
 						pbuf += sizeof(XDFAPI_NameTableSzOpt);
