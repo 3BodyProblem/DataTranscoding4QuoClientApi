@@ -165,6 +165,16 @@ int QuotationData::Initialize()
 
 void QuotationData::Release()
 {
+	s_nDumpCount = 0;
+	m_mapModuleStatus.clear();
+	m_mapSHL1.clear();
+	m_mapSHOPT.clear();
+	m_mapSZL1.clear();
+	m_mapSZOPT.clear();
+	m_mapCFF.clear();
+	m_mapCFFOPT.clear();
+	m_mapCNF.clear();
+	m_mapCNFOPT.clear();
 }
 
 short QuotationData::GetModuleStatus( enum XDFMarket eMarket )
