@@ -146,8 +146,6 @@ void CacheAlloc::FreeCaches()
 }
 
 
-unsigned int QuotationData::s_nDumpCount = 0;
-
 QuotationData::QuotationData()
 {
 }
@@ -165,7 +163,6 @@ int QuotationData::Initialize()
 
 void QuotationData::Release()
 {
-	s_nDumpCount = 0;
 	m_mapModuleStatus.clear();
 	m_mapSHL1.clear();
 	m_mapSHOPT.clear();
@@ -290,60 +287,70 @@ typedef char	STR_DAY_LINE[512];
 
 void* QuotationData::ThreadDumpDayLine1( void* pSelf )
 {
+	unsigned __int64			nDumpNumber = 0;
 	QuotationData&				refData = *(QuotationData*)pSelf;
 
 	while( false == SimpleThread::GetGlobalStopFlag() )
 	{
-		char*					pBufPtr = CacheAlloc::GetObj().GetBufferPtr();
-		unsigned int			nBufLen = CacheAlloc::GetObj().GetDataLength();
-		unsigned int			nMaxDataNum = nBufLen / sizeof(T_DAY_LINE);
-		std::string				sCode;
-		std::ofstream			oDumper;
-		STR_DAY_LINE			pszLine = { 0 };
-		static unsigned __int64	nDumpNumber = 0;
-
-		s_nDumpCount++;
-		SimpleThread::Sleep( 1000 * 1 );
-		if( nDumpNumber > 0 ) {
-			QuoCollector::GetCollector()->OnLog( TLV_INFO, "QuotationData::ThreadDumpDayLine1() : (%I64d) dumped... ( Times=%u ) ( Count=%u )", nDumpNumber, s_nDumpCount, nMaxDataNum );
-			nDumpNumber = 0;
-		}
-
-		for( int n = 0; n < nMaxDataNum; n++ )
+		try
 		{
-			T_DAY_LINE*				pDayLine = (T_DAY_LINE*)(pBufPtr + n * sizeof(T_DAY_LINE));
+			char*					pBufPtr = CacheAlloc::GetObj().GetBufferPtr();
+			unsigned int			nBufLen = CacheAlloc::GetObj().GetDataLength();
+			unsigned int			nMaxDataNum = nBufLen / sizeof(T_DAY_LINE);
+			std::string				sCode;
+			std::ofstream			oDumper;
+			STR_DAY_LINE			pszLine = { 0 };
 
-			if( 0 == pDayLine->Valid )
-			{
-				continue;
+			SimpleThread::Sleep( 1000 * 1 );
+			if( nDumpNumber > 0 ) {
+				QuoCollector::GetCollector()->OnLog( TLV_INFO, "QuotationData::ThreadDumpDayLine1() : (%I64d) dumped... ( Count=%u )", nDumpNumber, nMaxDataNum );
+				nDumpNumber = 0;
 			}
-			else
-			{
-				if( sCode != pDayLine->Code )
-				{
-					if( false == PrepareFile( pDayLine, sCode, oDumper ) )
-					{
-						continue;
-					}
-				}
 
-				if( !oDumper.is_open() )
+			for( int n = 0; n < nMaxDataNum; n++ )
+			{
+				T_DAY_LINE*				pDayLine = (T_DAY_LINE*)(pBufPtr + n * sizeof(T_DAY_LINE));
+
+				if( 0 == pDayLine->Valid )
 				{
-					QuoCollector::GetCollector()->OnLog( TLV_ERROR, "QuotationData::ThreadDumpDayLine1() : invalid file handle" );
-					SimpleThread::Sleep( 1000 * 10 );
 					continue;
 				}
+				else
+				{
+					if( sCode != pDayLine->Code )
+					{
+						if( false == PrepareFile( pDayLine, sCode, oDumper ) )
+						{
+							continue;
+						}
+					}
 
-				int		nLen = ::sprintf( pszLine, "%u,%u,%f,%f,%f,%f,%f,%f,%f,%f,%f,%f,%f,%I64d,%I64d,%I64d,%f,%I64d,%f,%I64d,%f,%I64d,%f,%I64d,%f,%s,%s\n"
-					, pDayLine->Date, pDayLine->Time, pDayLine->PreClosePx, pDayLine->PreSettlePx
-					, pDayLine->OpenPx, pDayLine->HighPx, pDayLine->LowPx, pDayLine->ClosePx, pDayLine->NowPx, pDayLine->SettlePx
-					, pDayLine->UpperPx, pDayLine->LowerPx, pDayLine->Amount, pDayLine->Volume, pDayLine->OpenInterest, pDayLine->NumTrades
-					, pDayLine->BidPx1, pDayLine->BidVol1, pDayLine->BidPx2, pDayLine->BidVol2, pDayLine->AskPx1, pDayLine->AskVol1, pDayLine->AskPx2, pDayLine->AskVol2
-					, pDayLine->Voip, pDayLine->TradingPhaseCode, pDayLine->PreName );
-				oDumper.write( pszLine, nLen );
-				pDayLine->Valid = 0;
-				nDumpNumber++;
+					if( !oDumper.is_open() )
+					{
+						QuoCollector::GetCollector()->OnLog( TLV_ERROR, "QuotationData::ThreadDumpDayLine1() : invalid file handle" );
+						SimpleThread::Sleep( 1000 * 10 );
+						continue;
+					}
+
+					int		nLen = ::sprintf( pszLine, "%u,%u,%f,%f,%f,%f,%f,%f,%f,%f,%f,%f,%f,%I64d,%I64d,%I64d,%f,%I64d,%f,%I64d,%f,%I64d,%f,%I64d,%f,%s,%s\n"
+						, pDayLine->Date, pDayLine->Time, pDayLine->PreClosePx, pDayLine->PreSettlePx
+						, pDayLine->OpenPx, pDayLine->HighPx, pDayLine->LowPx, pDayLine->ClosePx, pDayLine->NowPx, pDayLine->SettlePx
+						, pDayLine->UpperPx, pDayLine->LowerPx, pDayLine->Amount, pDayLine->Volume, pDayLine->OpenInterest, pDayLine->NumTrades
+						, pDayLine->BidPx1, pDayLine->BidVol1, pDayLine->BidPx2, pDayLine->BidVol2, pDayLine->AskPx1, pDayLine->AskVol1, pDayLine->AskPx2, pDayLine->AskVol2
+						, pDayLine->Voip, pDayLine->TradingPhaseCode, pDayLine->PreName );
+					oDumper.write( pszLine, nLen );
+					pDayLine->Valid = 0;
+					nDumpNumber++;
+				}
 			}
+		}
+		catch( std::exception& err )
+		{
+			QuoCollector::GetCollector()->OnLog( TLV_ERROR, "QuotationData::ThreadDumpDayLine1() : exception : %s", err.what() );
+		}
+		catch( ... )
+		{
+			QuoCollector::GetCollector()->OnLog( TLV_ERROR, "QuotationData::ThreadDumpDayLine1() : unknow exception" );
 		}
 	}
 
@@ -467,7 +474,7 @@ int QuotationData::BuildSecurity( enum XDFMarket eMarket, std::string& sCode, T_
 	return nErrorCode;
 }
 
-int QuotationData::UpdateDayLine( enum XDFMarket eMarket, char* pSnapData, unsigned int nSnapSize )
+int QuotationData::UpdateDayLine( enum XDFMarket eMarket, char* pSnapData, unsigned int nSnapSize, unsigned int nTradeDate )
 {
 	int				nErrorCode = 0;
 	T_DAY_LINE		refDayLine = { 0 };
@@ -798,6 +805,12 @@ int QuotationData::UpdateDayLine( enum XDFMarket eMarket, char* pSnapData, unsig
 		{
 			XDFAPI_CNFutureData*		pStock = (XDFAPI_CNFutureData*)pSnapData;
 			T_MAP_QUO::iterator			it = m_mapCNF.find( std::string(pStock->Code,6) );
+			static unsigned int			s_nCNFTradingDate = 0;
+
+			if( nTradeDate > 0 )
+			{
+				 s_nCNFTradingDate = nTradeDate;
+			}
 
 			if( it != m_mapCNF.end() )
 			{
@@ -806,7 +819,7 @@ int QuotationData::UpdateDayLine( enum XDFMarket eMarket, char* pSnapData, unsig
 
 				refDayLine.Type = refParam.Type;
 				::strncpy( refDayLine.Code, pStock->Code, 6 );
-				refDayLine.Date = pStock->Date;
+				refDayLine.Date = s_nCNFTradingDate;
 				refDayLine.Time = pStock->DataTimeStamp;
 				refDayLine.PreClosePx = pStock->PreClose / refParam.dPriceRate;
 				refDayLine.PreSettlePx = pStock->PreSettlePrice / refParam.dPriceRate;
@@ -840,6 +853,12 @@ int QuotationData::UpdateDayLine( enum XDFMarket eMarket, char* pSnapData, unsig
 		{
 			XDFAPI_CNFutOptData*		pStock = (XDFAPI_CNFutOptData*)pSnapData;
 			T_MAP_QUO::iterator			it = m_mapCNFOPT.find( std::string(pStock->Code) );
+			static unsigned int			s_nCNFOPTTradingDate = 0;
+
+			if( nTradeDate > 0 )
+			{
+				 s_nCNFOPTTradingDate = nTradeDate;
+			}
 
 			if( it != m_mapCNFOPT.end() )
 			{
@@ -848,7 +867,7 @@ int QuotationData::UpdateDayLine( enum XDFMarket eMarket, char* pSnapData, unsig
 
 				refDayLine.Type = refParam.Type;
 				::strcpy( refDayLine.Code, pStock->Code );
-				refDayLine.Date = pStock->Date;
+				refDayLine.Date = s_nCNFOPTTradingDate;
 				refDayLine.Time = pStock->DataTimeStamp;
 				refDayLine.PreClosePx = pStock->PreClose / refParam.dPriceRate;
 				refDayLine.PreSettlePx = pStock->PreSettlePrice / refParam.dPriceRate;

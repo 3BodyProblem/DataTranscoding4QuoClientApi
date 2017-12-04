@@ -86,10 +86,16 @@ public:///< 数据采集模块事件定义
 	 */
 	QuoteClientApi*			operator->();
 
+	/**
+	 * @brief				获取查询接口
+	 */
+	QuotePrimeApi*			GetPrimeApi();
+
 private:
 	Dll						m_oDllPlugin;					///< 插件加载类
 	CollectorStatus			m_oCollectorStatus;				///< 数据采集模块的状态
 	QuoteClientApi*			m_pQuoteClientApi;				///< 导出行情源控制类
+	QuotePrimeApi*			m_pQuotePrimeApi;				///< 行情数据查询接口
 };
 
 

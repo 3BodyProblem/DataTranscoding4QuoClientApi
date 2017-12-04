@@ -185,9 +185,10 @@ public:
 	 * @param[in]				refDayLine		日线信息
 	 * @param[in]				pSnapData		快照指针
 	 * @param[in]				nSnapSize		快照大小
+	 * @param[in]				nTradeDate		交易日期
 	 * @return					==0				成功
 	 */
-	int							UpdateDayLine( enum XDFMarket eMarket, char* pSnapData, unsigned int nSnapSize );
+	int							UpdateDayLine( enum XDFMarket eMarket, char* pSnapData, unsigned int nSnapSize, unsigned int nTradeDate = 0 );
 
 protected:///< 日线落盘线程
 	static void*	__stdcall	ThreadDumpDayLine1( void* pSelf );
@@ -195,7 +196,6 @@ protected:///< 日线落盘线程
 protected:
 	TMAP_MKID2STATUS			m_mapModuleStatus;				///< 模块状态表
 	CriticalObject				m_oLock;						///< 临界区对象
-	static unsigned int			s_nDumpCount;					///< 落盘次数统计
 protected:
 	T_MAP_QUO					m_mapSHL1;						///< 上证L1
 	T_MAP_QUO					m_mapSHOPT;						///< 上证期权

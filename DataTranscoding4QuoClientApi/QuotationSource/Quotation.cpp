@@ -1021,6 +1021,9 @@ int Quotation::ReloadCNF( enum XDFRunStat eStatus, bool bBuild )
 	///< ---------------- 获取快照表数据 -------------------------------------------
 	int		noffset = (sizeof(XDFAPI_CNFutureData) + sizeof(XDFAPI_UniMsgHead)) * nCodeCount;	///< 根据商品数量，分配获取快照表需要的缓存
 	char*	pszCodeBuf = new char[noffset];
+	char	cMkID = XDF_CNF;
+	XDFAPI_MarketStatusInfo	tagStatus = { 0 };
+	cMkID = m_oQuotPlugin.GetPrimeApi()->ReqFuncData( 101, &cMkID, &tagStatus );
 
 	nErrorCode = m_oQuotPlugin->GetLastMarketDataAll( XDF_CNF, pszCodeBuf, noffset );			///< 获取快照
 	for( int m = 0; m < nErrorCode; )
@@ -1033,7 +1036,7 @@ int Quotation::ReloadCNF( enum XDFRunStat eStatus, bool bBuild )
 		{
 			if( abs(pMsgHead->MsgType) == 26 )			///< 指数
 			{
-				m_oQuoDataCenter.UpdateDayLine( XDF_CNF, pbuf, sizeof(XDFAPI_CNFutureData) );
+				m_oQuoDataCenter.UpdateDayLine( XDF_CNF, pbuf, sizeof(XDFAPI_CNFutureData), tagStatus.MarketDate );
 				pbuf += sizeof(XDFAPI_CNFutureData);
 				nNum++;
 			}
@@ -1149,6 +1152,9 @@ int Quotation::ReloadCNFOPT( enum XDFRunStat eStatus, bool bBuild )
 	///< ---------------- 获取快照表数据 -------------------------------------------
 	int		noffset = (sizeof(XDFAPI_CNFutOptData) + sizeof(XDFAPI_UniMsgHead)) * nCodeCount;	///< 根据商品数量，分配获取快照表需要的缓存
 	char*	pszCodeBuf = new char[noffset];
+	char	cMkID = XDF_CNFOPT;
+	XDFAPI_MarketStatusInfo	tagStatus = { 0 };
+	cMkID = m_oQuotPlugin.GetPrimeApi()->ReqFuncData( 101, &cMkID, &tagStatus );
 
 	nErrorCode = m_oQuotPlugin->GetLastMarketDataAll( XDF_CNFOPT, pszCodeBuf, noffset );		///< 获取快照
 	for( int m = 0; m < nErrorCode; )
@@ -1161,7 +1167,7 @@ int Quotation::ReloadCNFOPT( enum XDFRunStat eStatus, bool bBuild )
 		{
 			if( abs(pMsgHead->MsgType) == 34 )			///< 指数
 			{
-				m_oQuoDataCenter.UpdateDayLine( XDF_CNFOPT, pbuf, sizeof(XDFAPI_CNFutOptData) );
+				m_oQuoDataCenter.UpdateDayLine( XDF_CNFOPT, pbuf, sizeof(XDFAPI_CNFutOptData), tagStatus.MarketDate );
 				pbuf += sizeof(XDFAPI_CNFutOptData);
 				nNum++;
 			}
@@ -1308,7 +1314,7 @@ void Quotation::FlushSnapOnCloseTime()
 			unsigned int	nDate = DateTime::Now().DateToLong();
 			int				nDiffTime = nNowT - refCfg.CloseTime;
 
-			if( ( (nDiffTime>0&&nDiffTime<1500) || 0==refCfg.LastDate ) && ( refCfg.LastDate!=nDate ) )
+			if( ( (nDiffTime>0&&nDiffTime<1500) || 0==refCfg.LastDate ) && ( refCfg.LastDate!=nDate ) && ( nNowT >= refCfg.CloseTime ) )
 			{
 				refCfg.LastDate = nDate;
 				QuoCollector::GetCollector()->OnLog( TLV_INFO, "Quotation::FlushSnapOnCloseTime() : Fetching Closing Prices : Market(%d), Status=%d, CloseTime=%d", nMkID, nMkStatus, refCfg.CloseTime );	

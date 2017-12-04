@@ -8,6 +8,11 @@
  */
 typedef QuoteClientApi*		(__stdcall *T_Func_CreateQuoteApi)( const char *pszDebugPath );
 
+/**
+ * @brief					获取查询接口
+ */
+typedef QuotePrimeApi *		(__stdcall *T_Func_CreatePrimeApi)();
+
 
 CollectorStatus::CollectorStatus()
 : m_eStatus( ET_SS_UNACTIVE ), m_nMarketID( -1 )
@@ -38,7 +43,7 @@ bool CollectorStatus::Set( enum E_SS_Status eNewStatus )
 
 
 DataCollector::DataCollector()
- : m_pQuoteClientApi( NULL )
+ : m_pQuoteClientApi( NULL ), m_pQuotePrimeApi( NULL )
 {
 }
 
@@ -49,6 +54,7 @@ int DataCollector::Initialize( QuoteClientSpi* pIQuotationSpi )
 
 	int						nErrorCode = 0;
 	T_Func_CreateQuoteApi	pFuncCreateApi = NULL;
+	T_Func_CreatePrimeApi	pFuncCreatePrimeApi = NULL;
 	std::string				sModulePath = GetModulePath(NULL) + Configuration::GetConfig().GetDataCollectorPluginPath();
 
 	///< 加载行情源QuoteClientApi.DLL
@@ -66,19 +72,33 @@ int DataCollector::Initialize( QuoteClientSpi* pIQuotationSpi )
 		return -2;
 	}
 
+	pFuncCreatePrimeApi = (T_Func_CreatePrimeApi)m_oDllPlugin.GetDllFunction( "CreatePrimeApi" );
+	if( NULL == pFuncCreatePrimeApi )
+	{
+		QuoCollector::GetCollector()->OnLog( TLV_ERROR, "DataCollector::Initialize() : invalid CreatePrimeApi() return (pointer is NULL)" );
+		return -3;
+	}
+
 	///< 创建控制类对象
 	m_pQuoteClientApi = pFuncCreateApi( "" );
+	m_pQuotePrimeApi = pFuncCreatePrimeApi();
 	if( NULL == m_pQuoteClientApi )
 	{
 		QuoCollector::GetCollector()->OnLog( TLV_ERROR, "DataCollector::Initialize() : invalid QuoteClientApi* pointer (equal 2 NULL)" );
-		return -3;
+		return -4;
+	}
+
+	if( NULL == m_pQuotePrimeApi )
+	{
+		QuoCollector::GetCollector()->OnLog( TLV_ERROR, "DataCollector::Initialize() : invalid QuotePrimeApi* pointer (equal 2 NULL)" );
+		return -5;
 	}
 
 	///< 初始化数据源模块
 	if( m_pQuoteClientApi->Init() <= 0 )
 	{
 		QuoCollector::GetCollector()->OnLog( TLV_ERROR, "DataCollector::Initialize() : failed 2 initialize m_pQuoteClientApi->Init()n" );
-		return -4;
+		return -6;
 	}
 
 	///< 注册行情和事件回调接口
@@ -140,6 +160,11 @@ int DataCollector::RecoverDataCollector()
 QuoteClientApi* DataCollector::operator->()
 {
 	return m_pQuoteClientApi;
+}
+
+QuotePrimeApi* DataCollector::GetPrimeApi()
+{
+	return m_pQuotePrimeApi;
 }
 
 enum E_SS_Status DataCollector::InquireDataCollectorStatus( char* pszStatusDesc, unsigned int& nStrLen )
