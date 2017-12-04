@@ -66,6 +66,7 @@ typedef struct
 	unsigned int				PreClosePx;		///< 昨收
 	unsigned int				PreSettlePx;	///< 昨结
 	unsigned int				PrePosition;	///< 昨持
+	char						PreName[8];		///< 前缀
 	double						dPriceRate;		///< 放大倍数
 } T_LINE_PARAM;
 #pragma pack()
@@ -179,6 +180,14 @@ public:
 	 * @return					==0				成功
 	 */
 	int							BuildSecurity( enum XDFMarket eMarket, std::string& sCode, T_LINE_PARAM& refParam );
+
+	/**
+	 * @brief					更新前缀
+	 * @param[in]				eMarket			市场ID
+	 * @param[in]				pszPreName		前缀内容
+	 * @param[in]				nSize			内容长度
+	 */
+	int							UpdatePreName( enum XDFMarket eMarket, std::string& sCode, char* pszPreName, unsigned int nSize );
 
 	/**
 	 * @brief					更新日线信息

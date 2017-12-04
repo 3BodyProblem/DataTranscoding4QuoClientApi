@@ -471,6 +471,7 @@ int Quotation::ReloadSzLv1( enum XDFRunStat eStatus, bool bBuild )
 						XDFAPI_NameTableSz*		pData = (XDFAPI_NameTableSz*)pbuf;
 
 						tagParam.dPriceRate = ::pow(10.0, int(vctKindInfo[pData->SecKind].PriceRate) );
+						::memcpy( tagParam.PreName, pData->PreName, 4 );
 						m_oQuoDataCenter.BuildSecurity( XDF_SZ, std::string( pData->Code, 6 ), tagParam );
 
 						pbuf += sizeof(XDFAPI_NameTableSz);
@@ -1519,7 +1520,17 @@ void __stdcall	Quotation::XDF_OnRspRecvData( XDFAPI_PkgHead * pHead, const char 
 						}
 						break;
 					case 24:///< XDFAPI_PreNameChg					///< 前缀变更包
-						nLen -= pMsgHead->MsgLen;
+						{
+							while( nMsgCount-- > 0 )
+							{
+								XDFAPI_PreNameChg*	pPreNameChg = (XDFAPI_PreNameChg*)pbuf;
+
+								m_oQuoDataCenter.UpdatePreName( XDF_SZ, std::string( pPreNameChg->Code, 6 ), (char*)(pPreNameChg->PreName + 0), sizeof(pPreNameChg->PreName) );
+
+								pbuf += sizeof(XDFAPI_PreNameChg);
+							}
+							nLen -= pMsgHead->MsgLen;
+						}
 						break;
 					}
 				}

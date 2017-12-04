@@ -357,6 +357,24 @@ void* QuotationData::ThreadDumpDayLine1( void* pSelf )
 	return NULL;
 }
 
+int QuotationData::UpdatePreName( enum XDFMarket eMarket, std::string& sCode, char* pszPreName, unsigned int nSize )
+{
+	switch( eMarket )
+	{
+	case XDF_SZ:	///< ÉîÖ¤L1
+		{
+			T_MAP_QUO::iterator it = m_mapSZL1.find( sCode );
+			if( it == m_mapSZL1.end() )
+			{
+				T_QUO_DATA&		refData = it->second;
+				::memcpy( refData.first.PreName, pszPreName, 4 );
+			}
+		}
+		break;
+	}
+	return 0;
+}
+
 int QuotationData::BuildSecurity( enum XDFMarket eMarket, std::string& sCode, T_LINE_PARAM& refParam )
 {
 	unsigned int		nBufSize = 0;
@@ -642,6 +660,7 @@ int QuotationData::UpdateDayLine( enum XDFMarket eMarket, char* pSnapData, unsig
 						refDayLine.AskPx2 = pStock->Sell[1].Price;
 						refDayLine.AskVol2 = pStock->Sell[1].Volume;
 						refDayLine.Voip = pStock->Voip / refParam.dPriceRate;
+						::memcpy( refDayLine.PreName, refParam.PreName, 4 );
 
 						nErrorCode = refDayLineCache.PutData( &refDayLine );
 					}
