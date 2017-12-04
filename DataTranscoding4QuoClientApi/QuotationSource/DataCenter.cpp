@@ -302,7 +302,7 @@ void* QuotationData::ThreadDumpDayLine1( void* pSelf )
 			STR_DAY_LINE			pszLine = { 0 };
 
 			SimpleThread::Sleep( 1000 * 1 );
-			if( nDumpNumber > 0 ) {
+			if( nDumpNumber > 3000 ) {
 				QuoCollector::GetCollector()->OnLog( TLV_INFO, "QuotationData::ThreadDumpDayLine1() : (%I64d) dumped... ( Count=%u )", nDumpNumber, nMaxDataNum );
 				nDumpNumber = 0;
 			}
