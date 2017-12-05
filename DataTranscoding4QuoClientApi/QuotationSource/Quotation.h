@@ -81,7 +81,7 @@ public:
 	/**
 	 * @brief					把收盘后快照刷新落盘
 	 */
-	void						FlushSnapOnCloseTime();
+	void						FlushDayLineOnCloseTime();
 
 public:
 	virtual bool __stdcall		XDF_OnRspStatusChanged( unsigned char cMarket, int nStatus );
@@ -155,6 +155,7 @@ protected:
 	int							ReloadCNFOPT( enum XDFRunStat eStatus, bool bBuild );
 
 private:
+	CriticalObject				m_oLock;				///< 临界区对象
 	WorkStatus					m_vctMkSvrStatus[64];	///< 各市场服务状态
 	DataCollector				m_oQuotPlugin;			///< 行情插件
 	QuotationData				m_oQuoDataCenter;		///< 行情数据集合

@@ -16,7 +16,7 @@
 
 #pragma pack(1)
 /**
- * @class						T_DAY_LINE
+ * @class						T_TICK_LINE
  * @brief						日线
  */
 typedef struct
@@ -52,7 +52,7 @@ typedef struct
 	double						Voip;			///< 基金模净、权证溢价
 	char						TradingPhaseCode[12];///< 交易状态
 	char						PreName[8];		///< 证券前缀
-} T_DAY_LINE;
+} T_TICK_LINE;
 
 /**
  * @class						T_LINE_PARAM
@@ -72,7 +72,7 @@ typedef struct
 #pragma pack()
 
 
-typedef MLoopBufferSt<T_DAY_LINE>				T_DAYLINE_CACHE;			///< 循环队列缓存
+typedef MLoopBufferSt<T_TICK_LINE>				T_TICKLINE_CACHE;			///< 循环队列缓存
 typedef	std::map<enum XDFMarket,int>			TMAP_MKID2STATUS;			///< 各市场模块状态
 const	unsigned int							MAX_WRITER_NUM = 128;		///< 最大落盘文件句柄
 
@@ -127,7 +127,7 @@ private:
 };
 
 
-typedef	std::pair<T_LINE_PARAM,T_DAYLINE_CACHE>	T_QUO_DATA;	///< 数据缓存
+typedef	std::pair<T_LINE_PARAM,T_TICKLINE_CACHE>	T_QUO_DATA;	///< 数据缓存
 typedef std::map<std::string,T_QUO_DATA>		T_MAP_QUO;	///< 行情数据缓存
 
 
@@ -146,7 +146,7 @@ public:
 	 * @return					==0				成功
 								!=				失败
 	 */
-	int							Initialize();
+	int							Initialize( void* pQuotation );
 
 	/**
 	 * @brief					释放资源
@@ -191,20 +191,28 @@ public:
 
 	/**
 	 * @brief					更新日线信息
-	 * @param[in]				refDayLine		日线信息
 	 * @param[in]				pSnapData		快照指针
 	 * @param[in]				nSnapSize		快照大小
 	 * @param[in]				nTradeDate		交易日期
 	 * @return					==0				成功
 	 */
-	int							UpdateDayLine( enum XDFMarket eMarket, char* pSnapData, unsigned int nSnapSize, unsigned int nTradeDate = 0 );
+	int							UpdateTickLine( enum XDFMarket eMarket, char* pSnapData, unsigned int nSnapSize, unsigned int nTradeDate = 0 );
+
+	/**
+	 * @brief					日线落盘
+	 * @param[in]				pSnapData		快照指针
+	 * @param[in]				nSnapSize		快照大小
+	 * @param[in]				nTradeDate		交易日期
+	 */
+	int							DumpDayLine( enum XDFMarket eMarket, char* pSnapData, unsigned int nSnapSize, unsigned int nTradeDate = 0 );
 
 protected:///< 日线落盘线程
-	static void*	__stdcall	ThreadDumpDayLine1( void* pSelf );
+	static void*	__stdcall	ThreadDumpTickLine( void* pSelf );
 
 protected:
 	TMAP_MKID2STATUS			m_mapModuleStatus;				///< 模块状态表
 	CriticalObject				m_oLock;						///< 临界区对象
+	void*						m_pQuotation;					///< 行情对象
 protected:
 	T_MAP_QUO					m_mapSHL1;						///< 上证L1
 	T_MAP_QUO					m_mapSHOPT;						///< 上证期权

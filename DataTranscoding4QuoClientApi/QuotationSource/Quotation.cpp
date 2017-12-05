@@ -97,7 +97,7 @@ int Quotation::Initialize()
 		QuoCollector::GetCollector()->OnLog( TLV_INFO, "Quotation::Initialize() : ............ [%s] Quotation Is Activating............" );
 		Release();
 
-		if( (nErrCode = m_oQuoDataCenter.Initialize()) < 0 )
+		if( (nErrCode = m_oQuoDataCenter.Initialize( this )) < 0 )
 		{
 			QuoCollector::GetCollector()->OnLog( TLV_WARN, "Quotation::Initialize() : failed 2 initialize DataCenter, errorcode = %d", nErrCode );
 			Release();
@@ -130,11 +130,11 @@ int Quotation::Release()
 	if( m_oWorkStatus != ET_SS_UNACTIVE )
 	{
 		QuoCollector::GetCollector()->OnLog( TLV_INFO, "Quotation::Release() : ............ Destroying .............." );
-
+/*
 		m_oWorkStatus = ET_SS_UNACTIVE;			///< 更新Quotation会话的状态
 		m_oQuotPlugin.Release();				///< 释放行情源插件
 		m_oQuoDataCenter.Release();				///< 释放行情数据资源
-
+*/
 		QuoCollector::GetCollector()->OnLog( TLV_INFO, "Quotation::Release() : ............ Destroyed! .............." );
 	}
 
@@ -153,6 +153,7 @@ int Quotation::ReloadShLv1( enum XDFRunStat eStatus, bool bBuild )
 	int						nKindCount = 0;
 	XDFAPI_MarketKindInfo	vctKindInfo[32] = { 0 };
 	char					tempbuf[8192] = { 0 };
+	CriticalLock			section( m_oLock );
 	int						nErrorCode = m_oQuotPlugin->GetMarketInfo( XDF_SH, tempbuf, sizeof(tempbuf) );
 
 	///< -------------- 获取上海的基础信息 --------------------------------------------
@@ -248,13 +249,27 @@ int Quotation::ReloadShLv1( enum XDFRunStat eStatus, bool bBuild )
 		{
 			if( abs(pMsgHead->MsgType) == 21 )			///< 指数
 			{
-				m_oQuoDataCenter.UpdateDayLine( XDF_SH, pbuf, sizeof(XDFAPI_IndexData) );
+				if( false == bBuild )
+				{
+					m_oQuoDataCenter.DumpDayLine( XDF_SH, pbuf, sizeof(XDFAPI_IndexData), 0 );	///< 日线
+				}
+				else
+				{
+					m_oQuoDataCenter.UpdateTickLine( XDF_SH, pbuf, sizeof(XDFAPI_IndexData) );	///< Tick线
+				}
 				pbuf += sizeof(XDFAPI_IndexData);
 				nNum++;
 			}
 			else if( abs(pMsgHead->MsgType) == 22 )		///< 快照数据
 			{
-				m_oQuoDataCenter.UpdateDayLine( XDF_SH, pbuf, sizeof(XDFAPI_StockData5) );
+				if( false == bBuild )
+				{
+					m_oQuoDataCenter.DumpDayLine( XDF_SH, pbuf, sizeof(XDFAPI_StockData5), 0 );	///< 日线
+				}
+				else
+				{
+					m_oQuoDataCenter.UpdateTickLine( XDF_SH, pbuf, sizeof(XDFAPI_StockData5) );	///< Tick线
+				}
 				pbuf += sizeof(XDFAPI_StockData5);
 				nNum++;
 			}
@@ -286,6 +301,7 @@ int Quotation::ReloadShOpt( enum XDFRunStat eStatus, bool bBuild )
 	int						nKindCount = 0;
 	XDFAPI_MarketKindInfo	vctKindInfo[32] = { 0 };
 	char					tempbuf[8192] = { 0 };
+	CriticalLock			section( m_oLock );
 	int						nErrorCode = m_oQuotPlugin->GetMarketInfo( XDF_SHOPT, tempbuf, sizeof(tempbuf) );
 
 	///< -------------- 获取上海期权的基础信息 -----------------------------------------
@@ -386,7 +402,15 @@ int Quotation::ReloadShOpt( enum XDFRunStat eStatus, bool bBuild )
 		{
 			if( abs(pMsgHead->MsgType) == 15 )			///< 指数
 			{
-				m_oQuoDataCenter.UpdateDayLine( XDF_SHOPT, pbuf, sizeof(XDFAPI_ShOptData) );
+				if( false == bBuild )
+				{
+					m_oQuoDataCenter.DumpDayLine( XDF_SHOPT, pbuf, sizeof(XDFAPI_ShOptData), 0 );	///< 日线
+				}
+				else
+				{
+					m_oQuoDataCenter.UpdateTickLine( XDF_SHOPT, pbuf, sizeof(XDFAPI_ShOptData) );
+				}
+
 				pbuf += sizeof(XDFAPI_ShOptData);
 				nNum++;
 			}
@@ -418,6 +442,7 @@ int Quotation::ReloadSzLv1( enum XDFRunStat eStatus, bool bBuild )
 	int						nKindCount = 0;
 	XDFAPI_MarketKindInfo	vctKindInfo[32] = { 0 };
 	char					tempbuf[8192] = { 0 };
+	CriticalLock			section( m_oLock );
 	int						nErrorCode = m_oQuotPlugin->GetMarketInfo( XDF_SZ, tempbuf, sizeof(tempbuf) );
 
 	///< -------------- 获取深圳的基础信息 --------------------------------------------
@@ -514,13 +539,27 @@ int Quotation::ReloadSzLv1( enum XDFRunStat eStatus, bool bBuild )
 		{
 			if( abs(pMsgHead->MsgType) == 21 )			///< 指数
 			{
-				m_oQuoDataCenter.UpdateDayLine( XDF_SZ, pbuf, sizeof(XDFAPI_IndexData) );
+				if( false == bBuild )
+				{
+					m_oQuoDataCenter.DumpDayLine( XDF_SZ, pbuf, sizeof(XDFAPI_IndexData), 0 );	///< 日线
+				}
+				else
+				{
+					m_oQuoDataCenter.UpdateTickLine( XDF_SZ, pbuf, sizeof(XDFAPI_IndexData) );	///< Tick线
+				}
 				pbuf += sizeof(XDFAPI_IndexData);
 				nNum++;
 			}
 			else if( abs(pMsgHead->MsgType) == 22 )		///< 快照数据
 			{
-				m_oQuoDataCenter.UpdateDayLine( XDF_SZ, pbuf, sizeof(XDFAPI_StockData5) );
+				if( false == bBuild )
+				{
+					m_oQuoDataCenter.DumpDayLine( XDF_SZ, pbuf, sizeof(XDFAPI_StockData5), 0 );	///< 日线
+				}
+				else
+				{
+					m_oQuoDataCenter.UpdateTickLine( XDF_SZ, pbuf, sizeof(XDFAPI_StockData5) );	///< Tick线
+				}
 				pbuf += sizeof(XDFAPI_StockData5);
 				nNum++;
 			}
@@ -552,6 +591,7 @@ int Quotation::ReloadSzOpt( enum XDFRunStat eStatus, bool bBuild )
 	int						nKindCount = 0;
 	XDFAPI_MarketKindInfo	vctKindInfo[32] = { 0 };
 	char					tempbuf[8192] = { 0 };
+	CriticalLock			section( m_oLock );
 	int						nErrorCode = m_oQuotPlugin->GetMarketInfo( XDF_SZOPT, tempbuf, sizeof(tempbuf) );
 
 	///< -------------- 获取深圳期权的基础信息 --------------------------------------------
@@ -652,7 +692,14 @@ int Quotation::ReloadSzOpt( enum XDFRunStat eStatus, bool bBuild )
 		{
 			if( abs(pMsgHead->MsgType) == 35 )			///< 指数
 			{
-				m_oQuoDataCenter.UpdateDayLine( XDF_SZOPT, pbuf, sizeof(XDFAPI_SzOptData) );
+				if( false == bBuild )
+				{
+					m_oQuoDataCenter.DumpDayLine( XDF_SZOPT, pbuf, sizeof(XDFAPI_SzOptData), 0 );	///< 日线
+				}
+				else
+				{
+					m_oQuoDataCenter.UpdateTickLine( XDF_SZOPT, pbuf, sizeof(XDFAPI_SzOptData) );
+				}
 				pbuf += sizeof(XDFAPI_SzOptData);
 				nNum++;
 			}
@@ -684,6 +731,7 @@ int Quotation::ReloadCFF( enum XDFRunStat eStatus, bool bBuild )
 	int						nKindCount = 0;
 	XDFAPI_MarketKindInfo	vctKindInfo[32] = { 0 };
 	char					tempbuf[8192] = { 0 };
+	CriticalLock			section( m_oLock );
 	int						nErrorCode = m_oQuotPlugin->GetMarketInfo( XDF_CF, tempbuf, sizeof(tempbuf) );
 
 	///< -------------- 获取中金期货的基础信息 --------------------------------------------
@@ -779,7 +827,14 @@ int Quotation::ReloadCFF( enum XDFRunStat eStatus, bool bBuild )
 		{
 			if( abs(pMsgHead->MsgType) == 20 )			///< 指数
 			{
-				m_oQuoDataCenter.UpdateDayLine( XDF_CF, pbuf, sizeof(XDFAPI_CffexData) );
+				if( false == bBuild )
+				{
+					m_oQuoDataCenter.DumpDayLine( XDF_CF, pbuf, sizeof(XDFAPI_CffexData), 0 );	///< 日线
+				}
+				else
+				{
+					m_oQuoDataCenter.UpdateTickLine( XDF_CF, pbuf, sizeof(XDFAPI_CffexData) );
+				}
 				pbuf += sizeof(XDFAPI_CffexData);
 				nNum++;
 			}
@@ -811,6 +866,7 @@ int Quotation::ReloadCFFOPT( enum XDFRunStat eStatus, bool bBuild )
 	int						nKindCount = 0;
 	XDFAPI_MarketKindInfo	vctKindInfo[32] = { 0 };
 	char					tempbuf[8192] = { 0 };
+	CriticalLock			section( m_oLock );
 	int						nErrorCode = m_oQuotPlugin->GetMarketInfo( XDF_ZJOPT, tempbuf, sizeof(tempbuf) );
 
 	///< -------------- 获取中金期权的基础信息 --------------------------------------------
@@ -906,7 +962,14 @@ int Quotation::ReloadCFFOPT( enum XDFRunStat eStatus, bool bBuild )
 		{
 			if( abs(pMsgHead->MsgType) == 18 )			///< 指数
 			{
-				m_oQuoDataCenter.UpdateDayLine( XDF_ZJOPT, pbuf, sizeof(XDFAPI_ZjOptData) );
+				if( false == bBuild )
+				{
+					m_oQuoDataCenter.DumpDayLine( XDF_ZJOPT, pbuf, sizeof(XDFAPI_ZjOptData), 0 );	///< 日线
+				}
+				else
+				{
+					m_oQuoDataCenter.UpdateTickLine( XDF_ZJOPT, pbuf, sizeof(XDFAPI_ZjOptData) );
+				}
 				pbuf += sizeof(XDFAPI_ZjOptData);
 				nNum++;
 			}
@@ -938,6 +1001,7 @@ int Quotation::ReloadCNF( enum XDFRunStat eStatus, bool bBuild )
 	int						nKindCount = 0;
 	XDFAPI_MarketKindInfo	vctKindInfo[32] = { 0 };
 	char					tempbuf[8192] = { 0 };
+	CriticalLock			section( m_oLock );
 	int						nErrorCode = m_oQuotPlugin->GetMarketInfo( XDF_CNF, tempbuf, sizeof(tempbuf) );
 
 	///< -------------- 获取商品期货的基础信息 --------------------------------------------
@@ -1037,7 +1101,14 @@ int Quotation::ReloadCNF( enum XDFRunStat eStatus, bool bBuild )
 		{
 			if( abs(pMsgHead->MsgType) == 26 )			///< 指数
 			{
-				m_oQuoDataCenter.UpdateDayLine( XDF_CNF, pbuf, sizeof(XDFAPI_CNFutureData), tagStatus.MarketDate );
+				if( false == bBuild )
+				{
+					m_oQuoDataCenter.DumpDayLine( XDF_CNF, pbuf, sizeof(XDFAPI_CNFutureData), tagStatus.MarketDate );	///< 日线
+				}
+				else
+				{
+					m_oQuoDataCenter.UpdateTickLine( XDF_CNF, pbuf, sizeof(XDFAPI_CNFutureData), tagStatus.MarketDate );
+				}
 				pbuf += sizeof(XDFAPI_CNFutureData);
 				nNum++;
 			}
@@ -1069,6 +1140,7 @@ int Quotation::ReloadCNFOPT( enum XDFRunStat eStatus, bool bBuild )
 	int						nKindCount = 0;
 	XDFAPI_MarketKindInfo	vctKindInfo[32] = { 0 };
 	char					tempbuf[8192] = { 0 };
+	CriticalLock			section( m_oLock );
 	int						nErrorCode = m_oQuotPlugin->GetMarketInfo( XDF_CNFOPT, tempbuf, sizeof(tempbuf) );
 
 	///< -------------- 获取商品期权的基础信息 --------------------------------------------
@@ -1168,7 +1240,14 @@ int Quotation::ReloadCNFOPT( enum XDFRunStat eStatus, bool bBuild )
 		{
 			if( abs(pMsgHead->MsgType) == 34 )			///< 指数
 			{
-				m_oQuoDataCenter.UpdateDayLine( XDF_CNFOPT, pbuf, sizeof(XDFAPI_CNFutOptData), tagStatus.MarketDate );
+				if( false == bBuild )
+				{
+					m_oQuoDataCenter.DumpDayLine( XDF_CNFOPT, pbuf, sizeof(XDFAPI_CNFutOptData), tagStatus.MarketDate );	///< 日线
+				}
+				else
+				{
+					m_oQuoDataCenter.UpdateTickLine( XDF_CNFOPT, pbuf, sizeof(XDFAPI_CNFutOptData), tagStatus.MarketDate );
+				}
 				pbuf += sizeof(XDFAPI_CNFutOptData);
 				nNum++;
 			}
@@ -1285,7 +1364,7 @@ bool __stdcall	Quotation::XDF_OnRspStatusChanged( unsigned char cMarket, int nSt
 	return true;
 }
 
-void Quotation::FlushSnapOnCloseTime()
+void Quotation::FlushDayLineOnCloseTime()
 {
 	MAP_MK_CLOSECFG&		refCloseCfg = Configuration::GetConfig().GetMkCloseCfg();
 	static CriticalObject	oLock;				///< 临界区对象
@@ -1304,7 +1383,7 @@ void Quotation::FlushSnapOnCloseTime()
 
 		if( nMkStatus < 5 )
 		{
-			QuoCollector::GetCollector()->OnLog( TLV_INFO, "Quotation::FlushSnapOnCloseTime() : Ignore Closing Prices : Market(%d), Status=%d", nMkID, nMkStatus );
+			QuoCollector::GetCollector()->OnLog( TLV_INFO, "Quotation::FlushDayLineOnCloseTime() : Ignore Closing Prices : Market(%d), Status=%d", nMkID, nMkStatus );
 			continue;
 		}
 
@@ -1318,7 +1397,7 @@ void Quotation::FlushSnapOnCloseTime()
 			if( ( (nDiffTime>0&&nDiffTime<1500) || 0==refCfg.LastDate ) && ( refCfg.LastDate!=nDate ) && ( nNowT >= refCfg.CloseTime ) )
 			{
 				refCfg.LastDate = nDate;
-				QuoCollector::GetCollector()->OnLog( TLV_INFO, "Quotation::FlushSnapOnCloseTime() : Fetching Closing Prices : Market(%d), Status=%d, CloseTime=%d", nMkID, nMkStatus, refCfg.CloseTime );	
+				QuoCollector::GetCollector()->OnLog( TLV_INFO, "Quotation::FlushDayLineOnCloseTime() : Fetching Closing Prices : Market(%d), Status=%d, CloseTime=%d", nMkID, nMkStatus, refCfg.CloseTime );	
 
 				switch( (enum XDFMarket)nMkID )
 				{
@@ -1390,7 +1469,7 @@ void __stdcall	Quotation::XDF_OnRspRecvData( XDFAPI_PkgHead * pHead, const char 
 						{
 							while( nMsgCount-- > 0 )
 							{
-								m_oQuoDataCenter.UpdateDayLine( XDF_SH, pbuf, sizeof(XDFAPI_IndexData) );
+								m_oQuoDataCenter.UpdateTickLine( XDF_SH, pbuf, sizeof(XDFAPI_IndexData) );
 
 								pbuf += sizeof(XDFAPI_IndexData);
 							}
@@ -1401,7 +1480,7 @@ void __stdcall	Quotation::XDF_OnRspRecvData( XDFAPI_PkgHead * pHead, const char 
 						{
 							while( nMsgCount-- > 0 )
 							{
-								m_oQuoDataCenter.UpdateDayLine( XDF_SH, pbuf, sizeof(XDFAPI_StockData5) );
+								m_oQuoDataCenter.UpdateTickLine( XDF_SH, pbuf, sizeof(XDFAPI_StockData5) );
 
 								pbuf += sizeof(XDFAPI_StockData5);
 							}
@@ -1456,7 +1535,7 @@ void __stdcall	Quotation::XDF_OnRspRecvData( XDFAPI_PkgHead * pHead, const char 
 						{
 							while( nMsgCount-- > 0 )
 							{
-								m_oQuoDataCenter.UpdateDayLine( XDF_SHOPT, pbuf, sizeof(XDFAPI_ShOptData) );
+								m_oQuoDataCenter.UpdateTickLine( XDF_SHOPT, pbuf, sizeof(XDFAPI_ShOptData) );
 
 								pbuf += sizeof(XDFAPI_ShOptData);
 							}
@@ -1501,7 +1580,7 @@ void __stdcall	Quotation::XDF_OnRspRecvData( XDFAPI_PkgHead * pHead, const char 
 						{
 							while( nMsgCount-- > 0 )
 							{
-								m_oQuoDataCenter.UpdateDayLine( XDF_SZ, pbuf, sizeof(XDFAPI_IndexData) );
+								m_oQuoDataCenter.UpdateTickLine( XDF_SZ, pbuf, sizeof(XDFAPI_IndexData) );
 
 								pbuf += sizeof(XDFAPI_IndexData);
 							}
@@ -1512,7 +1591,7 @@ void __stdcall	Quotation::XDF_OnRspRecvData( XDFAPI_PkgHead * pHead, const char 
 						{
 							while( nMsgCount-- > 0 )
 							{
-								m_oQuoDataCenter.UpdateDayLine( XDF_SZ, pbuf, sizeof(XDFAPI_StockData5) );
+								m_oQuoDataCenter.UpdateTickLine( XDF_SZ, pbuf, sizeof(XDFAPI_StockData5) );
 
 								pbuf += sizeof(XDFAPI_StockData5);
 							}
@@ -1580,7 +1659,7 @@ void __stdcall	Quotation::XDF_OnRspRecvData( XDFAPI_PkgHead * pHead, const char 
 						{
 							while( nMsgCount-- > 0 )
 							{
-								m_oQuoDataCenter.UpdateDayLine( XDF_SZOPT, pbuf, sizeof(XDFAPI_SzOptData) );
+								m_oQuoDataCenter.UpdateTickLine( XDF_SZOPT, pbuf, sizeof(XDFAPI_SzOptData) );
 
 								pbuf += sizeof(XDFAPI_SzOptData);
 							}
@@ -1625,7 +1704,7 @@ void __stdcall	Quotation::XDF_OnRspRecvData( XDFAPI_PkgHead * pHead, const char 
 						{
 							while( nMsgCount-- > 0 )
 							{
-								m_oQuoDataCenter.UpdateDayLine( XDF_CF, pbuf, sizeof(XDFAPI_CffexData) );
+								m_oQuoDataCenter.UpdateTickLine( XDF_CF, pbuf, sizeof(XDFAPI_CffexData) );
 
 								pbuf += sizeof(XDFAPI_CffexData);
 							}
@@ -1671,7 +1750,7 @@ void __stdcall	Quotation::XDF_OnRspRecvData( XDFAPI_PkgHead * pHead, const char 
 						{
 							while( nMsgCount-- > 0 )
 							{
-								m_oQuoDataCenter.UpdateDayLine( XDF_ZJOPT, pbuf, sizeof(XDFAPI_ZjOptData) );
+								m_oQuoDataCenter.UpdateTickLine( XDF_ZJOPT, pbuf, sizeof(XDFAPI_ZjOptData) );
 
 								pbuf += sizeof(XDFAPI_ZjOptData);
 							}
@@ -1717,7 +1796,7 @@ void __stdcall	Quotation::XDF_OnRspRecvData( XDFAPI_PkgHead * pHead, const char 
 						{
 							while( nMsgCount-- > 0 )
 							{
-								m_oQuoDataCenter.UpdateDayLine( XDF_CNF, pbuf, sizeof(XDFAPI_CNFutureData) );
+								m_oQuoDataCenter.UpdateTickLine( XDF_CNF, pbuf, sizeof(XDFAPI_CNFutureData) );
 
 								pbuf += sizeof(XDFAPI_CNFutureData);
 							}
@@ -1763,7 +1842,7 @@ void __stdcall	Quotation::XDF_OnRspRecvData( XDFAPI_PkgHead * pHead, const char 
 						{
 							while( nMsgCount-- > 0 )
 							{
-								m_oQuoDataCenter.UpdateDayLine( XDF_CNFOPT, pbuf, sizeof(XDFAPI_CNFutOptData) );
+								m_oQuoDataCenter.UpdateTickLine( XDF_CNFOPT, pbuf, sizeof(XDFAPI_CNFutOptData) );
 
 								pbuf += sizeof(XDFAPI_CNFutOptData);
 							}

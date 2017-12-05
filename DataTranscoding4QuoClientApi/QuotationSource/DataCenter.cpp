@@ -1,3 +1,4 @@
+#include "Quotation.h"
 #include "DataCenter.h"
 #include "DataDump.h"
 #include <windows.h>
@@ -64,59 +65,59 @@ char* CacheAlloc::GrabCache( enum XDFMarket eMkID, unsigned int& nOutSize )
 		nOutSize = 0;
 		if( NULL == m_pDataCache )
 		{
-			m_nMaxCacheSize = (XDF_SH_COUNT + XDF_SHOPT_COUNT + XDF_SZ_COUNT + XDF_SZOPT_COUNT + XDF_CF_COUNT + XDF_ZJOPT_COUNT + XDF_CNF_COUNT + XDF_CNFOPT_COUNT) * sizeof(T_DAY_LINE) * s_nNumberInSection;
+			m_nMaxCacheSize = (XDF_SH_COUNT + XDF_SHOPT_COUNT + XDF_SZ_COUNT + XDF_SZOPT_COUNT + XDF_CF_COUNT + XDF_ZJOPT_COUNT + XDF_CNF_COUNT + XDF_CNFOPT_COUNT) * sizeof(T_TICK_LINE) * s_nNumberInSection;
 			m_pDataCache = new char[m_nMaxCacheSize];
 			::memset( m_pDataCache, 0, m_nMaxCacheSize );
 		}
 
 		if( NULL == m_pDataCache )
 		{
-			QuoCollector::GetCollector()->OnLog( TLV_ERROR, "DayLineArray::GrabCache() : invalid buffer pointer." );
+			QuoCollector::GetCollector()->OnLog( TLV_ERROR, "CacheAlloc::GrabCache() : invalid buffer pointer." );
 			return NULL;
 		}
 
 		switch( eMkID )
 		{
 		case XDF_SH:		///< 上海Lv1
-			nBufferSize4Market = sizeof(T_DAY_LINE) * s_nNumberInSection;
+			nBufferSize4Market = sizeof(T_TICK_LINE) * s_nNumberInSection;
 			break;
 		case XDF_SHL2:		///< 上海Lv2(QuoteClientApi内部屏蔽)
-			nBufferSize4Market = sizeof(T_DAY_LINE) * s_nNumberInSection;
+			nBufferSize4Market = sizeof(T_TICK_LINE) * s_nNumberInSection;
 			break;
 		case XDF_SHOPT:		///< 上海期权
-			nBufferSize4Market = sizeof(T_DAY_LINE) * s_nNumberInSection;
+			nBufferSize4Market = sizeof(T_TICK_LINE) * s_nNumberInSection;
 			break;
 		case XDF_SZ:		///< 深证Lv1
-			nBufferSize4Market = sizeof(T_DAY_LINE) * s_nNumberInSection;
+			nBufferSize4Market = sizeof(T_TICK_LINE) * s_nNumberInSection;
 			break;
 		case XDF_SZL2:		///< 深证Lv2(QuoteClientApi内部屏蔽)
-			nBufferSize4Market = sizeof(T_DAY_LINE) * s_nNumberInSection;
+			nBufferSize4Market = sizeof(T_TICK_LINE) * s_nNumberInSection;
 			break;
 		case XDF_SZOPT:		///< 深圳期权
-			nBufferSize4Market = sizeof(T_DAY_LINE) * s_nNumberInSection;
+			nBufferSize4Market = sizeof(T_TICK_LINE) * s_nNumberInSection;
 			break;
 		case XDF_CF:		///< 中金期货
-			nBufferSize4Market = sizeof(T_DAY_LINE) * s_nNumberInSection;
+			nBufferSize4Market = sizeof(T_TICK_LINE) * s_nNumberInSection;
 			break;
 		case XDF_ZJOPT:		///< 中金期权
-			nBufferSize4Market = sizeof(T_DAY_LINE) * s_nNumberInSection;
+			nBufferSize4Market = sizeof(T_TICK_LINE) * s_nNumberInSection;
 			break;
 		case XDF_CNF:		///< 商品期货(上海/郑州/大连)
-			nBufferSize4Market = sizeof(T_DAY_LINE) * s_nNumberInSection;
+			nBufferSize4Market = sizeof(T_TICK_LINE) * s_nNumberInSection;
 			break;
 		case XDF_CNFOPT:	///< 商品期权(上海/郑州/大连)
-			nBufferSize4Market = sizeof(T_DAY_LINE) * s_nNumberInSection;
+			nBufferSize4Market = sizeof(T_TICK_LINE) * s_nNumberInSection;
 			break;
 		default:
 			{
-				QuoCollector::GetCollector()->OnLog( TLV_ERROR, "DayLineArray::GrabCache() : unknow market id" );
+				QuoCollector::GetCollector()->OnLog( TLV_ERROR, "CacheAlloc::GrabCache() : unknow market id" );
 				return NULL;
 			}
 		}
 
 		if( (m_nAllocateSize + nBufferSize4Market) > m_nMaxCacheSize )
 		{
-			QuoCollector::GetCollector()->OnLog( TLV_ERROR, "DayLineArray::GrabCache() : not enough space ( %u > %u )", (m_nAllocateSize + nBufferSize4Market), m_nMaxCacheSize );
+			QuoCollector::GetCollector()->OnLog( TLV_ERROR, "CacheAlloc::GrabCache() : not enough space ( %u > %u )", (m_nAllocateSize + nBufferSize4Market), m_nMaxCacheSize );
 			return NULL;
 		}
 
@@ -126,11 +127,11 @@ char* CacheAlloc::GrabCache( enum XDFMarket eMkID, unsigned int& nOutSize )
 	}
 	catch( std::exception& err )
 	{
-		QuoCollector::GetCollector()->OnLog( TLV_ERROR, "DayLineArray::GrabCache() : an exceptin occur : %s", err.what() );
+		QuoCollector::GetCollector()->OnLog( TLV_ERROR, "CacheAlloc::GrabCache() : an exceptin occur : %s", err.what() );
 	}
 	catch( ... )
 	{
-		QuoCollector::GetCollector()->OnLog( TLV_ERROR, "DayLineArray::GrabCache() : unknow exception" );
+		QuoCollector::GetCollector()->OnLog( TLV_ERROR, "CacheAlloc::GrabCache() : unknow exception" );
 	}
 
 	return pData;
@@ -145,8 +146,12 @@ void CacheAlloc::FreeCaches()
 	}
 }
 
+static unsigned int			s_nCNFTradingDate = 0;
+static unsigned int			s_nCNFOPTTradingDate = 0;
+
 
 QuotationData::QuotationData()
+ : m_pQuotation( NULL )
 {
 }
 
@@ -154,8 +159,9 @@ QuotationData::~QuotationData()
 {
 }
 
-int QuotationData::Initialize()
+int QuotationData::Initialize( void* pQuotation )
 {
+	m_pQuotation = pQuotation;
 	Release();
 
 	return 0;
@@ -200,61 +206,61 @@ void QuotationData::BeginDumpThread( enum XDFMarket eMarket, int nStatus )
 	{
 		if( false == m_oThdDump.IsAlive() )
 		{
-			if( 0 != m_oThdDump.Create( "ThreadDumpDayLine1()", ThreadDumpDayLine1, this ) ) {
-				QuoCollector::GetCollector()->OnLog( TLV_ERROR, "QuotationData::BeginDumpThread() : failed 2 create day line thread(1)" );
+			if( 0 != m_oThdDump.Create( "ThreadDumpTickLine()", ThreadDumpTickLine, this ) ) {
+				QuoCollector::GetCollector()->OnLog( TLV_ERROR, "QuotationData::BeginDumpThread() : failed 2 create tick line thread(1)" );
 			}
 		}
 	}
 }
 
-__inline bool	PrepareFile( T_DAY_LINE* pDayLine, std::string& sCode, std::ofstream& oDumper )
+__inline bool	PrepareTickFile( T_TICK_LINE* pTickLine, std::string& sCode, std::ofstream& oDumper )
 {
 	char				pszFilePath[512] = { 0 };
 
-	switch( pDayLine->eMarketID )
+	switch( pTickLine->eMarketID )
 	{
 	case XDF_SH:		///< 上海Lv1
 	case XDF_SHOPT:		///< 上海期权
 	case XDF_SHL2:		///< 上海Lv2(QuoteClientApi内部屏蔽)
-		::sprintf( pszFilePath, "SSE/TICK/%s/%u/", pDayLine->Code, pDayLine->Date, pDayLine->Code, pDayLine->Date );
+		::sprintf( pszFilePath, "SSE/TICK/%s/%u/", pTickLine->Code, pTickLine->Date, pTickLine->Code, pTickLine->Date );
 		break;
 	case XDF_SZ:		///< 深证Lv1
 	case XDF_SZOPT:		///< 深圳期权
 	case XDF_SZL2:		///< 深证Lv2(QuoteClientApi内部屏蔽)
-		::sprintf( pszFilePath, "SZSE/TICK/%s/%u/", pDayLine->Code, pDayLine->Date, pDayLine->Code, pDayLine->Date );
+		::sprintf( pszFilePath, "SZSE/TICK/%s/%u/", pTickLine->Code, pTickLine->Date, pTickLine->Code, pTickLine->Date );
 		break;
 	case XDF_CF:		///< 中金期货
 	case XDF_ZJOPT:		///< 中金期权
-		::sprintf( pszFilePath, "CFFEX/TICK/%s/%u/", pDayLine->Code, pDayLine->Date, pDayLine->Code, pDayLine->Date );
+		::sprintf( pszFilePath, "CFFEX/TICK/%s/%u/", pTickLine->Code, pTickLine->Date, pTickLine->Code, pTickLine->Date );
 		break;
 	case XDF_CNF:		///< 商品期货(上海/郑州/大连)
 	case XDF_CNFOPT:	///< 商品期权(上海/郑州/大连)
 		{
-			switch( pDayLine->Type )
+			switch( pTickLine->Type )
 			{
 			case 1:
 			case 4:
-				::sprintf( pszFilePath, "CZCE/TICK/%s/%u/", pDayLine->Code, pDayLine->Date, pDayLine->Code, pDayLine->Date );
+				::sprintf( pszFilePath, "CZCE/TICK/%s/%u/", pTickLine->Code, pTickLine->Date, pTickLine->Code, pTickLine->Date );
 				break;
 			case 2:
 			case 5:
-				::sprintf( pszFilePath, "DCE/TICK/%s/%u/", pDayLine->Code, pDayLine->Date, pDayLine->Code, pDayLine->Date );
+				::sprintf( pszFilePath, "DCE/TICK/%s/%u/", pTickLine->Code, pTickLine->Date, pTickLine->Code, pTickLine->Date );
 				break;
 			case 3:
 			case 6:
-				::sprintf( pszFilePath, "SHFE/TICK/%s/%u/", pDayLine->Code, pDayLine->Date, pDayLine->Code, pDayLine->Date );
+				::sprintf( pszFilePath, "SHFE/TICK/%s/%u/", pTickLine->Code, pTickLine->Date, pTickLine->Code, pTickLine->Date );
 				break;
 			case 7:
-				::sprintf( pszFilePath, "INE/TICK/%s/%u/", pDayLine->Code, pDayLine->Date, pDayLine->Code, pDayLine->Date );
+				::sprintf( pszFilePath, "INE/TICK/%s/%u/", pTickLine->Code, pTickLine->Date, pTickLine->Code, pTickLine->Date );
 				break;
 			default:
-				QuoCollector::GetCollector()->OnLog( TLV_ERROR, "QuotationData::ThreadDumpDayLine1() : invalid market subid (Type=%d)", pDayLine->Type );
+				QuoCollector::GetCollector()->OnLog( TLV_ERROR, "QuotationData::ThreadDumpTickLine() : invalid market subid (Type=%d)", pTickLine->Type );
 				return false;
 			}
 		}
 		break;
 	default:
-		QuoCollector::GetCollector()->OnLog( TLV_ERROR, "QuotationData::ThreadDumpDayLine1() : invalid market id (%s)", pDayLine->eMarketID );
+		QuoCollector::GetCollector()->OnLog( TLV_ERROR, "QuotationData::ThreadDumpTickLine() : invalid market id (%s)", pTickLine->eMarketID );
 		return false;
 	}
 
@@ -262,17 +268,17 @@ __inline bool	PrepareFile( T_DAY_LINE* pDayLine, std::string& sCode, std::ofstre
 	std::string				sFilePath = JoinPath( Configuration::GetConfig().GetDumpFolder(), pszFilePath );
 	File::CreateDirectoryTree( sFilePath );
 	char	pszFileName[128] = { 0 };
-	::sprintf( pszFileName, "TICK%s_%u.csv", pDayLine->Code, pDayLine->Date );
+	::sprintf( pszFileName, "TICK%s_%u.csv", pTickLine->Code, pTickLine->Date );
 	sFilePath += pszFileName;
 	oDumper.open( sFilePath.c_str() , std::ios::out|std::ios::app );
 
 	if( !oDumper.is_open() )
 	{
-		QuoCollector::GetCollector()->OnLog( TLV_ERROR, "QuotationData::ThreadDumpDayLine1() : cannot open file (%s)", sFilePath.c_str() );
+		QuoCollector::GetCollector()->OnLog( TLV_ERROR, "QuotationData::ThreadDumpTickLine() : cannot open file (%s)", sFilePath.c_str() );
 		return false;
 	}
 
-	sCode = pDayLine->Code;
+	sCode = pTickLine->Code;
 	oDumper.seekp( 0, std::ios::end );
 	if( 0 == oDumper.tellp() )
 	{
@@ -283,12 +289,13 @@ __inline bool	PrepareFile( T_DAY_LINE* pDayLine, std::string& sCode, std::ofstre
 	return true;
 }
 
-typedef char	STR_DAY_LINE[512];
+typedef char	STR_TICK_LINE[512];
 
-void* QuotationData::ThreadDumpDayLine1( void* pSelf )
+void* QuotationData::ThreadDumpTickLine( void* pSelf )
 {
 	unsigned __int64			nDumpNumber = 0;
 	QuotationData&				refData = *(QuotationData*)pSelf;
+	Quotation&					refQuotation = *((Quotation*)refData.m_pQuotation);
 
 	while( false == SimpleThread::GetGlobalStopFlag() )
 	{
@@ -296,30 +303,30 @@ void* QuotationData::ThreadDumpDayLine1( void* pSelf )
 		{
 			char*					pBufPtr = CacheAlloc::GetObj().GetBufferPtr();
 			unsigned int			nBufLen = CacheAlloc::GetObj().GetDataLength();
-			unsigned int			nMaxDataNum = nBufLen / sizeof(T_DAY_LINE);
+			unsigned int			nMaxDataNum = nBufLen / sizeof(T_TICK_LINE);
 			std::string				sCode;
 			std::ofstream			oDumper;
-			STR_DAY_LINE			pszLine = { 0 };
+			STR_TICK_LINE			pszLine = { 0 };
 
 			SimpleThread::Sleep( 1000 * 1 );
 			if( nDumpNumber > 3000 ) {
-				QuoCollector::GetCollector()->OnLog( TLV_INFO, "QuotationData::ThreadDumpDayLine1() : (%I64d) dumped... ( Count=%u )", nDumpNumber, nMaxDataNum );
+				QuoCollector::GetCollector()->OnLog( TLV_INFO, "QuotationData::ThreadDumpTickLine() : (%I64d) dumped... ( Count=%u )", nDumpNumber, nMaxDataNum );
 				nDumpNumber = 0;
 			}
 
 			for( int n = 0; n < nMaxDataNum; n++ )
 			{
-				T_DAY_LINE*				pDayLine = (T_DAY_LINE*)(pBufPtr + n * sizeof(T_DAY_LINE));
+				T_TICK_LINE*				pTickLine = (T_TICK_LINE*)(pBufPtr + n * sizeof(T_TICK_LINE));
 
-				if( 0 == pDayLine->Valid )
+				if( 0 == pTickLine->Valid )
 				{
 					continue;
 				}
 				else
 				{
-					if( sCode != pDayLine->Code )
+					if( sCode != pTickLine->Code )
 					{
-						if( false == PrepareFile( pDayLine, sCode, oDumper ) )
+						if( false == PrepareTickFile( pTickLine, sCode, oDumper ) )
 						{
 							continue;
 						}
@@ -327,30 +334,32 @@ void* QuotationData::ThreadDumpDayLine1( void* pSelf )
 
 					if( !oDumper.is_open() )
 					{
-						QuoCollector::GetCollector()->OnLog( TLV_ERROR, "QuotationData::ThreadDumpDayLine1() : invalid file handle" );
+						QuoCollector::GetCollector()->OnLog( TLV_ERROR, "QuotationData::ThreadDumpTickLine() : invalid file handle" );
 						SimpleThread::Sleep( 1000 * 10 );
 						continue;
 					}
 
 					int		nLen = ::sprintf( pszLine, "%u,%u,%f,%f,%f,%f,%f,%f,%f,%f,%f,%f,%f,%I64d,%I64d,%I64d,%f,%I64d,%f,%I64d,%f,%I64d,%f,%I64d,%f,%s,%s\n"
-						, pDayLine->Date, pDayLine->Time, pDayLine->PreClosePx, pDayLine->PreSettlePx
-						, pDayLine->OpenPx, pDayLine->HighPx, pDayLine->LowPx, pDayLine->ClosePx, pDayLine->NowPx, pDayLine->SettlePx
-						, pDayLine->UpperPx, pDayLine->LowerPx, pDayLine->Amount, pDayLine->Volume, pDayLine->OpenInterest, pDayLine->NumTrades
-						, pDayLine->BidPx1, pDayLine->BidVol1, pDayLine->BidPx2, pDayLine->BidVol2, pDayLine->AskPx1, pDayLine->AskVol1, pDayLine->AskPx2, pDayLine->AskVol2
-						, pDayLine->Voip, pDayLine->TradingPhaseCode, pDayLine->PreName );
+						, pTickLine->Date, pTickLine->Time, pTickLine->PreClosePx, pTickLine->PreSettlePx
+						, pTickLine->OpenPx, pTickLine->HighPx, pTickLine->LowPx, pTickLine->ClosePx, pTickLine->NowPx, pTickLine->SettlePx
+						, pTickLine->UpperPx, pTickLine->LowerPx, pTickLine->Amount, pTickLine->Volume, pTickLine->OpenInterest, pTickLine->NumTrades
+						, pTickLine->BidPx1, pTickLine->BidVol1, pTickLine->BidPx2, pTickLine->BidVol2, pTickLine->AskPx1, pTickLine->AskVol1, pTickLine->AskPx2, pTickLine->AskVol2
+						, pTickLine->Voip, pTickLine->TradingPhaseCode, pTickLine->PreName );
 					oDumper.write( pszLine, nLen );
-					pDayLine->Valid = 0;
+					pTickLine->Valid = 0;
 					nDumpNumber++;
 				}
 			}
+
+			refQuotation.FlushDayLineOnCloseTime();		///< 检查是否需要落日线
 		}
 		catch( std::exception& err )
 		{
-			QuoCollector::GetCollector()->OnLog( TLV_ERROR, "QuotationData::ThreadDumpDayLine1() : exception : %s", err.what() );
+			QuoCollector::GetCollector()->OnLog( TLV_ERROR, "QuotationData::ThreadDumpTickLine() : exception : %s", err.what() );
 		}
 		catch( ... )
 		{
-			QuoCollector::GetCollector()->OnLog( TLV_ERROR, "QuotationData::ThreadDumpDayLine1() : unknow exception" );
+			QuoCollector::GetCollector()->OnLog( TLV_ERROR, "QuotationData::ThreadDumpTickLine() : unknow exception" );
 		}
 	}
 
@@ -492,17 +501,90 @@ int QuotationData::BuildSecurity( enum XDFMarket eMarket, std::string& sCode, T_
 	return nErrorCode;
 }
 
-int QuotationData::UpdateDayLine( enum XDFMarket eMarket, char* pSnapData, unsigned int nSnapSize, unsigned int nTradeDate )
+bool PreDayFile( std::ofstream& oDumper, enum XDFMarket eMarket, std::string sCode, char cType, unsigned int nTradeDate )
 {
+	char		pszFilePath[512] = { 0 };
+
+	switch( eMarket )
+	{
+	case XDF_SH:		///< 上海Lv1
+	case XDF_SHOPT:		///< 上海期权
+	case XDF_SHL2:		///< 上海Lv2(QuoteClientApi内部屏蔽)
+		::strcpy( pszFilePath, "SSE/DAY/" );
+		break;
+	case XDF_SZ:		///< 深证Lv1
+	case XDF_SZOPT:		///< 深圳期权
+	case XDF_SZL2:		///< 深证Lv2(QuoteClientApi内部屏蔽)
+		::strcpy( pszFilePath, "SZSE/DAY/" );
+		break;
+	case XDF_CF:		///< 中金期货
+	case XDF_ZJOPT:		///< 中金期权
+		::strcpy( pszFilePath, "CFFEX/DAY/" );
+		break;
+	case XDF_CNF:		///< 商品期货(上海/郑州/大连)
+	case XDF_CNFOPT:	///< 商品期权(上海/郑州/大连)
+		{
+			switch( cType )
+			{
+			case 1:
+			case 4:
+				::strcpy( pszFilePath, "CZCE/DAY/" );
+				break;
+			case 2:
+			case 5:
+				::strcpy( pszFilePath, "DCE/DAY/" );
+				break;
+			case 3:
+			case 6:
+				::strcpy( pszFilePath, "SHFE/DAY/" );
+				break;
+			case 7:
+				::strcpy( pszFilePath, "INE/DAY/" );
+				break;
+			default:
+				QuoCollector::GetCollector()->OnLog( TLV_ERROR, "QuotationData::PreDayFile() : invalid market subid (Type=%d)", (int)cType );
+				return false;
+			}
+		}
+		break;
+	default:
+		QuoCollector::GetCollector()->OnLog( TLV_ERROR, "QuotationData::PreDayFile() : invalid market id (%s)", eMarket );
+		return false;
+	}
+
+	if( oDumper.is_open() )	oDumper.close();
+	std::string				sFilePath = JoinPath( Configuration::GetConfig().GetDumpFolder(), pszFilePath );
+	File::CreateDirectoryTree( sFilePath );
+	char	pszFileName[128] = { 0 };
+	::sprintf( pszFileName, "DAY%s.csv", sCode.c_str() );
+	sFilePath += pszFileName;
+	oDumper.open( sFilePath.c_str() , std::ios::out|std::ios::app );
+
+	if( !oDumper.is_open() )
+	{
+		QuoCollector::GetCollector()->OnLog( TLV_ERROR, "QuotationData::PreDayFile() : cannot open file (%s)", sFilePath.c_str() );
+		return false;
+	}
+
+	oDumper.seekp( 0, std::ios::end );
+	if( 0 == oDumper.tellp() )
+	{
+		std::string		sTitle = "date,openpx,highpx,lowpx,closepx,settlepx,amount,volume,openinterest,numtrades,voip\n";
+		oDumper << sTitle;
+	}
+
+	return true;
+}
+
+int QuotationData::DumpDayLine( enum XDFMarket eMarket, char* pSnapData, unsigned int nSnapSize, unsigned int nTradeDate )
+{
+	std::ofstream	oDumper;
 	int				nErrorCode = 0;
-	T_DAY_LINE		refDayLine = { 0 };
+	char			pszDayLine[512] = { 0 };
+	char			pszFilePath[512] = { 0 };
 	unsigned int	nMachineDate = DateTime::Now().DateToLong();
 	unsigned int	nMachineTime = DateTime::Now().TimeToLong() * 1000;
 
-	refDayLine.Valid = 1;
-	refDayLine.eMarketID = eMarket;
-	refDayLine.Date = nMachineDate;
-	refDayLine.Time = nMachineTime;
 	switch( eMarket )
 	{
 	case XDF_SH:	///< 上证L1
@@ -517,34 +599,14 @@ int QuotationData::UpdateDayLine( enum XDFMarket eMarket, char* pSnapData, unsig
 					if( it != m_mapSHL1.end() )
 					{
 						T_LINE_PARAM&		refParam = it->second.first;
-						T_DAYLINE_CACHE&	refDayLineCache = it->second.second;
 
-						::strncpy( refDayLine.Code, pStock->Code, 6 );
-						refDayLine.PreClosePx = pStock->PreClose / refParam.dPriceRate;
-						//refDayLine.PreSettlePx = 0;
-						refDayLine.OpenPx = pStock->Open / refParam.dPriceRate;
-						refDayLine.HighPx = pStock->High / refParam.dPriceRate;
-						refDayLine.LowPx = pStock->Low / refParam.dPriceRate;
-						refDayLine.ClosePx = pStock->Now / refParam.dPriceRate;
-						refDayLine.NowPx = refDayLine.ClosePx;
-						//refDayLine.SettlePx = 0;
-						refDayLine.UpperPx = pStock->HighLimit;
-						refDayLine.LowerPx = pStock->LowLimit;
-						refDayLine.Amount = pStock->Amount;
-						refDayLine.Volume = pStock->Volume;
-						//refDayLine.OpenInterest = 0;
-						refDayLine.NumTrades = pStock->Records;
-						refDayLine.BidPx1 = pStock->Buy[0].Price;
-						refDayLine.BidVol1 = pStock->Buy[0].Volume;
-						refDayLine.BidPx2 = pStock->Buy[1].Price;
-						refDayLine.BidVol2 = pStock->Buy[1].Volume;
-						refDayLine.AskPx1 = pStock->Sell[0].Price;
-						refDayLine.AskVol1 = pStock->Sell[0].Volume;
-						refDayLine.AskPx2 = pStock->Sell[1].Price;
-						refDayLine.AskVol2 = pStock->Sell[1].Volume;
-						refDayLine.Voip = pStock->Voip / refParam.dPriceRate;
-
-						nErrorCode = refDayLineCache.PutData( &refDayLine );
+						if( true == PreDayFile( oDumper, eMarket, std::string( pStock->Code, 6 ), 0, nMachineDate ) )
+						{
+							int	nLen = ::sprintf( pszDayLine, "%u,%.4f,%.4f,%.4f,%.4f,%.4f,%.4f,%I64d,%I64d,%u,%f\n", nMachineDate
+								, pStock->Open/refParam.dPriceRate, pStock->High/refParam.dPriceRate, pStock->Low/refParam.dPriceRate, pStock->Now/refParam.dPriceRate
+								, 0.0, pStock->Amount, pStock->Volume, 0, pStock->Records, pStock->Voip/refParam.dPriceRate );
+							oDumper.write( pszDayLine, nLen );
+						}
 					}
 				}
 				break;
@@ -556,26 +618,14 @@ int QuotationData::UpdateDayLine( enum XDFMarket eMarket, char* pSnapData, unsig
 					if( it != m_mapSHL1.end() )
 					{
 						T_LINE_PARAM&		refParam = it->second.first;
-						T_DAYLINE_CACHE&	refDayLineCache = it->second.second;
 
-						::strncpy( refDayLine.Code, pStock->Code, 6 );
-						refDayLine.PreClosePx = pStock->PreClose / refParam.dPriceRate;
-						//refDayLine.PreSettlePx = 0;
-						refDayLine.OpenPx = pStock->Open / refParam.dPriceRate;
-						refDayLine.HighPx = pStock->High / refParam.dPriceRate;
-						refDayLine.LowPx = pStock->Low / refParam.dPriceRate;
-						refDayLine.ClosePx = pStock->Now / refParam.dPriceRate;
-						refDayLine.NowPx = refDayLine.ClosePx;
-						//refDayLine.SettlePx = 0;
-						//refDayLine.UpperPx = 0;
-						//refDayLine.LowerPx = 0;
-						refDayLine.Amount = pStock->Amount;
-						refDayLine.Volume = pStock->Volume;
-						//refDayLine.OpenInterest = 0;
-						//refDayLine.NumTrades = pStock->Records;
-						//refDayLine.Voip = pStock->Voip / refParam.dPriceRate;
-
-						nErrorCode = refDayLineCache.PutData( &refDayLine );
+						if( true == PreDayFile( oDumper, eMarket, std::string( pStock->Code, 6 ), 0, nMachineDate ) )
+						{
+							int	nLen = ::sprintf( pszDayLine, "%u,%.4f,%.4f,%.4f,%.4f,%.4f,%.4f,%I64d,%I64d,%u,%f\n", nMachineDate
+								, pStock->Open/refParam.dPriceRate, pStock->High/refParam.dPriceRate, pStock->Low/refParam.dPriceRate, pStock->Now/refParam.dPriceRate
+								, 0.0, pStock->Amount, pStock->Volume, 0, 0, 0 );
+							oDumper.write( pszDayLine, nLen );
+						}
 					}
 				}
 				break;
@@ -590,35 +640,14 @@ int QuotationData::UpdateDayLine( enum XDFMarket eMarket, char* pSnapData, unsig
 			if( it != m_mapSHOPT.end() )
 			{
 				T_LINE_PARAM&		refParam = it->second.first;
-				T_DAYLINE_CACHE&	refDayLineCache = it->second.second;
 
-				::strncpy( refDayLine.Code, pStock->Code, 8 );
-				refDayLine.PreClosePx = refParam.PreClosePx / refParam.dPriceRate;
-				refDayLine.PreSettlePx = pStock->PreSettlePx / refParam.dPriceRate;
-				refDayLine.OpenPx = pStock->OpenPx / refParam.dPriceRate;
-				refDayLine.HighPx = pStock->HighPx / refParam.dPriceRate;
-				refDayLine.LowPx = pStock->LowPx / refParam.dPriceRate;
-				refDayLine.ClosePx = pStock->Now / refParam.dPriceRate;
-				refDayLine.NowPx = refDayLine.ClosePx;
-				refDayLine.SettlePx = pStock->SettlePrice / refParam.dPriceRate;
-				refDayLine.UpperPx = refParam.UpperPrice / refParam.dPriceRate;
-				refDayLine.LowerPx = refParam.LowerPrice / refParam.dPriceRate;
-				refDayLine.Amount = pStock->Amount;
-				refDayLine.Volume = pStock->Volume;
-				refDayLine.OpenInterest = pStock->Position;
-				//refDayLine.NumTrades = 0;
-				refDayLine.BidPx1 = pStock->Buy[0].Price;
-				refDayLine.BidVol1 = pStock->Buy[0].Volume;
-				refDayLine.BidPx2 = pStock->Buy[1].Price;
-				refDayLine.BidVol2 = pStock->Buy[1].Volume;
-				refDayLine.AskPx1 = pStock->Sell[0].Price;
-				refDayLine.AskVol1 = pStock->Sell[0].Volume;
-				refDayLine.AskPx2 = pStock->Sell[1].Price;
-				refDayLine.AskVol2 = pStock->Sell[1].Volume;
-				//refDayLine.Voip = pStock->Voip / refParam.dPriceRate;
-				::memcpy( refDayLine.TradingPhaseCode, pStock->TradingPhaseCode, sizeof(pStock->TradingPhaseCode) );
-
-				nErrorCode = refDayLineCache.PutData( &refDayLine );
+				if( true == PreDayFile( oDumper, eMarket, std::string( pStock->Code, 8 ), 0, nMachineDate ) )
+				{
+					int	nLen = ::sprintf( pszDayLine, "%u,%.4f,%.4f,%.4f,%.4f,%.4f,%.4f,%I64d,%I64d,%u,%f\n", nMachineDate
+						, pStock->OpenPx/refParam.dPriceRate, pStock->HighPx/refParam.dPriceRate, pStock->LowPx/refParam.dPriceRate, pStock->Now/refParam.dPriceRate
+						, pStock->SettlePrice/refParam.dPriceRate, pStock->Amount*1.0, pStock->Volume, pStock->Position, 0, 0 );
+					oDumper.write( pszDayLine, nLen );
+				}
 			}
 		}
 		break;
@@ -634,35 +663,14 @@ int QuotationData::UpdateDayLine( enum XDFMarket eMarket, char* pSnapData, unsig
 					if( it != m_mapSZL1.end() )
 					{
 						T_LINE_PARAM&		refParam = it->second.first;
-						T_DAYLINE_CACHE&	refDayLineCache = it->second.second;
 
-						::strncpy( refDayLine.Code, pStock->Code, 6 );
-						refDayLine.PreClosePx = pStock->PreClose / refParam.dPriceRate;
-						//refDayLine.PreSettlePx = 0;
-						refDayLine.OpenPx = pStock->Open / refParam.dPriceRate;
-						refDayLine.HighPx = pStock->High / refParam.dPriceRate;
-						refDayLine.LowPx = pStock->Low / refParam.dPriceRate;
-						refDayLine.ClosePx = pStock->Now / refParam.dPriceRate;
-						refDayLine.NowPx = refDayLine.ClosePx;
-						//refDayLine.SettlePx = 0;
-						refDayLine.UpperPx = pStock->HighLimit;
-						refDayLine.LowerPx = pStock->LowLimit;
-						refDayLine.Amount = pStock->Amount;
-						refDayLine.Volume = pStock->Volume;
-						//refDayLine.OpenInterest = 0;
-						refDayLine.NumTrades = pStock->Records;
-						refDayLine.BidPx1 = pStock->Buy[0].Price;
-						refDayLine.BidVol1 = pStock->Buy[0].Volume;
-						refDayLine.BidPx2 = pStock->Buy[1].Price;
-						refDayLine.BidVol2 = pStock->Buy[1].Volume;
-						refDayLine.AskPx1 = pStock->Sell[0].Price;
-						refDayLine.AskVol1 = pStock->Sell[0].Volume;
-						refDayLine.AskPx2 = pStock->Sell[1].Price;
-						refDayLine.AskVol2 = pStock->Sell[1].Volume;
-						refDayLine.Voip = pStock->Voip / refParam.dPriceRate;
-						::memcpy( refDayLine.PreName, refParam.PreName, 4 );
-
-						nErrorCode = refDayLineCache.PutData( &refDayLine );
+						if( true == PreDayFile( oDumper, eMarket, std::string( pStock->Code, 6 ), 0, nMachineDate ) )
+						{
+							int	nLen = ::sprintf( pszDayLine, "%u,%.4f,%.4f,%.4f,%.4f,%.4f,%.4f,%I64d,%I64d,%u,%.4f\n", nMachineDate
+								, pStock->Open/refParam.dPriceRate, pStock->High/refParam.dPriceRate, pStock->Low/refParam.dPriceRate, pStock->Now/refParam.dPriceRate
+								, 0.0, pStock->Amount, pStock->Volume, 0, pStock->Records, pStock->Voip/refParam.dPriceRate );
+							oDumper.write( pszDayLine, nLen );
+						}
 					}
 				}
 				break;
@@ -674,26 +682,14 @@ int QuotationData::UpdateDayLine( enum XDFMarket eMarket, char* pSnapData, unsig
 					if( it != m_mapSZL1.end() )
 					{
 						T_LINE_PARAM&		refParam = it->second.first;
-						T_DAYLINE_CACHE&	refDayLineCache = it->second.second;
 
-						::strncpy( refDayLine.Code, pStock->Code, 6 );
-						refDayLine.PreClosePx = pStock->PreClose / refParam.dPriceRate;
-						//refDayLine.PreSettlePx = 0;
-						refDayLine.OpenPx = pStock->Open / refParam.dPriceRate;
-						refDayLine.HighPx = pStock->High / refParam.dPriceRate;
-						refDayLine.LowPx = pStock->Low / refParam.dPriceRate;
-						refDayLine.ClosePx = pStock->Now / refParam.dPriceRate;
-						refDayLine.NowPx = refDayLine.ClosePx;
-						//refDayLine.SettlePx = 0;
-						//refDayLine.UpperPx = 0;
-						//refDayLine.LowerPx = 0;
-						refDayLine.Amount = pStock->Amount;
-						refDayLine.Volume = pStock->Volume;
-						//refDayLine.OpenInterest = 0;
-						//refDayLine.NumTrades = pStock->Records;
-						//refDayLine.Voip = pStock->Voip / refParam.dPriceRate;
-
-						nErrorCode = refDayLineCache.PutData( &refDayLine );
+						if( true == PreDayFile( oDumper, eMarket, std::string( pStock->Code, 6 ), 0, nMachineDate ) )
+						{
+							int	nLen = ::sprintf( pszDayLine, "%u,%.4f,%.4f,%.4f,%.4f,%.4f,%.4f,%I64d,%I64d,%u,%.4f\n", nMachineDate
+								, pStock->Open/refParam.dPriceRate, pStock->High/refParam.dPriceRate, pStock->Low/refParam.dPriceRate, pStock->Now/refParam.dPriceRate
+								, 0.0, pStock->Amount, pStock->Volume, 0, 0, 0 );
+							oDumper.write( pszDayLine, nLen );
+						}
 					}
 				}
 				break;
@@ -708,35 +704,14 @@ int QuotationData::UpdateDayLine( enum XDFMarket eMarket, char* pSnapData, unsig
 			if( it != m_mapSZOPT.end() )
 			{
 				T_LINE_PARAM&		refParam = it->second.first;
-				T_DAYLINE_CACHE&	refDayLineCache = it->second.second;
 
-				::strncpy( refDayLine.Code, pStock->Code, 6 );
-				refDayLine.PreClosePx = refParam.PreClosePx / refParam.dPriceRate;
-				refDayLine.PreSettlePx = pStock->PreSettlePx / refParam.dPriceRate;
-				refDayLine.OpenPx = pStock->OpenPx / refParam.dPriceRate;
-				refDayLine.HighPx = pStock->HighPx / refParam.dPriceRate;
-				refDayLine.LowPx = pStock->LowPx / refParam.dPriceRate;
-				refDayLine.ClosePx = pStock->Now / refParam.dPriceRate;
-				refDayLine.NowPx = refDayLine.ClosePx;
-				refDayLine.SettlePx = pStock->SettlePrice / refParam.dPriceRate;
-				refDayLine.UpperPx = refParam.UpperPrice / refParam.dPriceRate;
-				refDayLine.LowerPx = refParam.LowerPrice / refParam.dPriceRate;
-				refDayLine.Amount = pStock->Amount;
-				refDayLine.Volume = pStock->Volume;
-				refDayLine.OpenInterest = pStock->Position;
-				//refDayLine.NumTrades = 0;
-				refDayLine.BidPx1 = pStock->Buy[0].Price;
-				refDayLine.BidVol1 = pStock->Buy[0].Volume;
-				refDayLine.BidPx2 = pStock->Buy[1].Price;
-				refDayLine.BidVol2 = pStock->Buy[1].Volume;
-				refDayLine.AskPx1 = pStock->Sell[0].Price;
-				refDayLine.AskVol1 = pStock->Sell[0].Volume;
-				refDayLine.AskPx2 = pStock->Sell[1].Price;
-				refDayLine.AskVol2 = pStock->Sell[1].Volume;
-				//refDayLine.Voip = pStock->Voip / refParam.dPriceRate;
-				::memcpy( refDayLine.TradingPhaseCode, pStock->TradingPhaseCode, sizeof(pStock->TradingPhaseCode) );
-
-				nErrorCode = refDayLineCache.PutData( &refDayLine );
+				if( true == PreDayFile( oDumper, eMarket, std::string( pStock->Code, 8 ), 0, nMachineDate ) )
+				{
+					int	nLen = ::sprintf( pszDayLine, "%u,%.4f,%.4f,%.4f,%.4f,%.4f,%.4f,%I64d,%I64d,%u,%.4f\n", nMachineDate
+						, pStock->OpenPx/refParam.dPriceRate, pStock->HighPx/refParam.dPriceRate, pStock->LowPx/refParam.dPriceRate, pStock->Now/refParam.dPriceRate
+						, pStock->SettlePrice/refParam.dPriceRate, pStock->Amount*1.0, pStock->Volume, pStock->Position, 0, 0 );
+					oDumper.write( pszDayLine, nLen );
+				}
 			}
 		}
 		break;
@@ -748,35 +723,14 @@ int QuotationData::UpdateDayLine( enum XDFMarket eMarket, char* pSnapData, unsig
 			if( it != m_mapCFF.end() )
 			{
 				T_LINE_PARAM&		refParam = it->second.first;
-				T_DAYLINE_CACHE&	refDayLineCache = it->second.second;
 
-				::strncpy( refDayLine.Code, pStock->Code, 6 );
-				refDayLine.Time = pStock->DataTimeStamp;
-				refDayLine.PreClosePx = pStock->PreClose / refParam.dPriceRate;
-				refDayLine.PreSettlePx = pStock->PreSettlePrice / refParam.dPriceRate;
-				refDayLine.OpenPx = pStock->Open / refParam.dPriceRate;
-				refDayLine.HighPx = pStock->High / refParam.dPriceRate;
-				refDayLine.LowPx = pStock->Low / refParam.dPriceRate;
-				refDayLine.ClosePx = pStock->Now / refParam.dPriceRate;
-				refDayLine.NowPx = refDayLine.ClosePx;
-				refDayLine.SettlePx = pStock->SettlePrice / refParam.dPriceRate;
-				refDayLine.UpperPx = pStock->UpperPrice / refParam.dPriceRate;
-				refDayLine.LowerPx = pStock->LowerPrice / refParam.dPriceRate;
-				refDayLine.Amount = pStock->Amount;
-				refDayLine.Volume = pStock->Volume;
-				refDayLine.OpenInterest = pStock->OpenInterest;
-				//refDayLine.NumTrades = 0;
-				refDayLine.BidPx1 = pStock->Buy[0].Price;
-				refDayLine.BidVol1 = pStock->Buy[0].Volume;
-				refDayLine.BidPx2 = pStock->Buy[1].Price;
-				refDayLine.BidVol2 = pStock->Buy[1].Volume;
-				refDayLine.AskPx1 = pStock->Sell[0].Price;
-				refDayLine.AskVol1 = pStock->Sell[0].Volume;
-				refDayLine.AskPx2 = pStock->Sell[1].Price;
-				refDayLine.AskVol2 = pStock->Sell[1].Volume;
-				//refDayLine.Voip = pStock->Voip / refParam.dPriceRate;
-
-				nErrorCode = refDayLineCache.PutData( &refDayLine );
+				if( true == PreDayFile( oDumper, eMarket, std::string( pStock->Code, 6 ), 0, nMachineDate ) )
+				{
+					int	nLen = ::sprintf( pszDayLine, "%u,%.4f,%.4f,%.4f,%.4f,%.4f,%.4f,%I64d,%I64d,%u,%.4f\n", nMachineDate
+						, pStock->Open/refParam.dPriceRate, pStock->High/refParam.dPriceRate, pStock->Low/refParam.dPriceRate, pStock->Now/refParam.dPriceRate
+						, pStock->SettlePrice/refParam.dPriceRate, pStock->Amount, pStock->Volume, pStock->OpenInterest, 0, 0 );
+					oDumper.write( pszDayLine, nLen );
+				}
 			}
 		}
 		break;
@@ -788,35 +742,399 @@ int QuotationData::UpdateDayLine( enum XDFMarket eMarket, char* pSnapData, unsig
 			if( it != m_mapCFFOPT.end() )
 			{
 				T_LINE_PARAM&		refParam = it->second.first;
-				T_DAYLINE_CACHE&	refDayLineCache = it->second.second;
 
-				::strcpy( refDayLine.Code, pStock->Code );
-				refDayLine.Time = pStock->DataTimeStamp;
-				refDayLine.PreClosePx = pStock->PreClose / refParam.dPriceRate;
-				refDayLine.PreSettlePx = pStock->PreSettlePrice / refParam.dPriceRate;
-				refDayLine.OpenPx = pStock->Open / refParam.dPriceRate;
-				refDayLine.HighPx = pStock->High / refParam.dPriceRate;
-				refDayLine.LowPx = pStock->Low / refParam.dPriceRate;
-				refDayLine.ClosePx = pStock->Now / refParam.dPriceRate;
-				refDayLine.NowPx = refDayLine.ClosePx;
-				refDayLine.SettlePx = pStock->SettlePrice / refParam.dPriceRate;
-				refDayLine.UpperPx = pStock->UpperPrice / refParam.dPriceRate;
-				refDayLine.LowerPx = pStock->LowerPrice / refParam.dPriceRate;
-				refDayLine.Amount = pStock->Amount;
-				refDayLine.Volume = pStock->Volume;
-				refDayLine.OpenInterest = pStock->OpenInterest;
-				//refDayLine.NumTrades = 0;
-				refDayLine.BidPx1 = pStock->Buy[0].Price;
-				refDayLine.BidVol1 = pStock->Buy[0].Volume;
-				refDayLine.BidPx2 = pStock->Buy[1].Price;
-				refDayLine.BidVol2 = pStock->Buy[1].Volume;
-				refDayLine.AskPx1 = pStock->Sell[0].Price;
-				refDayLine.AskVol1 = pStock->Sell[0].Volume;
-				refDayLine.AskPx2 = pStock->Sell[1].Price;
-				refDayLine.AskVol2 = pStock->Sell[1].Volume;
-				//refDayLine.Voip = pStock->Voip / refParam.dPriceRate;
+				if( true == PreDayFile( oDumper, eMarket, std::string( pStock->Code ), 0, nMachineDate ) )
+				{
+					int	nLen = ::sprintf( pszDayLine, "%u,%.4f,%.4f,%.4f,%.4f,%.4f,%.4f,%I64d,%I64d,%u,%.4f\n", nMachineDate
+						, pStock->Open/refParam.dPriceRate, pStock->High/refParam.dPriceRate, pStock->Low/refParam.dPriceRate, pStock->Now/refParam.dPriceRate
+						, pStock->SettlePrice/refParam.dPriceRate, pStock->Amount, pStock->Volume, pStock->OpenInterest, 0, 0 );
+					oDumper.write( pszDayLine, nLen );
+				}
+			}
+		}
+		break;
+	case XDF_CNF:		///< 商品期货(上海/郑州/大连)
+		{
+			XDFAPI_CNFutureData*		pStock = (XDFAPI_CNFutureData*)pSnapData;
+			T_MAP_QUO::iterator			it = m_mapCNF.find( std::string(pStock->Code,6) );
 
-				nErrorCode = refDayLineCache.PutData( &refDayLine );
+			if( it != m_mapCNF.end() )
+			{
+				T_LINE_PARAM&			refParam = it->second.first;
+
+				if( true == PreDayFile( oDumper, eMarket, std::string( pStock->Code, 6 ), refParam.Type, s_nCNFTradingDate ) )
+				{
+					int	nLen = ::sprintf( pszDayLine, "%u,%.4f,%.4f,%.4f,%.4f,%.4f,%.4f,%I64d,%I64d,%u,%.4f\n", s_nCNFTradingDate
+						, pStock->Open/refParam.dPriceRate, pStock->High/refParam.dPriceRate, pStock->Low/refParam.dPriceRate, pStock->Now/refParam.dPriceRate
+						, pStock->SettlePrice/refParam.dPriceRate, pStock->Amount, pStock->Volume, pStock->OpenInterest, 0, 0 );
+					oDumper.write( pszDayLine, nLen );
+				}
+			}
+		}
+		break;
+	case XDF_CNFOPT:	///< 商品期权(上海/郑州/大连)
+		{
+			XDFAPI_CNFutOptData*		pStock = (XDFAPI_CNFutOptData*)pSnapData;
+			T_MAP_QUO::iterator			it = m_mapCNFOPT.find( std::string(pStock->Code) );
+
+			if( it != m_mapCNFOPT.end() )
+			{
+				T_LINE_PARAM&			refParam = it->second.first;
+
+				if( true == PreDayFile( oDumper, eMarket, std::string( pStock->Code ), refParam.Type, s_nCNFOPTTradingDate ) )
+				{
+					int	nLen = ::sprintf( pszDayLine, "%u,%.4f,%.4f,%.4f,%.4f,%.4f,%.4f,%I64d,%I64d,%u,%.4f\n", s_nCNFOPTTradingDate
+						, pStock->Open/refParam.dPriceRate, pStock->High/refParam.dPriceRate, pStock->Low/refParam.dPriceRate, pStock->Now/refParam.dPriceRate
+						, pStock->SettlePrice/refParam.dPriceRate, pStock->Amount, pStock->Volume, pStock->OpenInterest, 0, 0 );
+					oDumper.write( pszDayLine, nLen );
+				}
+			}
+		}
+		break;
+	default:
+		nErrorCode = -1024;
+		break;
+	}
+
+	if( oDumper.is_open() )
+	{
+		oDumper.close();
+	}
+
+	if( nErrorCode < 0 )
+	{
+		QuoCollector::GetCollector()->OnLog( TLV_ERROR, "QuotationData::DumpDayLine() : an error occur while dumping day line, marketid=%d, errorcode=%d", (int)eMarket, nErrorCode );
+		return -1;
+	}
+
+	return 0;
+}
+
+int QuotationData::UpdateTickLine( enum XDFMarket eMarket, char* pSnapData, unsigned int nSnapSize, unsigned int nTradeDate )
+{
+	int				nErrorCode = 0;
+	T_TICK_LINE		refTickLine = { 0 };
+	unsigned int	nMachineDate = DateTime::Now().DateToLong();
+	unsigned int	nMachineTime = DateTime::Now().TimeToLong() * 1000;
+
+	refTickLine.Valid = 1;
+	refTickLine.eMarketID = eMarket;
+	refTickLine.Date = nMachineDate;
+	refTickLine.Time = nMachineTime;
+	switch( eMarket )
+	{
+	case XDF_SH:	///< 上证L1
+		{
+			switch( nSnapSize )
+			{
+			case sizeof(XDFAPI_StockData5):
+				{
+					XDFAPI_StockData5*		pStock = (XDFAPI_StockData5*)pSnapData;
+					T_MAP_QUO::iterator		it = m_mapSHL1.find( std::string(pStock->Code, 6 ) );
+
+					if( it != m_mapSHL1.end() )
+					{
+						T_LINE_PARAM&		refParam = it->second.first;
+						T_TICKLINE_CACHE&	refTickLineCache = it->second.second;
+
+						::strncpy( refTickLine.Code, pStock->Code, 6 );
+						refTickLine.PreClosePx = pStock->PreClose / refParam.dPriceRate;
+						//refTickLine.PreSettlePx = 0;
+						refTickLine.OpenPx = pStock->Open / refParam.dPriceRate;
+						refTickLine.HighPx = pStock->High / refParam.dPriceRate;
+						refTickLine.LowPx = pStock->Low / refParam.dPriceRate;
+						refTickLine.ClosePx = pStock->Now / refParam.dPriceRate;
+						refTickLine.NowPx = refTickLine.ClosePx;
+						//refTickLine.SettlePx = 0;
+						refTickLine.UpperPx = pStock->HighLimit;
+						refTickLine.LowerPx = pStock->LowLimit;
+						refTickLine.Amount = pStock->Amount;
+						refTickLine.Volume = pStock->Volume;
+						//refTickLine.OpenInterest = 0;
+						refTickLine.NumTrades = pStock->Records;
+						refTickLine.BidPx1 = pStock->Buy[0].Price;
+						refTickLine.BidVol1 = pStock->Buy[0].Volume;
+						refTickLine.BidPx2 = pStock->Buy[1].Price;
+						refTickLine.BidVol2 = pStock->Buy[1].Volume;
+						refTickLine.AskPx1 = pStock->Sell[0].Price;
+						refTickLine.AskVol1 = pStock->Sell[0].Volume;
+						refTickLine.AskPx2 = pStock->Sell[1].Price;
+						refTickLine.AskVol2 = pStock->Sell[1].Volume;
+						refTickLine.Voip = pStock->Voip / refParam.dPriceRate;
+
+						nErrorCode = refTickLineCache.PutData( &refTickLine );
+					}
+				}
+				break;
+			case sizeof(XDFAPI_IndexData):
+				{
+					XDFAPI_IndexData*		pStock = (XDFAPI_IndexData*)pSnapData;
+					T_MAP_QUO::iterator		it = m_mapSHL1.find( std::string(pStock->Code, 6 ) );
+
+					if( it != m_mapSHL1.end() )
+					{
+						T_LINE_PARAM&		refParam = it->second.first;
+						T_TICKLINE_CACHE&	refTickLineCache = it->second.second;
+
+						::strncpy( refTickLine.Code, pStock->Code, 6 );
+						refTickLine.PreClosePx = pStock->PreClose / refParam.dPriceRate;
+						//refTickLine.PreSettlePx = 0;
+						refTickLine.OpenPx = pStock->Open / refParam.dPriceRate;
+						refTickLine.HighPx = pStock->High / refParam.dPriceRate;
+						refTickLine.LowPx = pStock->Low / refParam.dPriceRate;
+						refTickLine.ClosePx = pStock->Now / refParam.dPriceRate;
+						refTickLine.NowPx = refTickLine.ClosePx;
+						//refTickLine.SettlePx = 0;
+						//refTickLine.UpperPx = 0;
+						//refTickLine.LowerPx = 0;
+						refTickLine.Amount = pStock->Amount;
+						refTickLine.Volume = pStock->Volume;
+						//refTickLine.OpenInterest = 0;
+						//refTickLine.NumTrades = pStock->Records;
+						//refTickLine.Voip = pStock->Voip / refParam.dPriceRate;
+
+						nErrorCode = refTickLineCache.PutData( &refTickLine );
+					}
+				}
+				break;
+			}
+		}
+		break;
+	case XDF_SHOPT:	///< 上期
+		{
+			XDFAPI_ShOptData*		pStock = (XDFAPI_ShOptData*)pSnapData;
+			T_MAP_QUO::iterator		it = m_mapSHOPT.find( std::string(pStock->Code, 8 ) );
+
+			if( it != m_mapSHOPT.end() )
+			{
+				T_LINE_PARAM&		refParam = it->second.first;
+				T_TICKLINE_CACHE&	refTickLineCache = it->second.second;
+
+				::strncpy( refTickLine.Code, pStock->Code, 8 );
+				refTickLine.PreClosePx = refParam.PreClosePx / refParam.dPriceRate;
+				refTickLine.PreSettlePx = pStock->PreSettlePx / refParam.dPriceRate;
+				refTickLine.OpenPx = pStock->OpenPx / refParam.dPriceRate;
+				refTickLine.HighPx = pStock->HighPx / refParam.dPriceRate;
+				refTickLine.LowPx = pStock->LowPx / refParam.dPriceRate;
+				refTickLine.ClosePx = pStock->Now / refParam.dPriceRate;
+				refTickLine.NowPx = refTickLine.ClosePx;
+				refTickLine.SettlePx = pStock->SettlePrice / refParam.dPriceRate;
+				refTickLine.UpperPx = refParam.UpperPrice / refParam.dPriceRate;
+				refTickLine.LowerPx = refParam.LowerPrice / refParam.dPriceRate;
+				refTickLine.Amount = pStock->Amount;
+				refTickLine.Volume = pStock->Volume;
+				refTickLine.OpenInterest = pStock->Position;
+				//refTickLine.NumTrades = 0;
+				refTickLine.BidPx1 = pStock->Buy[0].Price;
+				refTickLine.BidVol1 = pStock->Buy[0].Volume;
+				refTickLine.BidPx2 = pStock->Buy[1].Price;
+				refTickLine.BidVol2 = pStock->Buy[1].Volume;
+				refTickLine.AskPx1 = pStock->Sell[0].Price;
+				refTickLine.AskVol1 = pStock->Sell[0].Volume;
+				refTickLine.AskPx2 = pStock->Sell[1].Price;
+				refTickLine.AskVol2 = pStock->Sell[1].Volume;
+				//refTickLine.Voip = pStock->Voip / refParam.dPriceRate;
+				::memcpy( refTickLine.TradingPhaseCode, pStock->TradingPhaseCode, sizeof(pStock->TradingPhaseCode) );
+
+				nErrorCode = refTickLineCache.PutData( &refTickLine );
+			}
+		}
+		break;
+	case XDF_SZ:	///< 深证L1
+		{
+			switch( nSnapSize )
+			{
+			case sizeof(XDFAPI_StockData5):
+				{
+					XDFAPI_StockData5*		pStock = (XDFAPI_StockData5*)pSnapData;
+					T_MAP_QUO::iterator		it = m_mapSZL1.find( std::string(pStock->Code, 6 ) );
+
+					if( it != m_mapSZL1.end() )
+					{
+						T_LINE_PARAM&		refParam = it->second.first;
+						T_TICKLINE_CACHE&	refTickLineCache = it->second.second;
+
+						::strncpy( refTickLine.Code, pStock->Code, 6 );
+						refTickLine.PreClosePx = pStock->PreClose / refParam.dPriceRate;
+						//refTickLine.PreSettlePx = 0;
+						refTickLine.OpenPx = pStock->Open / refParam.dPriceRate;
+						refTickLine.HighPx = pStock->High / refParam.dPriceRate;
+						refTickLine.LowPx = pStock->Low / refParam.dPriceRate;
+						refTickLine.ClosePx = pStock->Now / refParam.dPriceRate;
+						refTickLine.NowPx = refTickLine.ClosePx;
+						//refTickLine.SettlePx = 0;
+						refTickLine.UpperPx = pStock->HighLimit;
+						refTickLine.LowerPx = pStock->LowLimit;
+						refTickLine.Amount = pStock->Amount;
+						refTickLine.Volume = pStock->Volume;
+						//refTickLine.OpenInterest = 0;
+						refTickLine.NumTrades = pStock->Records;
+						refTickLine.BidPx1 = pStock->Buy[0].Price;
+						refTickLine.BidVol1 = pStock->Buy[0].Volume;
+						refTickLine.BidPx2 = pStock->Buy[1].Price;
+						refTickLine.BidVol2 = pStock->Buy[1].Volume;
+						refTickLine.AskPx1 = pStock->Sell[0].Price;
+						refTickLine.AskVol1 = pStock->Sell[0].Volume;
+						refTickLine.AskPx2 = pStock->Sell[1].Price;
+						refTickLine.AskVol2 = pStock->Sell[1].Volume;
+						refTickLine.Voip = pStock->Voip / refParam.dPriceRate;
+						::memcpy( refTickLine.PreName, refParam.PreName, 4 );
+
+						nErrorCode = refTickLineCache.PutData( &refTickLine );
+					}
+				}
+				break;
+			case sizeof(XDFAPI_IndexData):
+				{
+					XDFAPI_IndexData*		pStock = (XDFAPI_IndexData*)pSnapData;
+					T_MAP_QUO::iterator		it = m_mapSZL1.find( std::string(pStock->Code, 6 ) );
+
+					if( it != m_mapSZL1.end() )
+					{
+						T_LINE_PARAM&		refParam = it->second.first;
+						T_TICKLINE_CACHE&	refTickLineCache = it->second.second;
+
+						::strncpy( refTickLine.Code, pStock->Code, 6 );
+						refTickLine.PreClosePx = pStock->PreClose / refParam.dPriceRate;
+						//refTickLine.PreSettlePx = 0;
+						refTickLine.OpenPx = pStock->Open / refParam.dPriceRate;
+						refTickLine.HighPx = pStock->High / refParam.dPriceRate;
+						refTickLine.LowPx = pStock->Low / refParam.dPriceRate;
+						refTickLine.ClosePx = pStock->Now / refParam.dPriceRate;
+						refTickLine.NowPx = refTickLine.ClosePx;
+						//refTickLine.SettlePx = 0;
+						//refTickLine.UpperPx = 0;
+						//refTickLine.LowerPx = 0;
+						refTickLine.Amount = pStock->Amount;
+						refTickLine.Volume = pStock->Volume;
+						//refTickLine.OpenInterest = 0;
+						//refTickLine.NumTrades = pStock->Records;
+						//refTickLine.Voip = pStock->Voip / refParam.dPriceRate;
+
+						nErrorCode = refTickLineCache.PutData( &refTickLine );
+					}
+				}
+				break;
+			}
+		}
+		break;
+	case XDF_SZOPT:	///< 深期
+		{
+			XDFAPI_SzOptData*		pStock = (XDFAPI_SzOptData*)pSnapData;
+			T_MAP_QUO::iterator		it = m_mapSZOPT.find( std::string(pStock->Code,8) );
+
+			if( it != m_mapSZOPT.end() )
+			{
+				T_LINE_PARAM&		refParam = it->second.first;
+				T_TICKLINE_CACHE&	refTickLineCache = it->second.second;
+
+				::strncpy( refTickLine.Code, pStock->Code, 6 );
+				refTickLine.PreClosePx = refParam.PreClosePx / refParam.dPriceRate;
+				refTickLine.PreSettlePx = pStock->PreSettlePx / refParam.dPriceRate;
+				refTickLine.OpenPx = pStock->OpenPx / refParam.dPriceRate;
+				refTickLine.HighPx = pStock->HighPx / refParam.dPriceRate;
+				refTickLine.LowPx = pStock->LowPx / refParam.dPriceRate;
+				refTickLine.ClosePx = pStock->Now / refParam.dPriceRate;
+				refTickLine.NowPx = refTickLine.ClosePx;
+				refTickLine.SettlePx = pStock->SettlePrice / refParam.dPriceRate;
+				refTickLine.UpperPx = refParam.UpperPrice / refParam.dPriceRate;
+				refTickLine.LowerPx = refParam.LowerPrice / refParam.dPriceRate;
+				refTickLine.Amount = pStock->Amount;
+				refTickLine.Volume = pStock->Volume;
+				refTickLine.OpenInterest = pStock->Position;
+				//refTickLine.NumTrades = 0;
+				refTickLine.BidPx1 = pStock->Buy[0].Price;
+				refTickLine.BidVol1 = pStock->Buy[0].Volume;
+				refTickLine.BidPx2 = pStock->Buy[1].Price;
+				refTickLine.BidVol2 = pStock->Buy[1].Volume;
+				refTickLine.AskPx1 = pStock->Sell[0].Price;
+				refTickLine.AskVol1 = pStock->Sell[0].Volume;
+				refTickLine.AskPx2 = pStock->Sell[1].Price;
+				refTickLine.AskVol2 = pStock->Sell[1].Volume;
+				//refTickLine.Voip = pStock->Voip / refParam.dPriceRate;
+				::memcpy( refTickLine.TradingPhaseCode, pStock->TradingPhaseCode, sizeof(pStock->TradingPhaseCode) );
+
+				nErrorCode = refTickLineCache.PutData( &refTickLine );
+			}
+		}
+		break;
+	case XDF_CF:	///< 中金期货
+		{
+			XDFAPI_CffexData*		pStock = (XDFAPI_CffexData*)pSnapData;
+			T_MAP_QUO::iterator		it = m_mapCFF.find( std::string(pStock->Code,6) );
+
+			if( it != m_mapCFF.end() )
+			{
+				T_LINE_PARAM&		refParam = it->second.first;
+				T_TICKLINE_CACHE&	refTickLineCache = it->second.second;
+
+				::strncpy( refTickLine.Code, pStock->Code, 6 );
+				refTickLine.Time = pStock->DataTimeStamp;
+				refTickLine.PreClosePx = pStock->PreClose / refParam.dPriceRate;
+				refTickLine.PreSettlePx = pStock->PreSettlePrice / refParam.dPriceRate;
+				refTickLine.OpenPx = pStock->Open / refParam.dPriceRate;
+				refTickLine.HighPx = pStock->High / refParam.dPriceRate;
+				refTickLine.LowPx = pStock->Low / refParam.dPriceRate;
+				refTickLine.ClosePx = pStock->Now / refParam.dPriceRate;
+				refTickLine.NowPx = refTickLine.ClosePx;
+				refTickLine.SettlePx = pStock->SettlePrice / refParam.dPriceRate;
+				refTickLine.UpperPx = pStock->UpperPrice / refParam.dPriceRate;
+				refTickLine.LowerPx = pStock->LowerPrice / refParam.dPriceRate;
+				refTickLine.Amount = pStock->Amount;
+				refTickLine.Volume = pStock->Volume;
+				refTickLine.OpenInterest = pStock->OpenInterest;
+				//refTickLine.NumTrades = 0;
+				refTickLine.BidPx1 = pStock->Buy[0].Price;
+				refTickLine.BidVol1 = pStock->Buy[0].Volume;
+				refTickLine.BidPx2 = pStock->Buy[1].Price;
+				refTickLine.BidVol2 = pStock->Buy[1].Volume;
+				refTickLine.AskPx1 = pStock->Sell[0].Price;
+				refTickLine.AskVol1 = pStock->Sell[0].Volume;
+				refTickLine.AskPx2 = pStock->Sell[1].Price;
+				refTickLine.AskVol2 = pStock->Sell[1].Volume;
+				//refTickLine.Voip = pStock->Voip / refParam.dPriceRate;
+
+				nErrorCode = refTickLineCache.PutData( &refTickLine );
+			}
+		}
+		break;
+	case XDF_ZJOPT:	///< 中金期权
+		{
+			XDFAPI_ZjOptData*		pStock = (XDFAPI_ZjOptData*)pSnapData;
+			T_MAP_QUO::iterator		it = m_mapCFFOPT.find( std::string(pStock->Code) );
+
+			if( it != m_mapCFFOPT.end() )
+			{
+				T_LINE_PARAM&		refParam = it->second.first;
+				T_TICKLINE_CACHE&	refTickLineCache = it->second.second;
+
+				::strcpy( refTickLine.Code, pStock->Code );
+				refTickLine.Time = pStock->DataTimeStamp;
+				refTickLine.PreClosePx = pStock->PreClose / refParam.dPriceRate;
+				refTickLine.PreSettlePx = pStock->PreSettlePrice / refParam.dPriceRate;
+				refTickLine.OpenPx = pStock->Open / refParam.dPriceRate;
+				refTickLine.HighPx = pStock->High / refParam.dPriceRate;
+				refTickLine.LowPx = pStock->Low / refParam.dPriceRate;
+				refTickLine.ClosePx = pStock->Now / refParam.dPriceRate;
+				refTickLine.NowPx = refTickLine.ClosePx;
+				refTickLine.SettlePx = pStock->SettlePrice / refParam.dPriceRate;
+				refTickLine.UpperPx = pStock->UpperPrice / refParam.dPriceRate;
+				refTickLine.LowerPx = pStock->LowerPrice / refParam.dPriceRate;
+				refTickLine.Amount = pStock->Amount;
+				refTickLine.Volume = pStock->Volume;
+				refTickLine.OpenInterest = pStock->OpenInterest;
+				//refTickLine.NumTrades = 0;
+				refTickLine.BidPx1 = pStock->Buy[0].Price;
+				refTickLine.BidVol1 = pStock->Buy[0].Volume;
+				refTickLine.BidPx2 = pStock->Buy[1].Price;
+				refTickLine.BidVol2 = pStock->Buy[1].Volume;
+				refTickLine.AskPx1 = pStock->Sell[0].Price;
+				refTickLine.AskVol1 = pStock->Sell[0].Volume;
+				refTickLine.AskPx2 = pStock->Sell[1].Price;
+				refTickLine.AskVol2 = pStock->Sell[1].Volume;
+				//refTickLine.Voip = pStock->Voip / refParam.dPriceRate;
+
+				nErrorCode = refTickLineCache.PutData( &refTickLine );
 			}
 		}
 		break;
@@ -824,7 +1142,6 @@ int QuotationData::UpdateDayLine( enum XDFMarket eMarket, char* pSnapData, unsig
 		{
 			XDFAPI_CNFutureData*		pStock = (XDFAPI_CNFutureData*)pSnapData;
 			T_MAP_QUO::iterator			it = m_mapCNF.find( std::string(pStock->Code,6) );
-			static unsigned int			s_nCNFTradingDate = 0;
 
 			if( nTradeDate > 0 )
 			{
@@ -834,37 +1151,37 @@ int QuotationData::UpdateDayLine( enum XDFMarket eMarket, char* pSnapData, unsig
 			if( it != m_mapCNF.end() )
 			{
 				T_LINE_PARAM&		refParam = it->second.first;
-				T_DAYLINE_CACHE&	refDayLineCache = it->second.second;
+				T_TICKLINE_CACHE&	refTickLineCache = it->second.second;
 
-				refDayLine.Type = refParam.Type;
-				::strncpy( refDayLine.Code, pStock->Code, 6 );
-				refDayLine.Date = s_nCNFTradingDate;
-				refDayLine.Time = pStock->DataTimeStamp;
-				refDayLine.PreClosePx = pStock->PreClose / refParam.dPriceRate;
-				refDayLine.PreSettlePx = pStock->PreSettlePrice / refParam.dPriceRate;
-				refDayLine.OpenPx = pStock->Open / refParam.dPriceRate;
-				refDayLine.HighPx = pStock->High / refParam.dPriceRate;
-				refDayLine.LowPx = pStock->Low / refParam.dPriceRate;
-				refDayLine.ClosePx = pStock->Now / refParam.dPriceRate;
-				refDayLine.NowPx = refDayLine.ClosePx;
-				refDayLine.SettlePx = pStock->SettlePrice / refParam.dPriceRate;
-				refDayLine.UpperPx = pStock->UpperPrice / refParam.dPriceRate;
-				refDayLine.LowerPx = pStock->LowerPrice / refParam.dPriceRate;
-				refDayLine.Amount = pStock->Amount;
-				refDayLine.Volume = pStock->Volume;
-				refDayLine.OpenInterest = pStock->OpenInterest;
-				//refDayLine.NumTrades = 0;
-				refDayLine.BidPx1 = pStock->Buy[0].Price;
-				refDayLine.BidVol1 = pStock->Buy[0].Volume;
-				refDayLine.BidPx2 = pStock->Buy[1].Price;
-				refDayLine.BidVol2 = pStock->Buy[1].Volume;
-				refDayLine.AskPx1 = pStock->Sell[0].Price;
-				refDayLine.AskVol1 = pStock->Sell[0].Volume;
-				refDayLine.AskPx2 = pStock->Sell[1].Price;
-				refDayLine.AskVol2 = pStock->Sell[1].Volume;
-				//refDayLine.Voip = pStock->Voip / refParam.dPriceRate;
+				refTickLine.Type = refParam.Type;
+				::strncpy( refTickLine.Code, pStock->Code, 6 );
+				refTickLine.Date = s_nCNFTradingDate;
+				refTickLine.Time = pStock->DataTimeStamp;
+				refTickLine.PreClosePx = pStock->PreClose / refParam.dPriceRate;
+				refTickLine.PreSettlePx = pStock->PreSettlePrice / refParam.dPriceRate;
+				refTickLine.OpenPx = pStock->Open / refParam.dPriceRate;
+				refTickLine.HighPx = pStock->High / refParam.dPriceRate;
+				refTickLine.LowPx = pStock->Low / refParam.dPriceRate;
+				refTickLine.ClosePx = pStock->Now / refParam.dPriceRate;
+				refTickLine.NowPx = refTickLine.ClosePx;
+				refTickLine.SettlePx = pStock->SettlePrice / refParam.dPriceRate;
+				refTickLine.UpperPx = pStock->UpperPrice / refParam.dPriceRate;
+				refTickLine.LowerPx = pStock->LowerPrice / refParam.dPriceRate;
+				refTickLine.Amount = pStock->Amount;
+				refTickLine.Volume = pStock->Volume;
+				refTickLine.OpenInterest = pStock->OpenInterest;
+				//refTickLine.NumTrades = 0;
+				refTickLine.BidPx1 = pStock->Buy[0].Price;
+				refTickLine.BidVol1 = pStock->Buy[0].Volume;
+				refTickLine.BidPx2 = pStock->Buy[1].Price;
+				refTickLine.BidVol2 = pStock->Buy[1].Volume;
+				refTickLine.AskPx1 = pStock->Sell[0].Price;
+				refTickLine.AskVol1 = pStock->Sell[0].Volume;
+				refTickLine.AskPx2 = pStock->Sell[1].Price;
+				refTickLine.AskVol2 = pStock->Sell[1].Volume;
+				//refTickLine.Voip = pStock->Voip / refParam.dPriceRate;
 
-				nErrorCode = refDayLineCache.PutData( &refDayLine );
+				nErrorCode = refTickLineCache.PutData( &refTickLine );
 			}
 		}
 		break;
@@ -872,7 +1189,6 @@ int QuotationData::UpdateDayLine( enum XDFMarket eMarket, char* pSnapData, unsig
 		{
 			XDFAPI_CNFutOptData*		pStock = (XDFAPI_CNFutOptData*)pSnapData;
 			T_MAP_QUO::iterator			it = m_mapCNFOPT.find( std::string(pStock->Code) );
-			static unsigned int			s_nCNFOPTTradingDate = 0;
 
 			if( nTradeDate > 0 )
 			{
@@ -882,37 +1198,37 @@ int QuotationData::UpdateDayLine( enum XDFMarket eMarket, char* pSnapData, unsig
 			if( it != m_mapCNFOPT.end() )
 			{
 				T_LINE_PARAM&		refParam = it->second.first;
-				T_DAYLINE_CACHE&	refDayLineCache = it->second.second;
+				T_TICKLINE_CACHE&	refTickLineCache = it->second.second;
 
-				refDayLine.Type = refParam.Type;
-				::strcpy( refDayLine.Code, pStock->Code );
-				refDayLine.Date = s_nCNFOPTTradingDate;
-				refDayLine.Time = pStock->DataTimeStamp;
-				refDayLine.PreClosePx = pStock->PreClose / refParam.dPriceRate;
-				refDayLine.PreSettlePx = pStock->PreSettlePrice / refParam.dPriceRate;
-				refDayLine.OpenPx = pStock->Open / refParam.dPriceRate;
-				refDayLine.HighPx = pStock->High / refParam.dPriceRate;
-				refDayLine.LowPx = pStock->Low / refParam.dPriceRate;
-				refDayLine.ClosePx = pStock->Now / refParam.dPriceRate;
-				refDayLine.NowPx = refDayLine.ClosePx;
-				refDayLine.SettlePx = pStock->SettlePrice / refParam.dPriceRate;
-				refDayLine.UpperPx = pStock->UpperPrice / refParam.dPriceRate;
-				refDayLine.LowerPx = pStock->LowerPrice / refParam.dPriceRate;
-				refDayLine.Amount = pStock->Amount;
-				refDayLine.Volume = pStock->Volume;
-				refDayLine.OpenInterest = pStock->OpenInterest;
-				//refDayLine.NumTrades = 0;
-				refDayLine.BidPx1 = pStock->Buy[0].Price;
-				refDayLine.BidVol1 = pStock->Buy[0].Volume;
-				refDayLine.BidPx2 = pStock->Buy[1].Price;
-				refDayLine.BidVol2 = pStock->Buy[1].Volume;
-				refDayLine.AskPx1 = pStock->Sell[0].Price;
-				refDayLine.AskVol1 = pStock->Sell[0].Volume;
-				refDayLine.AskPx2 = pStock->Sell[1].Price;
-				refDayLine.AskVol2 = pStock->Sell[1].Volume;
-				//refDayLine.Voip = pStock->Voip / refParam.dPriceRate;
+				refTickLine.Type = refParam.Type;
+				::strcpy( refTickLine.Code, pStock->Code );
+				refTickLine.Date = s_nCNFOPTTradingDate;
+				refTickLine.Time = pStock->DataTimeStamp;
+				refTickLine.PreClosePx = pStock->PreClose / refParam.dPriceRate;
+				refTickLine.PreSettlePx = pStock->PreSettlePrice / refParam.dPriceRate;
+				refTickLine.OpenPx = pStock->Open / refParam.dPriceRate;
+				refTickLine.HighPx = pStock->High / refParam.dPriceRate;
+				refTickLine.LowPx = pStock->Low / refParam.dPriceRate;
+				refTickLine.ClosePx = pStock->Now / refParam.dPriceRate;
+				refTickLine.NowPx = refTickLine.ClosePx;
+				refTickLine.SettlePx = pStock->SettlePrice / refParam.dPriceRate;
+				refTickLine.UpperPx = pStock->UpperPrice / refParam.dPriceRate;
+				refTickLine.LowerPx = pStock->LowerPrice / refParam.dPriceRate;
+				refTickLine.Amount = pStock->Amount;
+				refTickLine.Volume = pStock->Volume;
+				refTickLine.OpenInterest = pStock->OpenInterest;
+				//refTickLine.NumTrades = 0;
+				refTickLine.BidPx1 = pStock->Buy[0].Price;
+				refTickLine.BidVol1 = pStock->Buy[0].Volume;
+				refTickLine.BidPx2 = pStock->Buy[1].Price;
+				refTickLine.BidVol2 = pStock->Buy[1].Volume;
+				refTickLine.AskPx1 = pStock->Sell[0].Price;
+				refTickLine.AskVol1 = pStock->Sell[0].Volume;
+				refTickLine.AskPx2 = pStock->Sell[1].Price;
+				refTickLine.AskVol2 = pStock->Sell[1].Volume;
+				//refTickLine.Voip = pStock->Voip / refParam.dPriceRate;
 
-				nErrorCode = refDayLineCache.PutData( &refDayLine );
+				nErrorCode = refTickLineCache.PutData( &refTickLine );
 			}
 		}
 		break;
@@ -923,7 +1239,7 @@ int QuotationData::UpdateDayLine( enum XDFMarket eMarket, char* pSnapData, unsig
 
 	if( nErrorCode < 0 )
 	{
-		QuoCollector::GetCollector()->OnLog( TLV_ERROR, "QuotationData::UpdateDayLine() : an error occur while updating day line(%s), marketid=%d, errorcode=%d", refDayLine.Code, (int)eMarket, nErrorCode );
+		QuoCollector::GetCollector()->OnLog( TLV_ERROR, "QuotationData::UpdateTickLine() : an error occur while updating tick line(%s), marketid=%d, errorcode=%d", refTickLine.Code, (int)eMarket, nErrorCode );
 		return -1;
 	}
 
