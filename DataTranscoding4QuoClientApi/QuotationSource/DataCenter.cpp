@@ -580,7 +580,7 @@ int QuotationData::DumpDayLine( enum XDFMarket eMarket, char* pSnapData, unsigne
 {
 	std::ofstream	oDumper;
 	int				nErrorCode = 0;
-	char			pszDayLine[512] = { 0 };
+	char			pszDayLine[1024] = { 0 };
 	char			pszFilePath[512] = { 0 };
 	unsigned int	nMachineDate = DateTime::Now().DateToLong();
 	unsigned int	nMachineTime = DateTime::Now().TimeToLong() * 1000;
