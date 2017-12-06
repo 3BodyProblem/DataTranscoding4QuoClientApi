@@ -204,10 +204,17 @@ void QuotationData::BeginDumpThread( enum XDFMarket eMarket, int nStatus )
 {
 	if( 5 == nStatus )
 	{
-		if( false == m_oThdDump.IsAlive() )
+		if( false == m_oThdTickDump.IsAlive() )
 		{
-			if( 0 != m_oThdDump.Create( "ThreadDumpTickLine()", ThreadDumpTickLine, this ) ) {
+			if( 0 != m_oThdTickDump.Create( "ThreadDumpTickLine()", ThreadDumpTickLine, this ) ) {
 				QuoCollector::GetCollector()->OnLog( TLV_ERROR, "QuotationData::BeginDumpThread() : failed 2 create tick line thread(1)" );
+			}
+		}
+
+		if( false == m_oThdMinuteDump.IsAlive() )
+		{
+			if( 0 != m_oThdMinuteDump.Create( "ThreadDumpMinuteLine()", ThreadDumpMinuteLine, this ) ) {
+				QuoCollector::GetCollector()->OnLog( TLV_ERROR, "QuotationData::BeginDumpThread() : failed 2 create minute line thread(1)" );
 			}
 		}
 	}
@@ -289,8 +296,31 @@ __inline bool	PrepareTickFile( T_TICK_LINE* pTickLine, std::string& sCode, std::
 	return true;
 }
 
-typedef char	STR_TICK_LINE[512];
+void* QuotationData::ThreadDumpMinuteLine( void* pSelf )
+{
+	QuotationData&				refData = *(QuotationData*)pSelf;
 
+	while( false == SimpleThread::GetGlobalStopFlag() )
+	{
+		try
+		{
+			SimpleThread::Sleep( 1000 * 3 );
+
+		}
+		catch( std::exception& err )
+		{
+			QuoCollector::GetCollector()->OnLog( TLV_ERROR, "QuotationData::ThreadDumpMinuteLine() : exception : %s", err.what() );
+		}
+		catch( ... )
+		{
+			QuoCollector::GetCollector()->OnLog( TLV_ERROR, "QuotationData::ThreadDumpMinuteLine() : unknow exception" );
+		}
+	}
+
+	return NULL;
+}
+
+typedef char	STR_TICK_LINE[512];
 void* QuotationData::ThreadDumpTickLine( void* pSelf )
 {
 	unsigned __int64			nDumpNumber = 0;

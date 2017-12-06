@@ -17,42 +17,65 @@
 #pragma pack(1)
 /**
  * @class						T_TICK_LINE
- * @brief						日线
+ * @brief						Tick线
  */
 typedef struct
 {
-	unsigned char				Valid;			///< 是否有效数据, 1:有效，需要落盘 0:无效或已落盘
-	unsigned char				Type;			///< 类型
-	char						eMarketID;		///< 市场ID
-	char						Code[16];		///< 商品代码
-	unsigned int				Date;			///< YYYYMMDD（如20170705）
-	unsigned int				Time;			///< HHMMSSmmm（如093005000)
-	double						PreClosePx;		///< 昨收价
-	double						PreSettlePx;	///< 昨结价
-	double						OpenPx;			///< 开盘价
-	double						HighPx;			///< 最高价
-	double						LowPx;			///< 最低价
-	double						ClosePx;		///< 收盘价
-	double						NowPx;			///< 现价
-	double						SettlePx;		///< 结算价
-	double						UpperPx;		///< 涨停价
-	double						LowerPx;		///< 跌停价
-	double						Amount;			///< 成交额
-	unsigned __int64			Volume;			///< 成交量(股/张/份)
-	unsigned __int64			OpenInterest;	///< 持仓量(股/张/份)
-	unsigned __int64			NumTrades;		///< 成交笔数
-	double						BidPx1;			///< 委托买盘一价格
-	unsigned __int64			BidVol1;		///< 委托买盘一量(股/张/份)
-	double						BidPx2;			///< 委托买盘二价格
-	unsigned __int64			BidVol2;		///< 委托买盘二量(股/张/份)
-	double						AskPx1;			///< 委托卖盘一价格
-	unsigned __int64			AskVol1;		///< 委托卖盘一量(股/张/份)
-	double						AskPx2;			///< 委托卖盘二价格
-	unsigned __int64			AskVol2;		///< 委托卖盘二量(股/张/份)
-	double						Voip;			///< 基金模净、权证溢价
-	char						TradingPhaseCode[12];///< 交易状态
-	char						PreName[8];		///< 证券前缀
+	unsigned char				Valid;					///< 是否有效数据, 1:有效，需要落盘 0:无效或已落盘
+	unsigned char				Type;					///< 类型
+	char						eMarketID;				///< 市场ID
+	char						Code[16];				///< 商品代码
+	unsigned int				Date;					///< YYYYMMDD（如20170705）
+	unsigned int				Time;					///< HHMMSSmmm（如093005000)
+	double						PreClosePx;				///< 昨收价
+	double						PreSettlePx;			///< 昨结价
+	double						OpenPx;					///< 开盘价
+	double						HighPx;					///< 最高价
+	double						LowPx;					///< 最低价
+	double						ClosePx;				///< 收盘价
+	double						NowPx;					///< 现价
+	double						SettlePx;				///< 结算价
+	double						UpperPx;				///< 涨停价
+	double						LowerPx;				///< 跌停价
+	double						Amount;					///< 成交额
+	unsigned __int64			Volume;					///< 成交量(股/张/份)
+	unsigned __int64			OpenInterest;			///< 持仓量(股/张/份)
+	unsigned __int64			NumTrades;				///< 成交笔数
+	double						BidPx1;					///< 委托买盘一价格
+	unsigned __int64			BidVol1;				///< 委托买盘一量(股/张/份)
+	double						BidPx2;					///< 委托买盘二价格
+	unsigned __int64			BidVol2;				///< 委托买盘二量(股/张/份)
+	double						AskPx1;					///< 委托卖盘一价格
+	unsigned __int64			AskVol1;				///< 委托卖盘一量(股/张/份)
+	double						AskPx2;					///< 委托卖盘二价格
+	unsigned __int64			AskVol2;				///< 委托卖盘二量(股/张/份)
+	double						Voip;					///< 基金模净、权证溢价
+	char						TradingPhaseCode[12];	///< 交易状态
+	char						PreName[8];				///< 证券前缀
 } T_TICK_LINE;
+
+/**
+ * @class						T_MIN_LINE
+ * @brief						分钟线
+ */
+typedef struct
+{
+	unsigned char				Type;					///< 类型
+	char						eMarketID;				///< 市场ID
+	char						Code[16];				///< 商品代码
+	unsigned int				Date;					///< YYYYMMDD（如20170705）
+	unsigned int				Time;					///< HHMMSSmmm（如093005000)
+	double						OpenPx;					///< 开盘价一分钟内的第一笔的nowpx
+	double						HighPx;					///< 最高价一分钟内的 最高的highpx
+	double						LowPx;					///< 最低价一分钟内的 最低的lowpx
+	double						ClosePx;				///< 收盘价一分钟内最后一笔的Nowpx
+	double						SettlePx;				///< 结算价一分钟内最后一笔的settlepx
+	double						Amount;					///< 成交额一分钟最后笔减去第一笔的amount
+	unsigned __int64			Volume;					///< 成交量(股/张/份)一分钟最后笔减去第一笔的volume
+	unsigned __int64			OpenInterest;			///< 持仓量(股/张/份)一分钟最后一笔
+	unsigned __int64			NumTrades;				///< 成交笔数一分钟最后笔减去第一笔的numtrades
+	double						Voip;					///< 基金模净、权证溢价一分钟的最后一笔voip
+} T_MIN_LINE;
 
 /**
  * @class						T_LINE_PARAM
@@ -60,21 +83,39 @@ typedef struct
  */
 typedef struct
 {
-	unsigned char				Type;			///< 类型
-	unsigned int				UpperPrice;		///< 涨停价
-	unsigned int				LowerPrice;		///< 跌停价
-	unsigned int				PreClosePx;		///< 昨收
-	unsigned int				PreSettlePx;	///< 昨结
-	unsigned int				PrePosition;	///< 昨持
-	char						PreName[8];		///< 前缀
-	double						dPriceRate;		///< 放大倍数
+	///< ---------------------- 参考基础信息 ----------------------------------
+	unsigned char				Type;					///< 类型
+	unsigned int				UpperPrice;				///< 涨停价
+	unsigned int				LowerPrice;				///< 跌停价
+	unsigned int				PreClosePx;				///< 昨收
+	unsigned int				PreSettlePx;			///< 昨结
+	unsigned int				PrePosition;			///< 昨持
+	char						PreName[8];				///< 前缀
+	double						dPriceRate;				///< 放大倍数
+	///< ---------------------- 分钟线统计信息 --------------------------------
+	unsigned char				Valid;					///< 是否有效数据, 1:有效，需要落盘 0:无效或已落盘
+	unsigned int				MkMinute;				///< 行情时间(精确到分，HHmm)
+	unsigned int				MinOpenPx1;				///< 分钟内第一笔最新价
+	unsigned int				MinHighPx;				///< 分钟内最高价
+	unsigned int				MinLowPx;				///< 分钟内最低价
+	unsigned int				MinClosePx;				///< 分钟内最新价
+	unsigned int				MinSettlePx;			///< 分钟内最新结算价
+	double						MinAmount1;				///< 分钟内第一笔金额
+	double						MinAmount2;				///< 分钟内第末笔金额
+	unsigned __int64			MinVolume1;				///< 分钟内第一笔成交量
+	unsigned __int64			MinVolume2;				///< 分钟内第末笔成交量
+	unsigned __int64			MinOpenInterest;		///< 分钟内第末笔持仓量
+	unsigned __int64			MinNumTrades1;			///< 分钟内第一笔成交笔数
+	unsigned __int64			MinNumTrades2;			///< 分钟内第末笔成交笔数
+	unsigned int				MinVoip;				///< 分钟内第末笔Voip
+
 } T_LINE_PARAM;
 #pragma pack()
 
 
-typedef MLoopBufferSt<T_TICK_LINE>				T_TICKLINE_CACHE;			///< 循环队列缓存
-typedef	std::map<enum XDFMarket,int>			TMAP_MKID2STATUS;			///< 各市场模块状态
-const	unsigned int							MAX_WRITER_NUM = 128;		///< 最大落盘文件句柄
+typedef MLoopBufferSt<T_TICK_LINE>		T_TICKLINE_CACHE;			///< 循环队列缓存
+typedef	std::map<enum XDFMarket,int>	TMAP_MKID2STATUS;			///< 各市场模块状态
+const	unsigned int					MAX_WRITER_NUM = 128;		///< 最大落盘文件句柄
 
 
 /**
@@ -206,8 +247,9 @@ public:
 	 */
 	int							DumpDayLine( enum XDFMarket eMarket, char* pSnapData, unsigned int nSnapSize, unsigned int nTradeDate = 0 );
 
-protected:///< 日线落盘线程
-	static void*	__stdcall	ThreadDumpTickLine( void* pSelf );
+protected:
+	static void*	__stdcall	ThreadDumpTickLine( void* pSelf );			///< 日线落盘线程
+	static void*	__stdcall	ThreadDumpMinuteLine( void* pSelf );		///< 分钟落盘线程
 
 protected:
 	TMAP_MKID2STATUS			m_mapModuleStatus;				///< 模块状态表
@@ -223,7 +265,8 @@ protected:
 	T_MAP_QUO					m_mapCNF;						///< 商品期货(上海/郑州/大连)
 	T_MAP_QUO					m_mapCNFOPT;					///< 商品期权(上海/郑州/大连)
 protected:
-	SimpleThread				m_oThdDump;						///< 上证L1
+	SimpleThread				m_oThdTickDump;					///< Tick落盘数据
+	SimpleThread				m_oThdMinuteDump;				///< 分钟线落盘数据
 };
 
 
