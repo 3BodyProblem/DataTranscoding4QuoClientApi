@@ -3,6 +3,7 @@
 #include <iostream>
 #include <algorithm>
 #include "Quotation.h"
+#include "../Infrastructure/File.h"
 #include "../DataTranscoding4QuoClientApi.h"
 
 
@@ -141,6 +142,85 @@ int Quotation::Release()
 	return 0;
 }
 
+__inline bool	PrepareStaticFile( T_STATIC_LINE& refStaticLine, std::ofstream& oDumper )
+{
+	char	pszFilePath[512] = { 0 };
+
+	if( oDumper.is_open() )
+	{
+		return true;
+	}
+
+	switch( refStaticLine.eMarketID )
+	{
+	case XDF_SH:		///< 上海Lv1
+	case XDF_SHOPT:		///< 上海期权
+	case XDF_SHL2:		///< 上海Lv2(QuoteClientApi内部屏蔽)
+		::sprintf( pszFilePath, "SSE/STATIC/%d/", refStaticLine.Date/10000 );
+		break;
+	case XDF_SZ:		///< 深证Lv1
+	case XDF_SZOPT:		///< 深圳期权
+	case XDF_SZL2:		///< 深证Lv2(QuoteClientApi内部屏蔽)
+		::sprintf( pszFilePath, "SZSE/STATIC/%d/", refStaticLine.Date/10000 );
+		break;
+	case XDF_CF:		///< 中金期货
+	case XDF_ZJOPT:		///< 中金期权
+		::sprintf( pszFilePath, "CFFEX/STATIC/%d/", refStaticLine.Date/10000 );
+		break;
+	case XDF_CNF:		///< 商品期货(上海/郑州/大连)
+	case XDF_CNFOPT:	///< 商品期权(上海/郑州/大连)
+		{
+			switch( refStaticLine.Type )
+			{
+			case 1:
+			case 4:
+				::sprintf( pszFilePath, "CZCE/STATIC/%s/", refStaticLine.Date/10000 );
+				break;
+			case 2:
+			case 5:
+				::sprintf( pszFilePath, "DCE/STATIC/%s/", refStaticLine.Date/10000 );
+				break;
+			case 3:
+			case 6:
+				::sprintf( pszFilePath, "SHFE/STATIC/%s/", refStaticLine.Date/10000 );
+				break;
+			case 7:
+				::sprintf( pszFilePath, "INE/STATIC/%s/", refStaticLine.Date/10000 );
+				break;
+			default:
+				QuoCollector::GetCollector()->OnLog( TLV_ERROR, "QuotationData::PrepareStaticFile() : invalid market subid (Type=%d)", refStaticLine.Type );
+				return false;
+			}
+		}
+		break;
+	default:
+		QuoCollector::GetCollector()->OnLog( TLV_ERROR, "QuotationData::PrepareStaticFile() : invalid market id (%s)", refStaticLine.eMarketID );
+		return false;
+	}
+
+	std::string				sFilePath = JoinPath( Configuration::GetConfig().GetDumpFolder(), pszFilePath );
+	File::CreateDirectoryTree( sFilePath );
+	char	pszFileName[128] = { 0 };
+	::sprintf( pszFileName, "STATIC%u.csv", refStaticLine.Date/10000 );
+	sFilePath += pszFileName;
+	oDumper.open( sFilePath.c_str() , std::ios::out|std::ios::app );
+
+	if( !oDumper.is_open() )
+	{
+		QuoCollector::GetCollector()->OnLog( TLV_ERROR, "QuotationData::PrepareStaticFile() : cannot open file (%s)", sFilePath.c_str() );
+		return false;
+	}
+
+	oDumper.seekp( 0, std::ios::end );
+	if( 0 == oDumper.tellp() )
+	{
+		std::string		sTitle = "date,code,name,lotsize,contractmult,contractunit,startdate,enddate,xqdate,deliverydate,expiredate,underlyingcode,underlyingname,optiontype,callorput,exercisepx\n";
+		oDumper << sTitle;
+	}
+
+	return true;
+}
+
 int Quotation::ReloadShLv1( enum XDFRunStat eStatus, bool bBuild )
 {
 	if( XRS_Normal != eStatus )
@@ -149,6 +229,7 @@ int Quotation::ReloadShLv1( enum XDFRunStat eStatus, bool bBuild )
 	}
 
 	int						nNum = 0;
+	std::ofstream			oDumper;
 	int						nCodeCount = 0;
 	int						nKindCount = 0;
 	XDFAPI_MarketKindInfo	vctKindInfo[32] = { 0 };
@@ -204,11 +285,30 @@ int Quotation::ReloadShLv1( enum XDFRunStat eStatus, bool bBuild )
 					if( abs(pMsgHead->MsgType) == 5 )
 					{
 						T_LINE_PARAM			tagParam = { 0 };
+						char					pszLine[1024] = { 0 };
+						T_STATIC_LINE			tagStaticLine = { 0 };
 						XDFAPI_NameTableSh*		pData = (XDFAPI_NameTableSh*)pbuf;
 
+						///< 构建商品集合
 						tagParam.dPriceRate = ::pow(10.0, int(vctKindInfo[pData->SecKind].PriceRate) );
 						m_oQuoDataCenter.BuildSecurity( XDF_SH, std::string( pData->Code, 6 ), tagParam );
 						nNum++;
+
+						///< 静态数据落盘
+						tagStaticLine.Type = 0;
+						tagStaticLine.eMarketID = XDF_SH;
+						tagStaticLine.Date = DateTime::Now().DateToLong();
+						::memcpy( tagStaticLine.Code, pData->Code, sizeof(pData->Code) );
+						::memcpy( tagStaticLine.Name, pData->Name, sizeof(pData->Name) );
+						tagStaticLine.LotSize = vctKindInfo[pData->SecKind].LotSize;
+						if( true == PrepareStaticFile( tagStaticLine, oDumper ) )
+						{
+							int		nLen = ::sprintf( pszLine, "%u,%s,%s,%d,%d,%d,%d,%d,%d,%d,%d,%s,%s,%c,%c,%.4f\n"
+								, tagStaticLine.Date, tagStaticLine.Code, tagStaticLine.Name, tagStaticLine.LotSize, tagStaticLine.ContractMult, tagStaticLine.ContractUnit
+								, tagStaticLine.StartDate, tagStaticLine.EndDate, tagStaticLine.XqDate, tagStaticLine.DeliveryDate, tagStaticLine.ExpireDate
+								, tagStaticLine.UnderlyingCode, tagStaticLine.UnderlyingName, tagStaticLine.OptionType, tagStaticLine.CallOrPut, tagStaticLine.ExercisePx );
+							oDumper.write( pszLine, nLen );
+						}
 
 						pbuf += sizeof(XDFAPI_NameTableSh);
 					}
@@ -297,6 +397,7 @@ int Quotation::ReloadShOpt( enum XDFRunStat eStatus, bool bBuild )
 	}
 
 	int						nNum = 0;
+	std::ofstream			oDumper;
 	int						nCodeCount = 0;
 	int						nKindCount = 0;
 	XDFAPI_MarketKindInfo	vctKindInfo[32] = { 0 };
@@ -352,8 +453,11 @@ int Quotation::ReloadShOpt( enum XDFRunStat eStatus, bool bBuild )
 					if( abs(pMsgHead->MsgType) == 2 )
 					{
 						T_LINE_PARAM			tagParam = { 0 };
+						char					pszLine[1024] = { 0 };
+						T_STATIC_LINE			tagStaticLine = { 0 };
 						XDFAPI_NameTableShOpt*	pData = (XDFAPI_NameTableShOpt*)pbuf;
 
+						///< 行情数据集合
 						tagParam.dPriceRate = ::pow(10.0, int(vctKindInfo[pData->SecKind].PriceRate) );
 						tagParam.LowerPrice = pData->DownLimit;
 						tagParam.UpperPrice = pData->UpLimit;
@@ -361,6 +465,34 @@ int Quotation::ReloadShOpt( enum XDFRunStat eStatus, bool bBuild )
 						tagParam.PreSettlePx = pData->PreSettlePx;
 						tagParam.PrePosition = pData->LeavesQty;
 						m_oQuoDataCenter.BuildSecurity( XDF_SHOPT, std::string( pData->Code, 8 ), tagParam );
+
+						///< 静态数据落盘
+						tagStaticLine.Type = 0;
+						tagStaticLine.eMarketID = XDF_SHOPT;
+						tagStaticLine.Date = DateTime::Now().DateToLong();
+						::memcpy( tagStaticLine.Code, pData->Code, sizeof(pData->Code) );
+						::memcpy( tagStaticLine.Name, pData->Name, sizeof(pData->Name) );
+						tagStaticLine.LotSize = vctKindInfo[pData->SecKind].LotSize;
+						///<tagStaticLine.ContractMult = 0;
+						tagStaticLine.ContractUnit = pData->ContractUnit;
+						tagStaticLine.StartDate = pData->StartDate;
+						tagStaticLine.EndDate = pData->EndDate;
+						tagStaticLine.XqDate = pData->XqDate;
+						tagStaticLine.DeliveryDate = pData->DeliveryDate;
+						tagStaticLine.ExpireDate = pData->ExpireDate;
+						::memcpy( tagStaticLine.UnderlyingCode, pData->UnderlyingCode, sizeof(pData->UnderlyingCode) );
+						::memcpy( tagStaticLine.UnderlyingName, pData->UnderlyingName, sizeof(pData->UnderlyingName) );
+						tagStaticLine.OptionType = pData->OptionType;		///< 期权类型：'E'-欧式 'A'-美式
+						tagStaticLine.CallOrPut = pData->CallOrPut;			///< 认沽认购：'C'认购 'P'认沽
+						tagStaticLine.ExercisePx = pData->XqPrice / tagParam.dPriceRate;
+						if( true == PrepareStaticFile( tagStaticLine, oDumper ) )
+						{
+							int		nLen = ::sprintf( pszLine, "%u,%s,%s,%d,%d,%d,%d,%d,%d,%d,%d,%s,%s,%c,%c,%.4f\n"
+								, tagStaticLine.Date, tagStaticLine.Code, tagStaticLine.Name, tagStaticLine.LotSize, tagStaticLine.ContractMult, tagStaticLine.ContractUnit
+								, tagStaticLine.StartDate, tagStaticLine.EndDate, tagStaticLine.XqDate, tagStaticLine.DeliveryDate, tagStaticLine.ExpireDate
+								, tagStaticLine.UnderlyingCode, tagStaticLine.UnderlyingName, tagStaticLine.OptionType, tagStaticLine.CallOrPut, tagStaticLine.ExercisePx );
+							oDumper.write( pszLine, nLen );
+						}
 
 						pbuf += sizeof(XDFAPI_NameTableShOpt);
 						nNum++;
@@ -438,6 +570,7 @@ int Quotation::ReloadSzLv1( enum XDFRunStat eStatus, bool bBuild )
 	}
 
 	int						nNum = 0;
+	std::ofstream			oDumper;
 	int						nCodeCount = 0;
 	int						nKindCount = 0;
 	XDFAPI_MarketKindInfo	vctKindInfo[32] = { 0 };
@@ -493,11 +626,30 @@ int Quotation::ReloadSzLv1( enum XDFRunStat eStatus, bool bBuild )
 					if( abs(pMsgHead->MsgType) == 6 )
 					{
 						T_LINE_PARAM			tagParam = { 0 };
+						char					pszLine[1024] = { 0 };
+						T_STATIC_LINE			tagStaticLine = { 0 };
 						XDFAPI_NameTableSz*		pData = (XDFAPI_NameTableSz*)pbuf;
 
+						///< 数据集合构建
 						tagParam.dPriceRate = ::pow(10.0, int(vctKindInfo[pData->SecKind].PriceRate) );
 						::memcpy( tagParam.PreName, pData->PreName, 4 );
 						m_oQuoDataCenter.BuildSecurity( XDF_SZ, std::string( pData->Code, 6 ), tagParam );
+
+						///< 静态数据落盘
+						tagStaticLine.Type = 0;
+						tagStaticLine.eMarketID = XDF_SZ;
+						tagStaticLine.Date = DateTime::Now().DateToLong();
+						::memcpy( tagStaticLine.Code, pData->Code, sizeof(pData->Code) );
+						::memcpy( tagStaticLine.Name, pData->Name, sizeof(pData->Name) );
+						tagStaticLine.LotSize = vctKindInfo[pData->SecKind].LotSize;
+						if( true == PrepareStaticFile( tagStaticLine, oDumper ) )
+						{
+							int		nLen = ::sprintf( pszLine, "%u,%s,%s,%d,%d,%d,%d,%d,%d,%d,%d,%s,%s,%c,%c,%.4f\n"
+								, tagStaticLine.Date, tagStaticLine.Code, tagStaticLine.Name, tagStaticLine.LotSize, tagStaticLine.ContractMult, tagStaticLine.ContractUnit
+								, tagStaticLine.StartDate, tagStaticLine.EndDate, tagStaticLine.XqDate, tagStaticLine.DeliveryDate, tagStaticLine.ExpireDate
+								, tagStaticLine.UnderlyingCode, tagStaticLine.UnderlyingName, tagStaticLine.OptionType, tagStaticLine.CallOrPut, tagStaticLine.ExercisePx );
+							oDumper.write( pszLine, nLen );
+						}
 
 						pbuf += sizeof(XDFAPI_NameTableSz);
 						nNum++;
@@ -587,6 +739,7 @@ int Quotation::ReloadSzOpt( enum XDFRunStat eStatus, bool bBuild )
 	}
 
 	int						nNum = 0;
+	std::ofstream			oDumper;
 	int						nCodeCount = 0;
 	int						nKindCount = 0;
 	XDFAPI_MarketKindInfo	vctKindInfo[32] = { 0 };
@@ -642,8 +795,11 @@ int Quotation::ReloadSzOpt( enum XDFRunStat eStatus, bool bBuild )
 					if( abs(pMsgHead->MsgType) == 9 )
 					{
 						T_LINE_PARAM			tagParam = { 0 };
+						char					pszLine[1024] = { 0 };
+						T_STATIC_LINE			tagStaticLine = { 0 };
 						XDFAPI_NameTableSzOpt*	pData = (XDFAPI_NameTableSzOpt*)pbuf;
 
+						///< 行情数据集合
 						tagParam.dPriceRate = ::pow(10.0, int(vctKindInfo[pData->SecKind].PriceRate) );
 						tagParam.UpperPrice = pData->UpLimit;
 						tagParam.LowerPrice = pData->DownLimit;
@@ -651,6 +807,34 @@ int Quotation::ReloadSzOpt( enum XDFRunStat eStatus, bool bBuild )
 						tagParam.PreSettlePx = pData->PreSettlePx;
 						tagParam.PrePosition = pData->LeavesQty;
 						m_oQuoDataCenter.BuildSecurity( XDF_SZOPT, std::string( pData->Code, 8 ), tagParam );
+
+						///< 静态数据落盘
+						tagStaticLine.Type = 0;
+						tagStaticLine.eMarketID = XDF_SZOPT;
+						tagStaticLine.Date = DateTime::Now().DateToLong();
+						::memcpy( tagStaticLine.Code, pData->Code, sizeof(pData->Code) );
+						::memcpy( tagStaticLine.Name, pData->Name, sizeof(pData->Name) );
+						tagStaticLine.LotSize = vctKindInfo[pData->SecKind].LotSize;
+						///<tagStaticLine.ContractMult = 0;
+						tagStaticLine.ContractUnit = pData->ContractUnit;
+						tagStaticLine.StartDate = pData->StartDate;
+						tagStaticLine.EndDate = pData->EndDate;
+						tagStaticLine.XqDate = pData->XqDate;
+						tagStaticLine.DeliveryDate = pData->DeliveryDate;
+						tagStaticLine.ExpireDate = pData->ExpireDate;
+						::memcpy( tagStaticLine.UnderlyingCode, pData->UnderlyingCode, sizeof(pData->UnderlyingCode) );
+						//::memcpy( tagStaticLine.UnderlyingName, pData->UnderlyingName, sizeof(pData->UnderlyingName) );
+						tagStaticLine.OptionType = pData->OptionType;		///< 期权类型：'E'-欧式 'A'-美式
+						tagStaticLine.CallOrPut = pData->CallOrPut;			///< 认沽认购：'C'认购 'P'认沽
+						tagStaticLine.ExercisePx = pData->XqPrice / tagParam.dPriceRate;
+						if( true == PrepareStaticFile( tagStaticLine, oDumper ) )
+						{
+							int		nLen = ::sprintf( pszLine, "%u,%s,%s,%d,%d,%d,%d,%d,%d,%d,%d,%s,%s,%c,%c,%.4f\n"
+								, tagStaticLine.Date, tagStaticLine.Code, tagStaticLine.Name, tagStaticLine.LotSize, tagStaticLine.ContractMult, tagStaticLine.ContractUnit
+								, tagStaticLine.StartDate, tagStaticLine.EndDate, tagStaticLine.XqDate, tagStaticLine.DeliveryDate, tagStaticLine.ExpireDate
+								, tagStaticLine.UnderlyingCode, tagStaticLine.UnderlyingName, tagStaticLine.OptionType, tagStaticLine.CallOrPut, tagStaticLine.ExercisePx );
+							oDumper.write( pszLine, nLen );
+						}
 
 						pbuf += sizeof(XDFAPI_NameTableSzOpt);
 						nNum++;
@@ -727,6 +911,7 @@ int Quotation::ReloadCFF( enum XDFRunStat eStatus, bool bBuild )
 	}
 
 	int						nNum = 0;
+	std::ofstream			oDumper;
 	int						nCodeCount = 0;
 	int						nKindCount = 0;
 	XDFAPI_MarketKindInfo	vctKindInfo[32] = { 0 };
@@ -782,10 +967,21 @@ int Quotation::ReloadCFF( enum XDFRunStat eStatus, bool bBuild )
 					if( abs(pMsgHead->MsgType) == 4 )
 					{
 						T_LINE_PARAM			tagParam = { 0 };
+						char					pszLine[1024] = { 0 };
+						T_STATIC_LINE			tagStaticLine = { 0 };
 						XDFAPI_NameTableZjqh*	pData = (XDFAPI_NameTableZjqh*)pbuf;
 
 						tagParam.dPriceRate = ::pow(10.0, int(vctKindInfo[pData->SecKind].PriceRate) );
 						m_oQuoDataCenter.BuildSecurity( XDF_CF, std::string( pData->Code, 6 ), tagParam );
+
+						if( true == PrepareStaticFile( tagStaticLine, oDumper ) )
+						{
+							int		nLen = ::sprintf( pszLine, "%u,%s,%s,%d,%d,%d,%d,%d,%d,%d,%d,%s,%s,%c,%c,%.4f\n"
+								, tagStaticLine.Date, tagStaticLine.Code, tagStaticLine.Name, tagStaticLine.LotSize, tagStaticLine.ContractMult, tagStaticLine.ContractUnit
+								, tagStaticLine.StartDate, tagStaticLine.EndDate, tagStaticLine.XqDate, tagStaticLine.DeliveryDate, tagStaticLine.ExpireDate
+								, tagStaticLine.UnderlyingCode, tagStaticLine.UnderlyingName, tagStaticLine.OptionType, tagStaticLine.CallOrPut, tagStaticLine.ExercisePx );
+							oDumper.write( pszLine, nLen );
+						}
 
 						pbuf += sizeof(XDFAPI_NameTableZjqh);
 						nNum++;
@@ -862,6 +1058,7 @@ int Quotation::ReloadCFFOPT( enum XDFRunStat eStatus, bool bBuild )
 	}
 
 	int						nNum = 0;
+	std::ofstream			oDumper;
 	int						nCodeCount = 0;
 	int						nKindCount = 0;
 	XDFAPI_MarketKindInfo	vctKindInfo[32] = { 0 };
@@ -917,10 +1114,21 @@ int Quotation::ReloadCFFOPT( enum XDFRunStat eStatus, bool bBuild )
 					if( abs(pMsgHead->MsgType) == 3 )
 					{
 						T_LINE_PARAM			tagParam = { 0 };
+						char					pszLine[1024] = { 0 };
+						T_STATIC_LINE			tagStaticLine = { 0 };
 						XDFAPI_NameTableZjOpt*	pData = (XDFAPI_NameTableZjOpt*)pbuf;
 
 						tagParam.dPriceRate = ::pow(10.0, int(vctKindInfo[pData->SecKind].PriceRate) );
 						m_oQuoDataCenter.BuildSecurity( XDF_ZJOPT, std::string( pData->Code ), tagParam );
+
+						if( true == PrepareStaticFile( tagStaticLine, oDumper ) )
+						{
+							int		nLen = ::sprintf( pszLine, "%u,%s,%s,%d,%d,%d,%d,%d,%d,%d,%d,%s,%s,%c,%c,%.4f\n"
+								, tagStaticLine.Date, tagStaticLine.Code, tagStaticLine.Name, tagStaticLine.LotSize, tagStaticLine.ContractMult, tagStaticLine.ContractUnit
+								, tagStaticLine.StartDate, tagStaticLine.EndDate, tagStaticLine.XqDate, tagStaticLine.DeliveryDate, tagStaticLine.ExpireDate
+								, tagStaticLine.UnderlyingCode, tagStaticLine.UnderlyingName, tagStaticLine.OptionType, tagStaticLine.CallOrPut, tagStaticLine.ExercisePx );
+							oDumper.write( pszLine, nLen );
+						}
 
 						pbuf += sizeof(XDFAPI_NameTableZjOpt);
 						nNum++;
@@ -997,6 +1205,7 @@ int Quotation::ReloadCNF( enum XDFRunStat eStatus, bool bBuild )
 	}
 
 	int						nNum = 0;
+	std::ofstream			oDumper;
 	int						nCodeCount = 0;
 	int						nKindCount = 0;
 	XDFAPI_MarketKindInfo	vctKindInfo[32] = { 0 };
@@ -1052,11 +1261,22 @@ int Quotation::ReloadCNF( enum XDFRunStat eStatus, bool bBuild )
 					if( abs(pMsgHead->MsgType) == 7 )
 					{
 						T_LINE_PARAM			tagParam = { 0 };
+						char					pszLine[1024] = { 0 };
+						T_STATIC_LINE			tagStaticLine = { 0 };
 						XDFAPI_NameTableCnf*	pData = (XDFAPI_NameTableCnf*)pbuf;
 
 						tagParam.Type = pData->SecKind;
 						tagParam.dPriceRate = ::pow(10.0, int(vctKindInfo[pData->SecKind].PriceRate) );
 						m_oQuoDataCenter.BuildSecurity( XDF_CNF, std::string( pData->Code, 6 ), tagParam );
+
+						if( true == PrepareStaticFile( tagStaticLine, oDumper ) )
+						{
+							int		nLen = ::sprintf( pszLine, "%u,%s,%s,%d,%d,%d,%d,%d,%d,%d,%d,%s,%s,%c,%c,%.4f\n"
+								, tagStaticLine.Date, tagStaticLine.Code, tagStaticLine.Name, tagStaticLine.LotSize, tagStaticLine.ContractMult, tagStaticLine.ContractUnit
+								, tagStaticLine.StartDate, tagStaticLine.EndDate, tagStaticLine.XqDate, tagStaticLine.DeliveryDate, tagStaticLine.ExpireDate
+								, tagStaticLine.UnderlyingCode, tagStaticLine.UnderlyingName, tagStaticLine.OptionType, tagStaticLine.CallOrPut, tagStaticLine.ExercisePx );
+							oDumper.write( pszLine, nLen );
+						}
 
 						pbuf += sizeof(XDFAPI_NameTableCnf);
 						nNum++;
@@ -1136,6 +1356,7 @@ int Quotation::ReloadCNFOPT( enum XDFRunStat eStatus, bool bBuild )
 	}
 
 	int						nNum = 0;
+	std::ofstream			oDumper;
 	int						nCodeCount = 0;
 	int						nKindCount = 0;
 	XDFAPI_MarketKindInfo	vctKindInfo[32] = { 0 };
@@ -1191,11 +1412,22 @@ int Quotation::ReloadCNFOPT( enum XDFRunStat eStatus, bool bBuild )
 					if( abs(pMsgHead->MsgType) == 11 )
 					{
 						T_LINE_PARAM			tagParam = { 0 };
+						char					pszLine[1024] = { 0 };
+						T_STATIC_LINE			tagStaticLine = { 0 };
 						XDFAPI_NameTableCnfOpt*	pData = (XDFAPI_NameTableCnfOpt*)pbuf;
 
 						tagParam.Type = pData->SecKind;
 						tagParam.dPriceRate = ::pow(10.0, int(vctKindInfo[pData->SecKind].PriceRate) );
 						m_oQuoDataCenter.BuildSecurity( XDF_CNFOPT, std::string( pData->Code ), tagParam );
+
+						if( true == PrepareStaticFile( tagStaticLine, oDumper ) )
+						{
+							int		nLen = ::sprintf( pszLine, "%u,%s,%s,%d,%d,%d,%d,%d,%d,%d,%d,%s,%s,%c,%c,%.4f\n"
+								, tagStaticLine.Date, tagStaticLine.Code, tagStaticLine.Name, tagStaticLine.LotSize, tagStaticLine.ContractMult, tagStaticLine.ContractUnit
+								, tagStaticLine.StartDate, tagStaticLine.EndDate, tagStaticLine.XqDate, tagStaticLine.DeliveryDate, tagStaticLine.ExpireDate
+								, tagStaticLine.UnderlyingCode, tagStaticLine.UnderlyingName, tagStaticLine.OptionType, tagStaticLine.CallOrPut, tagStaticLine.ExercisePx );
+							oDumper.write( pszLine, nLen );
+						}
 
 						pbuf += sizeof(XDFAPI_NameTableCnfOpt);
 						nNum++;
