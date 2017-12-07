@@ -113,8 +113,8 @@ typedef struct
 #pragma pack()
 
 
-typedef MLoopBufferSt<T_TICK_LINE>		T_TICKLINE_CACHE;			///< 循环队列缓存
-//typedef MLoopBufferSt<T_MIN_LINE>		T_TICKLINE_CACHE;			///< 循环队列缓存
+typedef MLoopBufferSt<T_TICK_LINE>		T_TICKLINE_CACHE;			///< Tick线循环队列缓存
+typedef MLoopBufferSt<T_MIN_LINE>		T_MINLINE_CACHE;			///< 分钟线循环队列缓存
 typedef	std::map<enum XDFMarket,int>	TMAP_MKID2STATUS;			///< 各市场模块状态
 const	unsigned int					MAX_WRITER_NUM = 128;		///< 最大落盘文件句柄
 
@@ -232,6 +232,16 @@ public:
 	int							UpdatePreName( enum XDFMarket eMarket, std::string& sCode, char* pszPreName, unsigned int nSize );
 
 	/**
+	 * @brief					更新前缀
+	 * @param[in]				eMarket			市场ID
+	 * @param[in]				sCode			商品代码
+	 * @param[in]				refParam		分钟线计算参数
+	 * @param[in]				nMkDate			市场日期
+	 * @param[in]				nMkTime			市场时间
+	 */
+	void						DispatchMinuteLine( enum XDFMarket eMarket, std::string& sCode, T_LINE_PARAM& refParam, unsigned int nMkDate, unsigned int nMkTime );
+
+	/**
 	 * @brief					更新日线信息
 	 * @param[in]				pSnapData		快照指针
 	 * @param[in]				nSnapSize		快照大小
@@ -265,6 +275,11 @@ protected:
 	T_MAP_QUO					m_mapCFFOPT;					///< 中金期权
 	T_MAP_QUO					m_mapCNF;						///< 商品期货(上海/郑州/大连)
 	T_MAP_QUO					m_mapCNFOPT;					///< 商品期权(上海/郑州/大连)
+protected:
+	unsigned int				m_nMaxMLineBufSize;				///< 分钟线缓存长度
+	char*						m_pBuf4MinuteLine;				///< 分钟线缓存地址
+	T_MINLINE_CACHE				m_arrayMinuteLine;				///< 分钟线缓存管理对象
+	CriticalObject				m_oMinuteLock;					///< 临界区对象
 protected:
 	SimpleThread				m_oThdTickDump;					///< Tick落盘数据
 	SimpleThread				m_oThdMinuteDump;				///< 分钟线落盘数据
