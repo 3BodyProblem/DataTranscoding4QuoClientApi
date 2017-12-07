@@ -971,9 +971,29 @@ int Quotation::ReloadCFF( enum XDFRunStat eStatus, bool bBuild )
 						T_STATIC_LINE			tagStaticLine = { 0 };
 						XDFAPI_NameTableZjqh*	pData = (XDFAPI_NameTableZjqh*)pbuf;
 
+						///< 行情数据集合
 						tagParam.dPriceRate = ::pow(10.0, int(vctKindInfo[pData->SecKind].PriceRate) );
 						m_oQuoDataCenter.BuildSecurity( XDF_CF, std::string( pData->Code, 6 ), tagParam );
 
+						///< 静态数据落盘
+						tagStaticLine.Type = 0;
+						tagStaticLine.eMarketID = XDF_CF;
+						tagStaticLine.Date = DateTime::Now().DateToLong();
+						::memcpy( tagStaticLine.Code, pData->Code, sizeof(pData->Code) );
+						::memcpy( tagStaticLine.Name, pData->Name, sizeof(pData->Name) );
+						tagStaticLine.LotSize = vctKindInfo[pData->SecKind].LotSize;
+						tagStaticLine.ContractMult = pData->ContractMult;
+						//tagStaticLine.ContractUnit = pData->ContractUnit;
+						//tagStaticLine.StartDate = pData->StartDate;
+						//tagStaticLine.EndDate = pData->EndDate;
+						//tagStaticLine.XqDate = pData->XqDate;
+						//tagStaticLine.DeliveryDate = pData->DeliveryDate;
+						//tagStaticLine.ExpireDate = pData->ExpireDate;
+						::memcpy( tagStaticLine.UnderlyingCode, pData->ObjectCode, sizeof(pData->ObjectCode) );
+						//::memcpy( tagStaticLine.UnderlyingName, pData->UnderlyingName, sizeof(pData->UnderlyingName) );
+						//tagStaticLine.OptionType = pData->OptionType;		///< 期权类型：'E'-欧式 'A'-美式
+						//tagStaticLine.CallOrPut = pData->CallOrPut;			///< 认沽认购：'C'认购 'P'认沽
+						//tagStaticLine.ExercisePx = pData->XqPrice / tagParam.dPriceRate;
 						if( true == PrepareStaticFile( tagStaticLine, oDumper ) )
 						{
 							int		nLen = ::sprintf( pszLine, "%u,%s,%s,%d,%d,%d,%d,%d,%d,%d,%d,%s,%s,%c,%c,%.4f\n"
@@ -1118,9 +1138,29 @@ int Quotation::ReloadCFFOPT( enum XDFRunStat eStatus, bool bBuild )
 						T_STATIC_LINE			tagStaticLine = { 0 };
 						XDFAPI_NameTableZjOpt*	pData = (XDFAPI_NameTableZjOpt*)pbuf;
 
+						///< 行情数据集合
 						tagParam.dPriceRate = ::pow(10.0, int(vctKindInfo[pData->SecKind].PriceRate) );
 						m_oQuoDataCenter.BuildSecurity( XDF_ZJOPT, std::string( pData->Code ), tagParam );
 
+						///< 静态数据落盘
+						tagStaticLine.Type = 0;
+						tagStaticLine.eMarketID = XDF_ZJOPT;
+						tagStaticLine.Date = DateTime::Now().DateToLong();
+						::memcpy( tagStaticLine.Code, pData->Code, sizeof(pData->Code) );
+						//::memcpy( tagStaticLine.Name, pData->Name, sizeof(pData->Name) );
+						tagStaticLine.LotSize = vctKindInfo[pData->SecKind].LotSize;
+						tagStaticLine.ContractMult = pData->ContractMult;
+						tagStaticLine.ContractUnit = pData->ContractUnit;
+						tagStaticLine.StartDate = pData->StartDate;
+						tagStaticLine.EndDate = pData->EndDate;
+						tagStaticLine.XqDate = pData->XqDate;
+						tagStaticLine.DeliveryDate = pData->DeliveryDate;
+						tagStaticLine.ExpireDate = pData->ExpireDate;
+						::memcpy( tagStaticLine.UnderlyingCode, pData->ObjectCode, sizeof(pData->ObjectCode) );
+						//::memcpy( tagStaticLine.UnderlyingName, pData->UnderlyingName, sizeof(pData->UnderlyingName) );
+						//tagStaticLine.OptionType = pData->OptionType;		///< 期权类型：'E'-欧式 'A'-美式
+						//tagStaticLine.CallOrPut = pData->CallOrPut;			///< 认沽认购：'C'认购 'P'认沽
+						//tagStaticLine.ExercisePx = pData->XqPrice / tagParam.dPriceRate;
 						if( true == PrepareStaticFile( tagStaticLine, oDumper ) )
 						{
 							int		nLen = ::sprintf( pszLine, "%u,%s,%s,%d,%d,%d,%d,%d,%d,%d,%d,%s,%s,%c,%c,%.4f\n"
@@ -1241,6 +1281,9 @@ int Quotation::ReloadCNF( enum XDFRunStat eStatus, bool bBuild )
 	}
 
 	///< ---------------- 获取商品期货市场码表数据 ----------------------------------------
+	char	cMkID = XDF_CNF;
+	XDFAPI_MarketStatusInfo	tagStatus = { 0 };
+	cMkID = m_oQuotPlugin.GetPrimeApi()->ReqFuncData( 101, &cMkID, &tagStatus );
 	nErrorCode = m_oQuotPlugin->GetCodeTable( XDF_CNF, NULL, NULL, nCodeCount );				///< 先获取一下商品数量
 	if( nErrorCode > 0 && nCodeCount > 0 )
 	{
@@ -1265,10 +1308,30 @@ int Quotation::ReloadCNF( enum XDFRunStat eStatus, bool bBuild )
 						T_STATIC_LINE			tagStaticLine = { 0 };
 						XDFAPI_NameTableCnf*	pData = (XDFAPI_NameTableCnf*)pbuf;
 
+						///< 行情数据集合
 						tagParam.Type = pData->SecKind;
 						tagParam.dPriceRate = ::pow(10.0, int(vctKindInfo[pData->SecKind].PriceRate) );
 						m_oQuoDataCenter.BuildSecurity( XDF_CNF, std::string( pData->Code, 6 ), tagParam );
 
+						///< 静态数据落盘
+						tagStaticLine.Type = tagParam.Type;
+						tagStaticLine.eMarketID = XDF_CNF;
+						tagStaticLine.Date = tagStatus.MarketDate;
+						::memcpy( tagStaticLine.Code, pData->Code, sizeof(pData->Code) );
+						::memcpy( tagStaticLine.Name, pData->Name, sizeof(pData->Name) );
+						tagStaticLine.LotSize = vctKindInfo[pData->SecKind].LotSize;
+						//tagStaticLine.ContractMult = pData->ContractMult;
+						//tagStaticLine.ContractUnit = pData->ContractUnit;
+						//tagStaticLine.StartDate = pData->StartDate;
+						//tagStaticLine.EndDate = pData->EndDate;
+						//tagStaticLine.XqDate = pData->XqDate;
+						//tagStaticLine.DeliveryDate = pData->DeliveryDate;
+						//tagStaticLine.ExpireDate = pData->ExpireDate;
+						//::memcpy( tagStaticLine.UnderlyingCode, pData->ObjectCode, sizeof(pData->ObjectCode) );
+						//::memcpy( tagStaticLine.UnderlyingName, pData->UnderlyingName, sizeof(pData->UnderlyingName) );
+						//tagStaticLine.OptionType = pData->OptionType;		///< 期权类型：'E'-欧式 'A'-美式
+						//tagStaticLine.CallOrPut = pData->CallOrPut;			///< 认沽认购：'C'认购 'P'认沽
+						//tagStaticLine.ExercisePx = pData->XqPrice / tagParam.dPriceRate;
 						if( true == PrepareStaticFile( tagStaticLine, oDumper ) )
 						{
 							int		nLen = ::sprintf( pszLine, "%u,%s,%s,%d,%d,%d,%d,%d,%d,%d,%d,%s,%s,%c,%c,%.4f\n"
@@ -1306,10 +1369,6 @@ int Quotation::ReloadCNF( enum XDFRunStat eStatus, bool bBuild )
 	///< ---------------- 获取快照表数据 -------------------------------------------
 	int		noffset = (sizeof(XDFAPI_CNFutureData) + sizeof(XDFAPI_UniMsgHead)) * nCodeCount;	///< 根据商品数量，分配获取快照表需要的缓存
 	char*	pszCodeBuf = new char[noffset];
-	char	cMkID = XDF_CNF;
-	XDFAPI_MarketStatusInfo	tagStatus = { 0 };
-	cMkID = m_oQuotPlugin.GetPrimeApi()->ReqFuncData( 101, &cMkID, &tagStatus );
-
 	nErrorCode = m_oQuotPlugin->GetLastMarketDataAll( XDF_CNF, pszCodeBuf, noffset );			///< 获取快照
 	for( int m = 0; m < nErrorCode; )
 	{
@@ -1392,6 +1451,9 @@ int Quotation::ReloadCNFOPT( enum XDFRunStat eStatus, bool bBuild )
 	}
 
 	///< ---------------- 获取商品期权市场码表数据 ----------------------------------------
+	char	cMkID = XDF_CNFOPT;
+	XDFAPI_MarketStatusInfo	tagStatus = { 0 };
+	cMkID = m_oQuotPlugin.GetPrimeApi()->ReqFuncData( 101, &cMkID, &tagStatus );
 	nErrorCode = m_oQuotPlugin->GetCodeTable( XDF_CNFOPT, NULL, NULL, nCodeCount );					///< 先获取一下商品数量
 	if( nErrorCode > 0 && nCodeCount > 0 )
 	{
@@ -1416,10 +1478,30 @@ int Quotation::ReloadCNFOPT( enum XDFRunStat eStatus, bool bBuild )
 						T_STATIC_LINE			tagStaticLine = { 0 };
 						XDFAPI_NameTableCnfOpt*	pData = (XDFAPI_NameTableCnfOpt*)pbuf;
 
+						///< 行情数据集合
 						tagParam.Type = pData->SecKind;
 						tagParam.dPriceRate = ::pow(10.0, int(vctKindInfo[pData->SecKind].PriceRate) );
 						m_oQuoDataCenter.BuildSecurity( XDF_CNFOPT, std::string( pData->Code ), tagParam );
 
+						///< 静态数据落盘
+						tagStaticLine.Type = tagParam.Type;
+						tagStaticLine.eMarketID = XDF_CNFOPT;
+						tagStaticLine.Date = tagStatus.MarketDate;
+						::memcpy( tagStaticLine.Code, pData->Code, sizeof(pData->Code) );
+						::memcpy( tagStaticLine.Name, pData->Name, sizeof(pData->Name) );
+						tagStaticLine.LotSize = vctKindInfo[pData->SecKind].LotSize;
+						tagStaticLine.ContractMult = pData->ContractMult;
+						//tagStaticLine.ContractUnit = pData->ContractUnit;
+						tagStaticLine.StartDate = pData->StartDate;
+						tagStaticLine.EndDate = pData->EndDate;
+						tagStaticLine.XqDate = pData->XqDate;
+						tagStaticLine.DeliveryDate = pData->DeliveryDate;
+						tagStaticLine.ExpireDate = pData->ExpireDate;
+						::memcpy( tagStaticLine.UnderlyingCode, pData->UnderlyingCode, sizeof(pData->UnderlyingCode) );
+						//::memcpy( tagStaticLine.UnderlyingName, pData->UnderlyingName, sizeof(pData->UnderlyingName) );
+						//tagStaticLine.OptionType = pData->OptionType;		///< 期权类型：'E'-欧式 'A'-美式
+						//tagStaticLine.CallOrPut = pData->CallOrPut;			///< 认沽认购：'C'认购 'P'认沽
+						tagStaticLine.ExercisePx = pData->XqPrice / tagParam.dPriceRate;
 						if( true == PrepareStaticFile( tagStaticLine, oDumper ) )
 						{
 							int		nLen = ::sprintf( pszLine, "%u,%s,%s,%d,%d,%d,%d,%d,%d,%d,%d,%s,%s,%c,%c,%.4f\n"
@@ -1457,9 +1539,6 @@ int Quotation::ReloadCNFOPT( enum XDFRunStat eStatus, bool bBuild )
 	///< ---------------- 获取快照表数据 -------------------------------------------
 	int		noffset = (sizeof(XDFAPI_CNFutOptData) + sizeof(XDFAPI_UniMsgHead)) * nCodeCount;	///< 根据商品数量，分配获取快照表需要的缓存
 	char*	pszCodeBuf = new char[noffset];
-	char	cMkID = XDF_CNFOPT;
-	XDFAPI_MarketStatusInfo	tagStatus = { 0 };
-	cMkID = m_oQuotPlugin.GetPrimeApi()->ReqFuncData( 101, &cMkID, &tagStatus );
 
 	nErrorCode = m_oQuotPlugin->GetLastMarketDataAll( XDF_CNFOPT, pszCodeBuf, noffset );		///< 获取快照
 	for( int m = 0; m < nErrorCode; )
