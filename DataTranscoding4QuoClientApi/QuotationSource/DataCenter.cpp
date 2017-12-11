@@ -178,7 +178,7 @@ int QuotationData::Initialize( void* pQuotation )
 
 	::memset( m_pBuf4MinuteLine, 0, m_nMaxMLineBufSize );
 	nErrorCode = m_arrayMinuteLine.Instance( m_pBuf4MinuteLine, m_nMaxMLineBufSize );
-	if( 0 != nErrorCode )
+	if( 0 > nErrorCode )
 	{
 		QuoCollector::GetCollector()->OnLog( TLV_ERROR, "QuotationData::Initialize() : failed 2 initialize minutes lines manager obj. errorcode = %d", nErrorCode );
 		return -2;
@@ -340,7 +340,7 @@ void* QuotationData::ThreadDumpMinuteLine( void* pSelf )
 				T_MIN_LINE		tagMinuteLine = { 0 };
 				CriticalLock	section( refData.m_oMinuteLock );
 
-				if( refData.m_arrayMinuteLine.GetData( &tagMinuteLine, sizeof(tagMinuteLine) ) <= 0 )
+				if( refData.m_arrayMinuteLine.GetData( &tagMinuteLine ) <= 0 )
 				{
 					break;
 				}
