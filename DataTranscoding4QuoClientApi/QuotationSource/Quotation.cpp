@@ -174,18 +174,18 @@ __inline bool	PrepareStaticFile( T_STATIC_LINE& refStaticLine, std::ofstream& oD
 			{
 			case 1:
 			case 4:
-				::sprintf( pszFilePath, "CZCE/STATIC/%s/", refStaticLine.Date/10000 );
+				::sprintf( pszFilePath, "CZCE/STATIC/%d/", refStaticLine.Date/10000 );
 				break;
 			case 2:
 			case 5:
-				::sprintf( pszFilePath, "DCE/STATIC/%s/", refStaticLine.Date/10000 );
+				::sprintf( pszFilePath, "DCE/STATIC/%d/", refStaticLine.Date/10000 );
 				break;
 			case 3:
 			case 6:
-				::sprintf( pszFilePath, "SHFE/STATIC/%s/", refStaticLine.Date/10000 );
+				::sprintf( pszFilePath, "SHFE/STATIC/%d/", refStaticLine.Date/10000 );
 				break;
 			case 7:
-				::sprintf( pszFilePath, "INE/STATIC/%s/", refStaticLine.Date/10000 );
+				::sprintf( pszFilePath, "INE/STATIC/%d/", refStaticLine.Date/10000 );
 				break;
 			default:
 				QuoCollector::GetCollector()->OnLog( TLV_ERROR, "QuotationData::PrepareStaticFile() : invalid market subid (Type=%d)", refStaticLine.Type );
