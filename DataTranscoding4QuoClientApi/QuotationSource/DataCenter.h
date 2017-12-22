@@ -22,26 +22,25 @@
  */
 typedef struct
 {
-	unsigned char		Type;					///< 类型
-	char				eMarketID;				///< 市场ID
-	char				Code[16];				///< 商品代码
-	unsigned int		Date;					///< YYYYMMDD（如20170705）
-	char				Name[64];				///< 商品名称
-	unsigned int		LotSize;				///< 每手数量(股/张/份)
-	unsigned int		ContractMult;			///< 合约乘数
-	unsigned int		ContractUnit;			///< 合约单位
-	unsigned int		StartDate;				///< 首个交易日(YYYYMMDD)
-	unsigned int		EndDate;				///< 最后交易日(YYYYMMDD)
-	unsigned int		XqDate;					///< 行权日(YYYYMMDD)
-	unsigned int		DeliveryDate;			///< 交割日(YYYYMMDD)
-	unsigned int		ExpireDate;				///< 到期日(YYYYMMDD)
-	char				UnderlyingCode[16];		///< 标的代码
-	char				UnderlyingName[64];		///< 标的名称
-	char				OptionType;				///< 期权类型：'E'-欧式 'A'-美式
-	char				CallOrPut;				///< 认沽认购：'C'认购 'P'认沽
-	double				ExercisePx;				///< 行权价格
+	unsigned char				Type;					///< 类型
+	char						eMarketID;				///< 市场ID
+	char						Code[16];				///< 商品代码
+	unsigned int				Date;					///< YYYYMMDD（如20170705）
+	char						Name[64];				///< 商品名称
+	unsigned int				LotSize;				///< 每手数量(股/张/份)
+	unsigned int				ContractMult;			///< 合约乘数
+	unsigned int				ContractUnit;			///< 合约单位
+	unsigned int				StartDate;				///< 首个交易日(YYYYMMDD)
+	unsigned int				EndDate;				///< 最后交易日(YYYYMMDD)
+	unsigned int				XqDate;					///< 行权日(YYYYMMDD)
+	unsigned int				DeliveryDate;			///< 交割日(YYYYMMDD)
+	unsigned int				ExpireDate;				///< 到期日(YYYYMMDD)
+	char						UnderlyingCode[16];		///< 标的代码
+	char						UnderlyingName[64];		///< 标的名称
+	char						OptionType;				///< 期权类型：'E'-欧式 'A'-美式
+	char						CallOrPut;				///< 认沽认购：'C'认购 'P'认沽
+	double						ExercisePx;				///< 行权价格
 } T_STATIC_LINE;
-
 
 /**
  * @class						T_TICK_LINE
@@ -141,10 +140,12 @@ typedef struct
 #pragma pack()
 
 
-typedef MLoopBufferSt<T_TICK_LINE>		T_TICKLINE_CACHE;			///< Tick线循环队列缓存
-typedef MLoopBufferSt<T_MIN_LINE>		T_MINLINE_CACHE;			///< 分钟线循环队列缓存
-typedef	std::map<enum XDFMarket,int>	TMAP_MKID2STATUS;			///< 各市场模块状态
-const	unsigned int					MAX_WRITER_NUM = 128;		///< 最大落盘文件句柄
+typedef MLoopBufferSt<T_TICK_LINE>						T_TICKLINE_CACHE;			///< Tick线循环队列缓存
+typedef MLoopBufferSt<T_MIN_LINE>						T_MINLINE_CACHE;			///< 分钟线循环队列缓存
+typedef	std::map<enum XDFMarket,int>					TMAP_MKID2STATUS;			///< 各市场模块状态
+const	unsigned int									MAX_WRITER_NUM = 128;		///< 最大落盘文件句柄
+typedef	std::pair<T_LINE_PARAM,T_TICKLINE_CACHE>		T_QUO_DATA;					///< 数据缓存
+typedef std::map<std::string,T_QUO_DATA>				T_MAP_QUO;					///< 行情数据缓存
 
 
 /**
@@ -195,10 +196,6 @@ private:
 	unsigned int				m_nAllocateSize;			///< 当前使用的缓存大小
 	char*						m_pDataCache;				///< 行情数据缓存地址
 };
-
-
-typedef	std::pair<T_LINE_PARAM,T_TICKLINE_CACHE>	T_QUO_DATA;	///< 数据缓存
-typedef std::map<std::string,T_QUO_DATA>			T_MAP_QUO;	///< 行情数据缓存
 
 
 /**
