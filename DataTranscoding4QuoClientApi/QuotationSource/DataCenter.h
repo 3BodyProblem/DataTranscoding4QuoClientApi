@@ -16,6 +16,34 @@
 
 #pragma pack(1)
 /**
+ * @class			T_MIN_LINE
+ * @brief			分钟线
+ * @author			barry
+ */
+typedef struct
+{
+	unsigned char		Type;					///< 类型
+	char				eMarketID;				///< 市场ID
+	char				Code[16];				///< 商品代码
+	unsigned int		Date;					///< YYYYMMDD（如20170705）
+	char				Name[64];				///< 商品名称
+	unsigned int		LotSize;				///< 每手数量(股/张/份)
+	unsigned int		ContractMult;			///< 合约乘数
+	unsigned int		ContractUnit;			///< 合约单位
+	unsigned int		StartDate;				///< 首个交易日(YYYYMMDD)
+	unsigned int		EndDate;				///< 最后交易日(YYYYMMDD)
+	unsigned int		XqDate;					///< 行权日(YYYYMMDD)
+	unsigned int		DeliveryDate;			///< 交割日(YYYYMMDD)
+	unsigned int		ExpireDate;				///< 到期日(YYYYMMDD)
+	char				UnderlyingCode[16];		///< 标的代码
+	char				UnderlyingName[64];		///< 标的名称
+	char				OptionType;				///< 期权类型：'E'-欧式 'A'-美式
+	char				CallOrPut;				///< 认沽认购：'C'认购 'P'认沽
+	double				ExercisePx;				///< 行权价格
+} T_STATIC_LINE;
+
+
+/**
  * @class						T_TICK_LINE
  * @brief						Tick线
  */

@@ -11,34 +11,6 @@
 
 
 /**
- * @class			T_MIN_LINE
- * @brief			分钟线
- * @author			barry
- */
-typedef struct
-{
-	unsigned char		Type;					///< 类型
-	char				eMarketID;				///< 市场ID
-	char				Code[16];				///< 商品代码
-	unsigned int		Date;					///< YYYYMMDD（如20170705）
-	char				Name[64];				///< 商品名称
-	unsigned int		LotSize;				///< 每手数量(股/张/份)
-	unsigned int		ContractMult;			///< 合约乘数
-	unsigned int		ContractUnit;			///< 合约单位
-	unsigned int		StartDate;				///< 首个交易日(YYYYMMDD)
-	unsigned int		EndDate;				///< 最后交易日(YYYYMMDD)
-	unsigned int		XqDate;					///< 行权日(YYYYMMDD)
-	unsigned int		DeliveryDate;			///< 交割日(YYYYMMDD)
-	unsigned int		ExpireDate;				///< 到期日(YYYYMMDD)
-	char				UnderlyingCode[16];		///< 标的代码
-	char				UnderlyingName[64];		///< 标的名称
-	char				OptionType;				///< 期权类型：'E'-欧式 'A'-美式
-	char				CallOrPut;				///< 认沽认购：'C'认购 'P'认沽
-	double				ExercisePx;				///< 行权价格
-} T_STATIC_LINE;
-
-
-/**
  * @class			WorkStatus
  * @brief			工作状态管理
  * @author			barry
@@ -107,80 +79,89 @@ public:
 	WorkStatus&					GetWorkStatus();
 
 	/**
-	 * @brief					把收盘后快照刷新落盘
+	 * @brief					把各市场收盘后快照刷新落盘
+	 * @detail					周期性调用这个函数，本函数将以配置的收盘时间信息为标准，进行全市场的收盘操作
 	 */
 	void						FlushDayLineOnCloseTime();
 
-public:
+public:///< 行情接口的回调函数
 	virtual bool __stdcall		XDF_OnRspStatusChanged( unsigned char cMarket, int nStatus );
 	virtual void __stdcall		XDF_OnRspRecvData( XDFAPI_PkgHead * pHead, const char * pszBuf, int nBytes );
 	virtual void __stdcall		XDF_OnRspOutLog( unsigned char nLogType, unsigned char nLogLevel,const char * pLogBuf );
 	virtual int	__stdcall		XDF_OnRspNotify( unsigned int nNotifyNo, void* wParam, void* lParam );
 
-protected:
+protected:///< 加载市场行情数据: 落盘 静态数据文件 + tick文件 或者 创建日线文件
 	/**
 	 * @brief					加载上海Lv1的基础信息
 	 * @param[in]				eStatus		市场模块状态
+	 * @param[in]				bBuild		是否为初始过程中:true,创建静态信息文件+tick信息 false,只创建日线信息
 	 * @return					==0			成功
 								!=0			失败
 	 */
-	int							ReloadShLv1( enum XDFRunStat eStatus, bool bBuild );
+	int							SaveShLv1_Static_Tick_Day( enum XDFRunStat eStatus, bool bBuild );
 
 	/**
 	 * @brief					加载上海Option的基础信息
 	 * @param[in]				eStatus		市场模块状态
+	 * @param[in]				bBuild		是否为初始过程中:true,创建静态信息文件+tick信息 false,只创建日线信息
 	 * @return					==0			成功
 								!=0			失败
 	 */
-	int							ReloadShOpt( enum XDFRunStat eStatus, bool bBuild );
+	int							SaveShOpt_Static_Tick_Day( enum XDFRunStat eStatus, bool bBuild );
 
 	/**
 	 * @brief					加载深圳Lv1的基础信息
 	 * @param[in]				eStatus		市场模块状态
+	 * @param[in]				bBuild		是否为初始过程中:true,创建静态信息文件+tick信息 false,只创建日线信息
 	 * @return					==0			成功
 								!=0			失败
 	 */
-	int							ReloadSzLv1( enum XDFRunStat eStatus, bool bBuild );
+	int							SaveSzLv1_Static_Tick_Day( enum XDFRunStat eStatus, bool bBuild );
 
 	/**
 	 * @brief					加载深圳期权的基础信息
 	 * @param[in]				eStatus		市场模块状态
+	 * @param[in]				bBuild		是否为初始过程中:true,创建静态信息文件+tick信息 false,只创建日线信息
 	 * @return					==0			成功
 								!=0			失败
 	 */
-	int							ReloadSzOpt( enum XDFRunStat eStatus, bool bBuild );
+	int							SaveSzOpt_Static_Tick_Day( enum XDFRunStat eStatus, bool bBuild );
 
 	/**
 	 * @brief					加载中金期货的基础信息
 	 * @param[in]				eStatus		市场模块状态
+	 * @param[in]				bBuild		是否为初始过程中:true,创建静态信息文件+tick信息 false,只创建日线信息
 	 * @return					==0			成功
 								!=0			失败
 	 */
-	int							ReloadCFF( enum XDFRunStat eStatus, bool bBuild );
+	int							SaveCFF_Static_Tick_Day( enum XDFRunStat eStatus, bool bBuild );
 
 	/**
 	 * @brief					加载中金期权的基础信息
 	 * @param[in]				eStatus		市场模块状态
+	 * @param[in]				bBuild		是否为初始过程中:true,创建静态信息文件+tick信息 false,只创建日线信息
 	 * @return					==0			成功
 								!=0			失败
 	 */
-	int							ReloadCFFOPT( enum XDFRunStat eStatus, bool bBuild );
+	int							SaveCFFOPT_Static_Tick_Day( enum XDFRunStat eStatus, bool bBuild );
 
 	/**
 	 * @brief					加载商品期货的基础信息
 	 * @param[in]				eStatus		市场模块状态
+	 * @param[in]				bBuild		是否为初始过程中:true,创建静态信息文件+tick信息 false,只创建日线信息
 	 * @return					==0			成功
 								!=0			失败
 	 */
-	int							ReloadCNF( enum XDFRunStat eStatus, bool bBuild );
+	int							SaveCNF_Static_Tick_Day( enum XDFRunStat eStatus, bool bBuild );
 
 	/**
 	 * @brief					加载商品期权的基础信息
 	 * @param[in]				eStatus		市场模块状态
+	 * @param[in]				bBuild		是否为初始过程中:true,创建静态信息文件+tick信息 false,只创建日线信息
 	 * @return					==0			成功
 								!=0			失败
 	 */
-	int							ReloadCNFOPT( enum XDFRunStat eStatus, bool bBuild );
+	int							SaveCNFOPT_Static_Tick_Day( enum XDFRunStat eStatus, bool bBuild );
 
 private:
 	CriticalObject				m_oLock;				///< 临界区对象
