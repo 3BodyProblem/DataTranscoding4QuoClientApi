@@ -208,11 +208,6 @@ public:
 	 */
 	short						GetModuleStatus( enum XDFMarket eMarket );
 
-	/**
-	 * @brief					为就绪的市场启动落盘线程
-	 */
-	void						BeginDumpThread( enum XDFMarket eMarket, int nStatus );
-
 public:
 	/**
 	 * @brief					更新商品的参数信息

@@ -184,6 +184,22 @@ int QuotationData::Initialize( void* pQuotation )
 		return -2;
 	}
 
+	if( false == m_oThdTickDump.IsAlive() )
+	{
+		if( 0 != m_oThdTickDump.Create( "ThreadDumpTickLine()", ThreadDumpTickLine, this ) ) {
+			QuoCollector::GetCollector()->OnLog( TLV_ERROR, "QuotationData::Initialize() : failed 2 create tick line thread(1)" );
+			return -3;
+		}
+	}
+
+	if( false == m_oThdMinuteDump.IsAlive() )
+	{
+		if( 0 != m_oThdMinuteDump.Create( "ThreadDumpMinuteLine()", ThreadDumpMinuteLine, this ) ) {
+			QuoCollector::GetCollector()->OnLog( TLV_ERROR, "QuotationData::Initialize() : failed 2 create minute line thread(1)" );
+			return -4;
+		}
+	}
+
 	return 0;
 }
 
@@ -225,26 +241,6 @@ void QuotationData::UpdateModuleStatus( enum XDFMarket eMarket, int nStatus )
 	CriticalLock	section( m_oLock );
 
 	m_mapModuleStatus[eMarket] = nStatus;
-}
-
-void QuotationData::BeginDumpThread( enum XDFMarket eMarket, int nStatus )
-{
-	if( 5 == nStatus )
-	{
-		if( false == m_oThdTickDump.IsAlive() )
-		{
-			if( 0 != m_oThdTickDump.Create( "ThreadDumpTickLine()", ThreadDumpTickLine, this ) ) {
-				QuoCollector::GetCollector()->OnLog( TLV_ERROR, "QuotationData::BeginDumpThread() : failed 2 create tick line thread(1)" );
-			}
-		}
-
-		if( false == m_oThdMinuteDump.IsAlive() )
-		{
-			if( 0 != m_oThdMinuteDump.Create( "ThreadDumpMinuteLine()", ThreadDumpMinuteLine, this ) ) {
-				QuoCollector::GetCollector()->OnLog( TLV_ERROR, "QuotationData::BeginDumpThread() : failed 2 create minute line thread(1)" );
-			}
-		}
-	}
 }
 
 __inline bool	PrepareMinuteFile( T_MIN_LINE&	refMinuteLine, std::string& sCode, std::ofstream& oDumper )
