@@ -220,7 +220,6 @@ public:
 	 */
 	void						Release();
 
-public:
 	/**
 	 * @brief					更新模块工作状态
 	 * @param[in]				cMarket			市场ID
