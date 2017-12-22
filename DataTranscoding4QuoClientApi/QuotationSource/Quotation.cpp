@@ -131,11 +131,11 @@ int Quotation::Release()
 	if( m_oWorkStatus != ET_SS_UNACTIVE )
 	{
 		QuoCollector::GetCollector()->OnLog( TLV_INFO, "Quotation::Release() : ............ Destroying .............." );
-/*
+
 		m_oWorkStatus = ET_SS_UNACTIVE;			///< 更新Quotation会话的状态
 		m_oQuotPlugin.Release();				///< 释放行情源插件
 		m_oQuoDataCenter.Release();				///< 释放行情数据资源
-*/
+
 		QuoCollector::GetCollector()->OnLog( TLV_INFO, "Quotation::Release() : ............ Destroyed! .............." );
 	}
 
@@ -145,11 +145,6 @@ int Quotation::Release()
 __inline bool	PrepareStaticFile( T_STATIC_LINE& refStaticLine, std::ofstream& oDumper )
 {
 	char	pszFilePath[512] = { 0 };
-
-	if( oDumper.is_open() )
-	{
-		return true;
-	}
 
 	switch( refStaticLine.eMarketID )
 	{
@@ -170,6 +165,8 @@ __inline bool	PrepareStaticFile( T_STATIC_LINE& refStaticLine, std::ofstream& oD
 	case XDF_CNF:		///< 商品期货(上海/郑州/大连)
 	case XDF_CNFOPT:	///< 商品期权(上海/郑州/大连)
 		{
+			if( refStaticLine.Date/10000 == 2011 )
+				int a = 0;
 			switch( refStaticLine.Type )
 			{
 			case 1:
@@ -229,7 +226,6 @@ int Quotation::ReloadShLv1( enum XDFRunStat eStatus, bool bBuild )
 	}
 
 	int						nNum = 0;
-	std::ofstream			oDumper;
 	int						nCodeCount = 0;
 	int						nKindCount = 0;
 	XDFAPI_MarketKindInfo	vctKindInfo[32] = { 0 };
@@ -284,6 +280,7 @@ int Quotation::ReloadShLv1( enum XDFRunStat eStatus, bool bBuild )
 				{
 					if( abs(pMsgHead->MsgType) == 5 )
 					{
+						std::ofstream			oDumper;
 						T_LINE_PARAM			tagParam = { 0 };
 						char					pszLine[1024] = { 0 };
 						T_STATIC_LINE			tagStaticLine = { 0 };
@@ -397,7 +394,6 @@ int Quotation::ReloadShOpt( enum XDFRunStat eStatus, bool bBuild )
 	}
 
 	int						nNum = 0;
-	std::ofstream			oDumper;
 	int						nCodeCount = 0;
 	int						nKindCount = 0;
 	XDFAPI_MarketKindInfo	vctKindInfo[32] = { 0 };
@@ -452,6 +448,7 @@ int Quotation::ReloadShOpt( enum XDFRunStat eStatus, bool bBuild )
 				{
 					if( abs(pMsgHead->MsgType) == 2 )
 					{
+						std::ofstream			oDumper;
 						T_LINE_PARAM			tagParam = { 0 };
 						char					pszLine[1024] = { 0 };
 						T_STATIC_LINE			tagStaticLine = { 0 };
@@ -570,7 +567,6 @@ int Quotation::ReloadSzLv1( enum XDFRunStat eStatus, bool bBuild )
 	}
 
 	int						nNum = 0;
-	std::ofstream			oDumper;
 	int						nCodeCount = 0;
 	int						nKindCount = 0;
 	XDFAPI_MarketKindInfo	vctKindInfo[32] = { 0 };
@@ -625,6 +621,7 @@ int Quotation::ReloadSzLv1( enum XDFRunStat eStatus, bool bBuild )
 				{
 					if( abs(pMsgHead->MsgType) == 6 )
 					{
+						std::ofstream			oDumper;
 						T_LINE_PARAM			tagParam = { 0 };
 						char					pszLine[1024] = { 0 };
 						T_STATIC_LINE			tagStaticLine = { 0 };
@@ -739,7 +736,6 @@ int Quotation::ReloadSzOpt( enum XDFRunStat eStatus, bool bBuild )
 	}
 
 	int						nNum = 0;
-	std::ofstream			oDumper;
 	int						nCodeCount = 0;
 	int						nKindCount = 0;
 	XDFAPI_MarketKindInfo	vctKindInfo[32] = { 0 };
@@ -794,6 +790,7 @@ int Quotation::ReloadSzOpt( enum XDFRunStat eStatus, bool bBuild )
 				{
 					if( abs(pMsgHead->MsgType) == 9 )
 					{
+						std::ofstream			oDumper;
 						T_LINE_PARAM			tagParam = { 0 };
 						char					pszLine[1024] = { 0 };
 						T_STATIC_LINE			tagStaticLine = { 0 };
@@ -966,6 +963,7 @@ int Quotation::ReloadCFF( enum XDFRunStat eStatus, bool bBuild )
 				{
 					if( abs(pMsgHead->MsgType) == 4 )
 					{
+						std::ofstream			oDumper;
 						T_LINE_PARAM			tagParam = { 0 };
 						char					pszLine[1024] = { 0 };
 						T_STATIC_LINE			tagStaticLine = { 0 };
@@ -1078,7 +1076,6 @@ int Quotation::ReloadCFFOPT( enum XDFRunStat eStatus, bool bBuild )
 	}
 
 	int						nNum = 0;
-	std::ofstream			oDumper;
 	int						nCodeCount = 0;
 	int						nKindCount = 0;
 	XDFAPI_MarketKindInfo	vctKindInfo[32] = { 0 };
@@ -1133,6 +1130,7 @@ int Quotation::ReloadCFFOPT( enum XDFRunStat eStatus, bool bBuild )
 				{
 					if( abs(pMsgHead->MsgType) == 3 )
 					{
+						std::ofstream			oDumper;
 						T_LINE_PARAM			tagParam = { 0 };
 						char					pszLine[1024] = { 0 };
 						T_STATIC_LINE			tagStaticLine = { 0 };
@@ -1245,7 +1243,6 @@ int Quotation::ReloadCNF( enum XDFRunStat eStatus, bool bBuild )
 	}
 
 	int						nNum = 0;
-	std::ofstream			oDumper;
 	int						nCodeCount = 0;
 	int						nKindCount = 0;
 	XDFAPI_MarketKindInfo	vctKindInfo[32] = { 0 };
@@ -1303,6 +1300,7 @@ int Quotation::ReloadCNF( enum XDFRunStat eStatus, bool bBuild )
 				{
 					if( abs(pMsgHead->MsgType) == 7 )
 					{
+						std::ofstream			oDumper;
 						T_LINE_PARAM			tagParam = { 0 };
 						char					pszLine[1024] = { 0 };
 						T_STATIC_LINE			tagStaticLine = { 0 };
@@ -1415,7 +1413,6 @@ int Quotation::ReloadCNFOPT( enum XDFRunStat eStatus, bool bBuild )
 	}
 
 	int						nNum = 0;
-	std::ofstream			oDumper;
 	int						nCodeCount = 0;
 	int						nKindCount = 0;
 	XDFAPI_MarketKindInfo	vctKindInfo[32] = { 0 };
@@ -1473,6 +1470,7 @@ int Quotation::ReloadCNFOPT( enum XDFRunStat eStatus, bool bBuild )
 				{
 					if( abs(pMsgHead->MsgType) == 11 )
 					{
+						std::ofstream			oDumper;
 						T_LINE_PARAM			tagParam = { 0 };
 						char					pszLine[1024] = { 0 };
 						T_STATIC_LINE			tagStaticLine = { 0 };
@@ -1487,7 +1485,7 @@ int Quotation::ReloadCNFOPT( enum XDFRunStat eStatus, bool bBuild )
 						tagStaticLine.Type = tagParam.Type;
 						tagStaticLine.eMarketID = XDF_CNFOPT;
 						tagStaticLine.Date = tagStatus.MarketDate;
-						::memcpy( tagStaticLine.Code, pData->Code, sizeof(pData->Code) );
+						::memcpy( tagStaticLine.Code, pData->Code, sizeof(tagStaticLine.Code)-1 );
 						::memcpy( tagStaticLine.Name, pData->Name, sizeof(pData->Name) );
 						tagStaticLine.LotSize = vctKindInfo[pData->SecKind].LotSize;
 						tagStaticLine.ContractMult = pData->ContractMult;
