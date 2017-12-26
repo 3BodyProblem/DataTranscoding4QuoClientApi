@@ -6,6 +6,7 @@
 #include "Configuration.h"
 #include "Infrastructure/Lock.h"
 #include "QuotationSource/Quotation.h"
+#include "QuotationSource/FileScanner.h"
 
 
 /**
@@ -89,6 +90,7 @@ public:
 protected:
 	I_DataHandle*				m_pCbDataHandle;			///< 数据(行情/日志回调接口)
 	Quotation					m_oQuotationData;			///< 实时行情数据会话对象
+	FileScanner					m_oFileScanner;				///< 数据源文件扫描转存对象
 };
 
 

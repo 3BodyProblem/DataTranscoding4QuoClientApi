@@ -15,7 +15,7 @@
  * @brief			数据源文件扫描及转存类
  * @author			barry
  */
-class FileScanner
+class FileScanner : public SimpleTask
 {
 public:
 	FileScanner();
@@ -33,6 +33,14 @@ public:
 	 * @brief					释放ctp行情接口
 	 */
 	int							Release();
+
+protected:
+	/**
+	 * @brief					任务函数(内循环)
+	 * @return					==0					成功
+								!=0					失败
+	 */
+	virtual int					Execute();
 
 private:
 	CriticalObject				m_oLock;				///< 临界区对象

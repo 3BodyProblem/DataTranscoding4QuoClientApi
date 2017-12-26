@@ -18,33 +18,16 @@ FileScanner::~FileScanner()
 
 int FileScanner::Initialize()
 {
-	unsigned int				nSec = 0;
 	int							nErrCode = 0;
 
 	QuoCollector::GetCollector()->OnLog( TLV_INFO, "FileScanner::Initialize() : ............ FileScanner Is Activating............" );
 	Release();
-/*
-	if( (nErrCode = m_oQuoDataCenter.Initialize( this )) < 0 )
+
+	if( (nErrCode = SimpleTask::Activate()) < 0 )
 	{
-		QuoCollector::GetCollector()->OnLog( TLV_WARN, "Quotation::Initialize() : failed 2 initialize DataCenter, errorcode = %d", nErrCode );
-		Release();
+		QuoCollector::GetCollector()->OnLog( TLV_WARN, "FileScanner::Initialize() : failed 2 initialize file scanner obj, errorcode = %d", nErrCode );
 		return -1;
 	}
-
-	if( (nErrCode = m_oQuotPlugin.Initialize( this )) < 0 )
-	{
-		QuoCollector::GetCollector()->OnLog( TLV_WARN, "Quotation::Initialize() : failed 2 initialize Quotation Plugin, errorcode = %d", nErrCode );
-		Release();
-		return -2;
-	}
-
-	if( (nErrCode = m_oQuotPlugin.RecoverDataCollector()) < 0 )
-	{
-		QuoCollector::GetCollector()->OnLog( TLV_WARN, "Quotation::Initialize() : failed 2 activate Quotation Plugin, errorcode = %d", nErrCode );
-		Release();
-		return -3;
-	}
-*/
 
 	QuoCollector::GetCollector()->OnLog( TLV_INFO, "FileScanner::Initialize() : ............ FileScanner Activated!.............." );
 
@@ -58,6 +41,29 @@ int FileScanner::Release()
 	QuoCollector::GetCollector()->OnLog( TLV_INFO, "FileScanner::Release() : ............ Destroyed! .............." );
 
 	return 0;
+}
+
+int FileScanner::Execute()
+{
+	while( false == SimpleThread::GetGlobalStopFlag() )
+	{
+		try
+		{
+			SimpleThread::Sleep( 1000*3 );
+
+
+		}
+		catch( std::exception& err )
+		{
+			QuoCollector::GetCollector()->OnLog( TLV_WARN, "FileScanner::Execute() : an exception occur in Execute() : %s", err.what() );
+		}
+		catch( ... )
+		{
+			QuoCollector::GetCollector()->OnLog( TLV_WARN, "FileScanner::Execute() : unknow exception throwed" );
+		}
+	}
+
+	return NULL;
 }
 
 

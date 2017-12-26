@@ -41,6 +41,12 @@ int QuoCollector::Initialize( I_DataHandle* pIDataHandle )
 		return -2;
 	}
 
+	if( 0 != (nErrorCode = m_oFileScanner.Initialize()) )
+	{
+		QuoCollector::GetCollector()->OnLog( TLV_ERROR, "QuoCollector::Initialize() : failed 2 initialize file scanner obj, errorcode=%d", nErrorCode );
+		return -3;
+	}
+
 	return 0;
 }
 
