@@ -203,6 +203,14 @@
 				>
 			</File>
 			<File
+				RelativePath=".\QuotationSource\FileScanner.cpp"
+				>
+			</File>
+			<File
+				RelativePath=".\QuotationSource\FileScanner.h"
+				>
+			</File>
+			<File
 				RelativePath=".\QuotationSource\Quotation.cpp"
 				>
 			</File>
