@@ -88,18 +88,34 @@ public:
 	 */
 	MAP_MK_CLOSECFG&			GetMkCloseCfg();
 
+	/**
+	 * @brief					获取请求文件的路径
+	 */
+	std::string					GetFinancialDataFolder() const;
+
+	/**
+	 * @brief					获取行情文件的路径
+	 */
+	std::string					GetWeightFileFolder() const;
+
 private:
-	std::string					m_sQuoPluginPath;		///< 行情插件路径
-	std::string					m_sDumpFileFolder;		///< 快照落盘路径(需要有文件名)
-	bool						m_bBroadcastModel;		///< 数据自动播放模式
-	std::string					m_sBcTradeFile;			///< 播放的请求文件路径
-	std::string					m_sBcQuotationFile;		///< 播放的实时文件路径
-	unsigned int				m_nBcBeginTime;			///< 正常速度的播放时间
-	MAP_MK_CLOSECFG				m_mapMkCloseCfg;		///< 市场收盘时间配置
+	std::string					m_sQuoPluginPath;			///< 行情插件路径
+	std::string					m_sDumpFileFolder;			///< 快照落盘路径(需要有文件名)
+	bool						m_bBroadcastModel;			///< 数据自动播放模式
+	std::string					m_sBcTradeFile;				///< 播放的请求文件路径
+	std::string					m_sBcQuotationFile;			///< 播放的实时文件路径
+	unsigned int				m_nBcBeginTime;				///< 正常速度的播放时间
+	MAP_MK_CLOSECFG				m_mapMkCloseCfg;			///< 市场收盘时间配置
+	std::string					m_sFinancialFolder;			///< 财经文件路径
+	std::string					m_sWeightFolder;			///< 权息文件路径
 };
 
 
+
+
+
 #endif
+
 
 
 

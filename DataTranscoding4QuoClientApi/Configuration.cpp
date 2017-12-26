@@ -138,6 +138,16 @@ int Configuration::Initialize()
 		}
 	}
 
+	m_sFinancialFolder = oIniFile.getStringValue( std::string("DataSource"), std::string("FinancialData"), nErrCode );
+	if( 0 != nErrCode )	{
+		QuoCollector::GetCollector()->OnLog( TLV_WARN, "Configuration::Initialize() : financial file isn\'t exist..." );
+	}
+
+	m_sWeightFolder = oIniFile.getStringValue( std::string("DataSource"), std::string("Weight"), nErrCode );
+	if( 0 != nErrCode )	{
+		QuoCollector::GetCollector()->OnLog( TLV_WARN, "Configuration::Initialize() : weight file isn\'t exist..." );
+	}
+
 	return 0;
 }
 
@@ -149,6 +159,16 @@ const std::string& Configuration::GetDataCollectorPluginPath() const
 const std::string& Configuration::GetDumpFolder() const
 {
 	return m_sDumpFileFolder;
+}
+
+std::string Configuration::GetFinancialDataFolder() const
+{
+	return m_sFinancialFolder;
+}
+
+std::string Configuration::GetWeightFileFolder() const
+{
+	return m_sWeightFolder;
 }
 
 unsigned int Configuration::GetBroadcastBeginTime() const
