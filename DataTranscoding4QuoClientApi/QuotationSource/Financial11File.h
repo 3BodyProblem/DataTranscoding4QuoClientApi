@@ -2,6 +2,7 @@
 #define __FINANCIAL_11_FILE_H__
 
 
+#include <fstream>
 #include "../Infrastructure/ReadDbfFile.h"
 
 
@@ -23,12 +24,11 @@ public:
 	 */
 	void			Release();
 
-public:
-	int				GetShNameTableData( unsigned long RecordPos, tagSHL2Mem_NameTable * Out, unsigned long * ulClose, unsigned long * ulOpen );
-	int				GetDbfDate( unsigned long * );
-
-protected:
-	static void*	__stdcall ThreadFunc( void* pParam );
+	/**
+	 * @brief		将信息文件转存到文件
+	 * @param[in]	oDumper			文件句柄
+	 */
+	int				Redirect2File( std::ofstream& oDumper );
 
 private:
 	unsigned long		m_ulSaveDate;

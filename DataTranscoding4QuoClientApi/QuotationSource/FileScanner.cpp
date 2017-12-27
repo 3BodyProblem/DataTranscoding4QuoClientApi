@@ -119,9 +119,9 @@ void FileScanner::ResaveFinancialFile()
 	{
 		SHL1FinancialDbf	objDbfSHL1;
 
-		if( (nErrCode=objDbfSHL1.Instance()) != 0 )
+		if( (nErrCode=objDbfSHL1.Instance()) == 0 )
 		{
-
+			objDbfSHL1.Redirect2File( oSHFinancialDumper );
 		}
 	}
 
