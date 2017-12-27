@@ -283,6 +283,14 @@
 				>
 			</File>
 			<File
+				RelativePath=".\Infrastructure\ReadDbfFile.cpp"
+				>
+			</File>
+			<File
+				RelativePath=".\Infrastructure\ReadDbfFile.h"
+				>
+			</File>
+			<File
 				RelativePath=".\Infrastructure\Thread.cpp"
 				>
 			</File>

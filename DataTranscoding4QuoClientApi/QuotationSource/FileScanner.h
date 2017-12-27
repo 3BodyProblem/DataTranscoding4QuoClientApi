@@ -42,6 +42,17 @@ protected:
 	 */
 	virtual int					Execute();
 
+protected:
+	/**
+	 * @brief					解析转存财经数据库
+	 */
+	void						ResaveFinancialFile();
+
+	/**
+	 * @brief					解析转存权重信息库
+	 */
+	void						ResaveWeightFile();
+
 private:
 	CriticalObject				m_oLock;				///< 临界区对象
 };
