@@ -5,33 +5,34 @@
 #include "../Infrastructure/ReadDbfFile.h"
 
 
-class SHL1FinancialDbf : public MReadDbfFile
+class SHL1FinancialDbf : public ReadDbfFile
 {
-private:
-	unsigned long			m_ulSaveDate;
 public:
-	SHShow2003Dbf();
-	~SHShow2003Dbf();
-	int Instance( bool = true );
-	void Release();
-	int PreProcessFile();
-private:
-	int GetShNameTableData( unsigned long RecordPos, tagSHL2Mem_NameTable * Out, unsigned long * ulClose, unsigned long * ulOpen );
-	int GetDbfDate( unsigned long * );
+	SHL1FinancialDbf();
+	~SHL1FinancialDbf();
+
+	/**
+	 * @brief		初始化
+	 * @return		==0				成功
+					!=0				失败
+	 */
+	int				Instance();
+
+	/**
+	 * @brief		释放
+	 */
+	void			Release();
+
+public:
+	int				GetShNameTableData( unsigned long RecordPos, tagSHL2Mem_NameTable * Out, unsigned long * ulClose, unsigned long * ulOpen );
+	int				GetDbfDate( unsigned long * );
+
 protected:
-	static void * __stdcall ThreadFunc( void * Param );
-public:
-	static bool IsIndex( const char (&)[6] );
-	static bool IsAGu( const char (&)[6] );
-	static bool IsBGu( const char (&)[6] );
-	static bool IsZhaiQuan( const char (&)[6] );
-	static bool IsZhuanZhai( const char (&)[6] );
-	static bool IsHuig( const char (&)[6] );
-	static bool IsETF( const char (&)[6] );
-	static bool IsJiJinTong( const char (&)[6] );
-	static bool IsGzlx( const char (&)[6] );
-	static bool IsQzxx( const char (&)[6] );
-	static bool IsJijin( const char (&)[6] );
+	static void*	__stdcall ThreadFunc( void* pParam );
+
+private:
+	unsigned long		m_ulSaveDate;
+
 };
 
 

@@ -111,15 +111,18 @@ __inline bool PrepareFinancialDumper( enum XDFMarket eMkID, std::ofstream& oDump
 
 void FileScanner::ResaveFinancialFile()
 {
-	std::ofstream		oSHFinancialDumper;
-	std::ofstream		oSZFinancialDumper;
-	enum XDFMarket		arrayMkID[2] = { XDF_SH, XDF_SZ };
-	std::string&		sFolder = Configuration::GetConfig().GetFinancialDataFolder();
+	int						nErrCode = 0;
+	std::ofstream			oSHFinancialDumper;
+	std::ofstream			oSZFinancialDumper;
 
 	if( true == PrepareFinancialDumper( XDF_SH, oSHFinancialDumper ) )		///< 上海财经数据
 	{
-		//ReadDbfFile		objDbfSHL1;
+		SHL1FinancialDbf	objDbfSHL1;
 
+		if( (nErrCode=objDbfSHL1.Instance()) != 0 )
+		{
+
+		}
 	}
 
 	if( true == PrepareFinancialDumper( XDF_SZ, oSZFinancialDumper ) )		///< 深圳财经数据
@@ -132,7 +135,6 @@ void FileScanner::ResaveFinancialFile()
 void FileScanner::ResaveWeightFile()
 {
 	enum XDFMarket		arrayMkID[2] = { XDF_SH, XDF_SZ };
-	std::string&		sFolder = Configuration::GetConfig().GetWeightFileFolder();
 
 }
 
