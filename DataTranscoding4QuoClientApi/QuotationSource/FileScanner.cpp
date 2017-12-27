@@ -3,8 +3,8 @@
 #include <iostream>
 #include <algorithm>
 #include "FileScanner.h"
+#include "Financial11File.h"
 #include "../Infrastructure/File.h"
-#include "../Infrastructure/ReadDbfFile.h"
 #include "../DataTranscoding4QuoClientApi.h"
 
 
@@ -118,13 +118,13 @@ void FileScanner::ResaveFinancialFile()
 
 	if( true == PrepareFinancialDumper( XDF_SH, oSHFinancialDumper ) )		///< 上海财经数据
 	{
-		ReadDbfFile		objDbfSHL1;
+		//ReadDbfFile		objDbfSHL1;
 
 	}
 
 	if( true == PrepareFinancialDumper( XDF_SZ, oSZFinancialDumper ) )		///< 深圳财经数据
 	{
-		ReadDbfFile		objDbfSZL1;
+		//ReadDbfFile		objDbfSZL1;
 
 	}
 }

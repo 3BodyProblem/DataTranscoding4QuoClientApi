@@ -1,20 +1,17 @@
-#include "./L1DbfFileIO.h"
-#include "./QzGzFile.h"
-#include "../GlobalIO/MGlobalIO.h"
 #include "math.h"
+#include "./Financial11File.h"
 
 
-SHShow2003Dbf::SHShow2003Dbf() : m_ulSaveDate(0)
-{}
+SHL1FinancialDbf::SHL1FinancialDbf() : m_ulSaveDate(0)
+{
+}
 
-//////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-SHShow2003Dbf::~SHShow2003Dbf()
+SHL1FinancialDbf::~SHL1FinancialDbf()
 {
 	Release();
 }
 
-//////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-int SHShow2003Dbf::Instance( bool bFirst )
+int SHL1FinancialDbf::Instance( bool bFirst )
 {
 	int							nErrCode = -1;
 	tagSHL2Mem_MarketHead		tagMarkHead = {0};
@@ -53,33 +50,18 @@ int SHShow2003Dbf::Instance( bool bFirst )
 	tagMarkHead.checkcode = Global_DataIO.GetShl2FastNameTb().GetNameTableCheckCode();
 	Global_DataIO.GetShl2FastMarket().SetMarketHead( &tagMarkHead );
 
-	if( bFirst )
-	{
-		if( (nErrCode = m_thread.StartThread( "L1初始化监测线程", ThreadFunc, this ) ) < 0 )
-		{
-			Global_Process.WriteError( 0, "L1码表初始化", "初始化监测线程启动失败" );
-			return nErrCode;
-		}
-	}
 	return 1;
 }
 
-//////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-void SHShow2003Dbf::Release()
+void SHL1FinancialDbf::Release()
 {
-	if( "" == Global_Option.GetL1DbfFilePath() )
-	{
-		return;
-	}
-
-	m_thread.StopThread();
 	Close();
 }
 
 //////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 //从库中装入码表
 //////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-int SHShow2003Dbf::PreProcessFile()
+int SHL1FinancialDbf::PreProcessFile()
 {
 	int							nErrCode = -1;
 	unsigned long				ulTime;
@@ -188,8 +170,7 @@ int SHShow2003Dbf::PreProcessFile()
 	return 1;
 }
 
-////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-int SHShow2003Dbf::GetDbfDate( unsigned long * ulDate )
+int SHL1FinancialDbf::GetDbfDate( unsigned long * ulDate )
 {
 	*ulDate = 0;
 	if( !m_FilePtr.IsOpen() )
@@ -208,8 +189,7 @@ int SHShow2003Dbf::GetDbfDate( unsigned long * ulDate )
 	return 1;
 }
 
-////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-int SHShow2003Dbf::GetShNameTableData( unsigned long RecordPos, tagSHL2Mem_NameTable * Out, unsigned long * ulClose, unsigned long * ulOpen )
+int SHL1FinancialDbf::GetShNameTableData( unsigned long RecordPos, tagSHL2Mem_NameTable * Out, unsigned long * ulClose, unsigned long * ulOpen )
 {
 	double				dTemp = 0.f;
 	char				tempbuf[32];
@@ -302,8 +282,7 @@ int SHShow2003Dbf::GetShNameTableData( unsigned long RecordPos, tagSHL2Mem_NameT
 	return 1;
 }
 
-////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-bool SHShow2003Dbf::IsIndex( const char (&code)[6] )
+bool SHL1FinancialDbf::IsIndex( const char (&code)[6] )
 {
 	const TKindMask * p;
 	int i;
@@ -324,8 +303,7 @@ bool SHShow2003Dbf::IsIndex( const char (&code)[6] )
 	return false;
 }
 
-////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-bool SHShow2003Dbf::IsAGu( const char (&code)[6] )
+bool SHL1FinancialDbf::IsAGu( const char (&code)[6] )
 {
 	const TKindMask * p;
 	int i;
@@ -348,8 +326,7 @@ bool SHShow2003Dbf::IsAGu( const char (&code)[6] )
 	return false;
 }
 
-////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-bool SHShow2003Dbf::IsBGu( const char (&code)[6] )
+bool SHL1FinancialDbf::IsBGu( const char (&code)[6] )
 {
 	const TKindMask * p;
 	int i;
@@ -372,8 +349,7 @@ bool SHShow2003Dbf::IsBGu( const char (&code)[6] )
 	return false;
 }
 
-////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-bool SHShow2003Dbf::IsZhaiQuan( const char (&code)[6] )
+bool SHL1FinancialDbf::IsZhaiQuan( const char (&code)[6] )
 {
 	const TKindMask * p;
 	int i;
@@ -401,8 +377,7 @@ bool SHShow2003Dbf::IsZhaiQuan( const char (&code)[6] )
 	return false;
 }
 
-////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-bool SHShow2003Dbf::IsZhuanZhai( const char (&code)[6] )
+bool SHL1FinancialDbf::IsZhuanZhai( const char (&code)[6] )
 {
 	const TKindMask * p;
 	int i;
@@ -428,8 +403,7 @@ bool SHShow2003Dbf::IsZhuanZhai( const char (&code)[6] )
 	return false;
 }
 
-////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-bool SHShow2003Dbf::IsHuig( const char (&code)[6] )
+bool SHL1FinancialDbf::IsHuig( const char (&code)[6] )
 {
 	const TKindMask * p;
 	int i;
@@ -458,8 +432,7 @@ bool SHShow2003Dbf::IsHuig( const char (&code)[6] )
 	return false;
 }
 
-////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-bool SHShow2003Dbf::IsETF( const char (&code)[6] )
+bool SHL1FinancialDbf::IsETF( const char (&code)[6] )
 {
 	const TKindMask * p;
 	int i;
@@ -483,8 +456,7 @@ bool SHShow2003Dbf::IsETF( const char (&code)[6] )
 	return false;
 }
 
-////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-bool SHShow2003Dbf::IsJiJinTong( const char (&code)[6] )
+bool SHL1FinancialDbf::IsJiJinTong( const char (&code)[6] )
 {
 	const TKindMask * p;
 	int i;
@@ -512,8 +484,7 @@ bool SHShow2003Dbf::IsJiJinTong( const char (&code)[6] )
 	return false;
 }
 
-////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-bool SHShow2003Dbf::IsGzlx( const char (&code)[6] )
+bool SHL1FinancialDbf::IsGzlx( const char (&code)[6] )
 {
 	if( !IsIndex( code )&&( code[0]=='0'||code[0]=='1' ) )
 	{
@@ -522,8 +493,7 @@ bool SHShow2003Dbf::IsGzlx( const char (&code)[6] )
 	return false;
 }
 
-////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-bool SHShow2003Dbf::IsQzxx( const char (&code)[6] )
+bool SHL1FinancialDbf::IsQzxx( const char (&code)[6] )
 {
 	const TKindMask * p;
 	int i;
@@ -548,8 +518,7 @@ bool SHShow2003Dbf::IsQzxx( const char (&code)[6] )
 	return false;
 }
 
-////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-bool SHShow2003Dbf::IsJijin( const char (&code)[6] )
+bool SHL1FinancialDbf::IsJijin( const char (&code)[6] )
 {
 	const TKindMask * p;
 	int i;
@@ -574,8 +543,7 @@ bool SHShow2003Dbf::IsJijin( const char (&code)[6] )
 	return false;
 }
 
-////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-void * __stdcall SHShow2003Dbf::ThreadFunc( void * Param )
+void * __stdcall SHL1FinancialDbf::ThreadFunc( void * Param )
 {
 	SHShow2003Dbf		*			pSelf = NULL;
 	unsigned long					ulDate = 0;
@@ -610,3 +578,19 @@ void * __stdcall SHShow2003Dbf::ThreadFunc( void * Param )
 
 	return 0;
 }
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+

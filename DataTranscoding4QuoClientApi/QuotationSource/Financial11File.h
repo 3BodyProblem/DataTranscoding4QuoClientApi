@@ -1,17 +1,13 @@
-/*
-	仅仅从L1库中取得码表
-*/
-#ifndef __L1_DBFFILE_IO_H__
-#define __L1_DBFFILE_IO_H__
+#ifndef __FINANCIAL_11_FILE_H__
+#define __FINANCIAL_11_FILE_H__
 
-#include "../DataCenter/MemStructure.h"
 
-bool is_found(const char (&code)[6]);
+#include "../Infrastructure/ReadDbfFile.h"
 
-class SHShow2003Dbf : public MReadDbfFile
+
+class SHL1FinancialDbf : public MReadDbfFile
 {
 private:
-	MThread					m_thread;
 	unsigned long			m_ulSaveDate;
 public:
 	SHShow2003Dbf();
@@ -36,13 +32,12 @@ public:
 	static bool IsGzlx( const char (&)[6] );
 	static bool IsQzxx( const char (&)[6] );
 	static bool IsJijin( const char (&)[6] );
-protected:
-
 };
 
 
 
+#endif
 
 
 
-#endif//__L1_DBFFILE_IO_H__
+

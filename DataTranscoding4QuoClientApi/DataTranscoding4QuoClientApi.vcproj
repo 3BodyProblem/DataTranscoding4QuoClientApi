@@ -211,6 +211,14 @@
 				>
 			</File>
 			<File
+				RelativePath=".\QuotationSource\Financial11File.cpp"
+				>
+			</File>
+			<File
+				RelativePath=".\QuotationSource\Financial11File.h"
+				>
+			</File>
+			<File
 				RelativePath=".\QuotationSource\Quotation.cpp"
 				>
 			</File>
