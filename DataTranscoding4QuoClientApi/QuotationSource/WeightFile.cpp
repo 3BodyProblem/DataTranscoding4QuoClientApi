@@ -196,6 +196,7 @@ void WeightFile::ScanWeightFiles()
 
 int WeightFile::Redirect2File( std::string sSourceFile, std::string sDestFile )
 {
+	std::string				sCSVTitle;						///< CSV文件首行
 	std::ofstream			oCSVDumper;						///< CSV输出文件
 	std::ifstream			oWeightReader;					///< 权息信息文件
 	SYSTEMTIME				oReadFileTime = { 0 };			///< 源头文件时间
@@ -210,19 +211,53 @@ int WeightFile::Redirect2File( std::string sSourceFile, std::string sDestFile )
 	{
 		return -1024;	///< 源文件不存在
 	}
-
-	if( false == GetWeightFileWriteTime( sDestFile, oDumpFileTime ) )
+	else				///< 取一个目标文件的文件时间，若文件不存在，则取0值
 	{
-		return -1025;	///< 目标文件不存在
+		GetWeightFileWriteTime( sDestFile, oDumpFileTime );
 	}
 
 	unsigned __int64	nSrcDateTime = oReadFileTime.wYear * 10000000000000 + oReadFileTime.wMonth * 100000000000 + (__int64)oReadFileTime.wDay * 1000000000 + oReadFileTime.wHour * 10000000 + oReadFileTime.wMinute * 100000 + oReadFileTime.wSecond * 1000 + oReadFileTime.wMilliseconds;
 	unsigned __int64	nDestDateTime = oDumpFileTime.wYear * 10000000000000 + oDumpFileTime.wMonth * 100000000000 + (__int64)oDumpFileTime.wDay * 1000000000 + oDumpFileTime.wHour * 10000000 + oDumpFileTime.wMinute * 100000 + oDumpFileTime.wSecond * 1000 + oDumpFileTime.wMilliseconds;
 
 	///< 判断源文件是否比较落盘转存文件的创建时间旧，则直接返回
-	if( nSrcDateTime <= nDestDateTime/* && 0 != nDestDateTime*/ )
+	if( nSrcDateTime <= nDestDateTime && 0 != nDestDateTime )
 	{
 		return 0;
+	}
+
+	///< 打开源文件 & 目标文件
+	oWeightReader.open( sSourceFile.c_str(), std::ios::in|std::ios::binary );
+	if( !oWeightReader.is_open() )
+	{
+		return -1025;
+	}
+
+	oCSVDumper.open( sDestFile.c_str() , std::ios::out|std::ios::binary );
+	if( !oCSVDumper.is_open() )
+	{
+		return -1026;
+	}
+
+	///< 遍历数据源文件并转存到目标文件
+	oWeightReader.seekg( 0, std::ios::beg );
+	sCSVTitle = "date,a,b,c,d,e,base,flowbase\n";					///< format目标文件首行(title)
+	oCSVDumper.write( sCSVTitle.c_str(), sCSVTitle.length() );		///< 写入title
+	while( true )
+	{
+		int				nLen = 0;
+		char			pszRecords[512] = { 0 };
+		T_WEIGHT		tagSrcWeight = { 0 };
+
+		if( oWeightReader.peek() == EOF || true == oWeightReader.eof() )
+		{
+			break;		///< 文件读完
+		}
+
+		oWeightReader.read( (char*)&tagSrcWeight, sizeof(tagSrcWeight) );///<oWeightReader.gcount();
+		nLen = ::sprintf( pszRecords, "%d,%d,%d,%f,%f,%d,%f,%f\n"
+				, tagSrcWeight.Date, tagSrcWeight.A, tagSrcWeight.B, tagSrcWeight.C, tagSrcWeight.D, tagSrcWeight.E, tagSrcWeight.BASE, tagSrcWeight.FLOWBASE );
+
+		oCSVDumper.write( pszRecords, nLen );
 	}
 
 	return 0;
