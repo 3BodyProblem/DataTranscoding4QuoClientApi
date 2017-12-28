@@ -105,58 +105,52 @@ __inline bool GetWeightFileWriteTime( std::string sFilePath, SYSTEMTIME& refFile
 	return false;
 }
 
-__inline bool PrepareWeightlDumper( enum XDFMarket eMkID, std::ofstream& oDumper, SYSTEMTIME& refFileTime )
+__inline std::string GenWeightFilePath( enum XDFMarket eMkID, std::string sCode )
 {
 	std::string				sFilePath;
-	std::string				sFirstLineOfCSV;
 	char					pszFileName[128] = { 0 };
 	char					pszFilePath[512] = { 0 };
 
 	switch( eMkID )
 	{
 	case XDF_SH:		///< 上海Lv1
-		{
-			::sprintf( pszFilePath, "SSE/FINANCIAL/%d/", DateTime::Now().DateToLong()/10000 );
-			sFirstLineOfCSV = "STOCK_CODE,STOCK_NAME,START_DATE,VOCATION,FIELD,ZGB,AG,BG,KZQ,ZZC,LDZC,GDZC,WXDYZC,QTZC,ZFZ,CQFZ,LDFZ,QTFZ,GDQY,ZBGJJ,WFPLR,MGJZC,LRZE,JLR,ZYSR,ZYYWLR,ZQMGSY,NDMGSY,SYL,ZCFZB,LDBL,SDBL,GDQYB,FP_DATE,M10G_SG,M10G_PG,PGJ_HIGH,PGJ_LOW,MGHL,NEWS,UPDATEDATE,HG,YFPSZ,YFPHL,UPDATETIME\n";
-		}
+		::strcpy( pszFilePath, "SSE/WEIGHT/" );
 		break;
 	case XDF_SZ:		///< 深证Lv1
-		{
-			::sprintf( pszFilePath, "SZSE/FINANCIAL/%d/", DateTime::Now().DateToLong()/10000 );
-			sFirstLineOfCSV = "STOCK_CODE,STOCK_NAME,START_DATE,VOCATION,FIELD,ZGB,AG,BG,KZQ,ZZC,LDZC,GDZC,WXDYZC,QTZC,ZFZ,CQFZ,LDFZ,QTFZ,GDQY,ZBGJJ,WFPLR,MGJZC,LRZE,JLR,ZYSR,ZYYWLR,ZQMGSY,NDMGSY,SYL,ZCFZB,LDBL,SDBL,GDQYB,FP_DATE,M10G_SG,M10G_PG,PGJ_HIGH,PGJ_LOW,MGHL,NEWS,UPDATEDATE,HG,YFPSZ,YFPHL,UPDATETIME\n";
-		}
+		::strcpy( pszFilePath, "SZSE/WEIGHT/" );
 		break;
 	default:
-		QuoCollector::GetCollector()->OnLog( TLV_ERROR, "PrepareFinancialFile() : invalid market id (%s)", eMkID );
+		QuoCollector::GetCollector()->OnLog( TLV_ERROR, "GenWeightFilePath() : invalid market id (%s)", eMkID );
+		return false;
+	}
+
+	if( true == sCode.empty() )
+	{
+		QuoCollector::GetCollector()->OnLog( TLV_ERROR, "GenWeightFilePath() : mkid(%d), invalid code(%s)", eMkID, sCode.c_str() );
 		return false;
 	}
 
 	sFilePath = JoinPath( Configuration::GetConfig().GetDumpFolder(), pszFilePath );
 	File::CreateDirectoryTree( sFilePath );							///< 若目录不存在则新建
-	::sprintf( pszFileName, "Financial%u.csv", DateTime::Now().DateToLong() );
+	::sprintf( pszFileName, "WEIGHT%s.csv", sCode.c_str() );
 	sFilePath += pszFileName;										///< 拼接出文件全路径
-	GetWeightFileWriteTime( sFilePath.c_str(), refFileTime );		///< 获取文件的创建时间
-	if( oDumper.is_open() )		oDumper.close();
-	oDumper.open( sFilePath.c_str() , std::ios::out );				///< 创建文件
 
-	if( !oDumper.is_open() )
-	{
-		QuoCollector::GetCollector()->OnLog( TLV_ERROR, "PrepareFinancialFile() : cannot open file (%s)", sFilePath.c_str() );
-		return false;
-	}
-
-	oDumper.seekp( 0, std::ios::end );								///< 文件指针移至文件尾
-	if( 0 == oDumper.tellp() )										///< 判断文件是否为全空
-	{
-		oDumper << sFirstLineOfCSV;									///< 先写入第一行(Title列)
-	}
-
-	return true;
+	return sFilePath;
 }
 
 
 ///< -----------------------------------------------------------------------------------------------------------
 
+
+std::string	GrabCodeFromPath( std::string& sPath )
+{
+	int	nEndPos = sPath.rfind( ".wgt" );
+	int	nBeginPos1 = sPath.rfind( "/" );
+	int	nBeginPos2 = sPath.rfind( "\\" );
+	int	nBeginPos = max( nBeginPos1, nBeginPos2 );
+
+	return sPath.substr( nBeginPos + 1, nEndPos - nBeginPos - 1 );
+}
 
 WeightFile::WeightFile()
 {
@@ -166,14 +160,29 @@ void WeightFile::ScanWeightFiles()
 {
 	std::vector<std::string>	vctFilesPath4SHL1;																///< 所有SHL1权重源文件路径
 	std::vector<std::string>	vctFilesPath4SZL1;																///< 所有SZL1权重源文件路径
-	std::string&				sFolder = Configuration::GetConfig().GetFinancialDataFolder();					///< 权息文件所在的根目录
+	std::string&				sFolder = Configuration::GetConfig().GetWeightFileFolder();						///< 权息文件所在的根目录
 	std::string					sSHL1WeightFolder = JoinPath( sFolder, "SSE/" );								///< 上海L1Weight所在子目录
 	std::string					sSZL1WeightFolder = JoinPath( sFolder, "SZSE/" );								///< 深圳L1Weight所在子目录
 	int							nFileCount4SHL1 = EnumAllFiles( sSHL1WeightFolder.c_str(), vctFilesPath4SHL1 );	///< 列出所有SHL1权重源文件
 	int							nFileCount4SZL1 = EnumAllFiles( sSZL1WeightFolder.c_str(), vctFilesPath4SZL1 );	///< 列出所有SZL1权重源文件
 
+	///< 上海L1市场的权息信息列出
+	for( int i = 0; i < nFileCount4SHL1; i++ )
+	{
+		std::string				sSrcFilePath = vctFilesPath4SHL1[i];
+		std::string				sCode = GrabCodeFromPath( sSrcFilePath );
+		std::string				sDestFilePath = GenWeightFilePath( XDF_SH, sCode );
 
+	}
 
+	///< 深圳L1市场的权息信息列出
+	for( int j = 0; j < nFileCount4SZL1; j++ )
+	{
+		std::string				sSrcFilePath = vctFilesPath4SZL1[j];
+		std::string				sCode = GrabCodeFromPath( sSrcFilePath );
+		std::string				sDestFilePath = GenWeightFilePath( XDF_SZ, sCode );
+
+	}
 }
 
 int WeightFile::Redirect2File( std::string sSourceFile, std::string sDestFile )
