@@ -3,6 +3,7 @@
 #include <iostream>
 #include <algorithm>
 #include "FileScanner.h"
+#include "WeightFile.h"
 #include "Financial11File.h"
 #include "../Infrastructure/File.h"
 #include "../DataTranscoding4QuoClientApi.h"
@@ -87,7 +88,9 @@ void FileScanner::ResaveFinancialFile()
 
 void FileScanner::ResaveWeightFile()
 {
-	enum XDFMarket		arrayMkID[2] = { XDF_SH, XDF_SZ };
+	WeightFile				objWeightFiles;			///< 所以市场的权息文件转存对象
+
+	objWeightFiles.ScanWeightFiles();				///< 开始转存操作
 
 }
 

@@ -21,6 +21,8 @@ public:
 
 	/**
 	 * @brief				将信息文件转存到文件
+	 * @return				==0				操作成功
+							!=				出错
 	 */
 	int						Redirect2File();
 
@@ -43,6 +45,8 @@ public:
 
 	/**
 	 * @brief				将信息文件转存到文件
+	 * @return				==0				操作成功
+							!=				出错
 	 */
 	int						Redirect2File();
 
