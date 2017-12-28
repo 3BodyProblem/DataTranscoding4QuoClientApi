@@ -76,20 +76,14 @@ void FileScanner::ResaveFinancialFile()
 	SHL1FinancialDbf		objDbfSHL1;				///< 上海财经数据转存对象
 	SZL1FinancialDbf		objDbfSZL1;				///< 深圳财经数据转存对象
 
-	if( (nErrCode=objDbfSHL1.Instance()) == 0 )
+	if( (nErrCode=objDbfSHL1.Redirect2File()) != 0 )
 	{
-		if( (nErrCode=objDbfSHL1.Redirect2File()) != 0 )
-		{
-			QuoCollector::GetCollector()->OnLog( TLV_WARN, "FileScanner::ResaveFinancialFile() : an error occur while saving financial data for SHL1, errorcode = %d", nErrCode );
-		}
+		QuoCollector::GetCollector()->OnLog( TLV_WARN, "FileScanner::ResaveFinancialFile() : an error occur while saving financial data for SHL1, errorcode = %d", nErrCode );
 	}
 
-	if( (nErrCode=objDbfSZL1.Instance()) == 0 )
+	if( (nErrCode=objDbfSZL1.Redirect2File()) != 0 )
 	{
-		if( (nErrCode=objDbfSZL1.Redirect2File()) != 0 )
-		{
-			QuoCollector::GetCollector()->OnLog( TLV_WARN, "FileScanner::ResaveFinancialFile() : an error occur while saving financial data for SZL1, errorcode = %d", nErrCode );
-		}
+		QuoCollector::GetCollector()->OnLog( TLV_WARN, "FileScanner::ResaveFinancialFile() : an error occur while saving financial data for SZL1, errorcode = %d", nErrCode );
 	}
 
 }

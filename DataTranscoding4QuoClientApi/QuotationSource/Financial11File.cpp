@@ -3,7 +3,47 @@
 #include "../DataTranscoding4QuoClientApi.h"
 
 
-__inline bool PrepareFinancialDumper( enum XDFMarket eMkID, std::ofstream& oDumper )
+__inline bool GetMyFileCreateTime( std::string sFilePath, SYSTEMTIME& refFileTime )
+{
+	HANDLE		hFile = NULL;
+	FILETIME	ftWrite = { 0 };
+	FILETIME	ftCreate = { 0 };
+	FILETIME	ftAccess = { 0 };
+	OFSTRUCT	ofStruct = { 0 };
+	FILETIME	ftLocalTime = { 0 };
+
+	try
+	{
+		hFile = ::CreateFile( sFilePath.c_str(), GENERIC_READ, 0, NULL, OPEN_EXISTING, FILE_FLAG_BACKUP_SEMANTICS, NULL );
+		if( INVALID_HANDLE_VALUE == hFile )
+		{
+			::memset( &refFileTime, 0, sizeof(refFileTime) );
+			return false;
+		}
+
+		::GetFileTime( hFile, &ftCreate, &ftAccess, &ftWrite );		///< 获取文件创建/存取/写入时间
+		::FileTimeToLocalFileTime( &ftCreate, &ftLocalTime );		///< 转换文件时间到本地文件时间
+		::FileTimeToSystemTime( &ftLocalTime, &refFileTime );		///< 转换文件本地时间到系统时间
+	}
+	catch( std::exception& err )
+	{
+		QuoCollector::GetCollector()->OnLog( TLV_ERROR, "GetMyFileTime() : an exception occur in function : %s", err.what() );
+	}
+	catch( ... )
+	{
+		QuoCollector::GetCollector()->OnLog( TLV_ERROR, "GetMyFileTime() : an unknow exception" );
+	}
+
+	if( INVALID_HANDLE_VALUE != hFile )
+	{
+		::CloseHandle( hFile );
+		return true;
+	}
+
+	return false;
+}
+
+__inline bool PrepareFinancialDumper( enum XDFMarket eMkID, std::ofstream& oDumper, SYSTEMTIME& refFileTime )
 {
 	std::string				sFilePath;
 	std::string				sFirstLineOfCSV;
@@ -25,26 +65,28 @@ __inline bool PrepareFinancialDumper( enum XDFMarket eMkID, std::ofstream& oDump
 		}
 		break;
 	default:
-		QuoCollector::GetCollector()->OnLog( TLV_ERROR, "FileScanner::PrepareFinancialFile() : invalid market id (%s)", eMkID );
+		QuoCollector::GetCollector()->OnLog( TLV_ERROR, "PrepareFinancialFile() : invalid market id (%s)", eMkID );
 		return false;
 	}
 
 	sFilePath = JoinPath( Configuration::GetConfig().GetDumpFolder(), pszFilePath );
-	File::CreateDirectoryTree( sFilePath );
+	File::CreateDirectoryTree( sFilePath );							///< 若目录不存在则新建
 	::sprintf( pszFileName, "Financial%u.csv", DateTime::Now().DateToLong() );
-	sFilePath += pszFileName;
-	oDumper.open( sFilePath.c_str() , std::ios::out );
+	sFilePath += pszFileName;										///< 拼接出文件全路径
+	GetMyFileCreateTime( sFilePath.c_str(), refFileTime );			///< 获取文件的创建时间
+	if( oDumper.is_open() )		oDumper.close();
+	oDumper.open( sFilePath.c_str() , std::ios::out );				///< 创建文件
 
 	if( !oDumper.is_open() )
 	{
-		QuoCollector::GetCollector()->OnLog( TLV_ERROR, "FileScanner::PrepareFinancialFile() : cannot open file (%s)", sFilePath.c_str() );
+		QuoCollector::GetCollector()->OnLog( TLV_ERROR, "PrepareFinancialFile() : cannot open file (%s)", sFilePath.c_str() );
 		return false;
 	}
 
-	oDumper.seekp( 0, std::ios::end );
-	if( 0 == oDumper.tellp() )
+	oDumper.seekp( 0, std::ios::end );								///< 文件指针移至文件尾
+	if( 0 == oDumper.tellp() )										///< 判断文件是否为全空
 	{
-		oDumper << sFirstLineOfCSV;			///< 先写入第一行(Title列)
+		oDumper << sFirstLineOfCSV;									///< 先写入第一行(Title列)
 	}
 
 	return true;
@@ -56,6 +98,7 @@ __inline bool PrepareFinancialDumper( enum XDFMarket eMkID, std::ofstream& oDump
 
 SHL1FinancialDbf::SHL1FinancialDbf()
 {
+	::memset( &m_oDumpFileTime, 0, sizeof(m_oDumpFileTime) );
 }
 
 SHL1FinancialDbf::~SHL1FinancialDbf()
@@ -63,36 +106,40 @@ SHL1FinancialDbf::~SHL1FinancialDbf()
 	Release();
 }
 
-int SHL1FinancialDbf::Instance()
+int SHL1FinancialDbf::Redirect2File()
 {
 	int					nErrCode = 0;
+	int					nRecordCount = 0;
+	SYSTEMTIME			tagDBFSystemTime = { 0 };
 	std::string&		sFolder = Configuration::GetConfig().GetFinancialDataFolder();
 	std::string			sFilePath = JoinPath( sFolder, "SSE/shbase.dbf" );
 
-	Release();
-	if( (nErrCode = Open( sFilePath.c_str() )) < 0 )
-	{
-		return nErrCode;
-	}
-
-	if( false == PrepareFinancialDumper( XDF_SH, m_oCSVDumper ) )		///< 上海财经数据
+	Close();
+	if( false == GetMyFileCreateTime( sFilePath, tagDBFSystemTime ) )					///< 获取DBF文件时间
 	{
 		return -1024;
 	}
 
-	return 0;
-}
+	if( (nErrCode = Open( sFilePath.c_str() )) < 0 )									///< 打开DBF文件
+	{
+		return nErrCode;
+	}
 
-void SHL1FinancialDbf::Release()
-{
-	Close();
-}
+	if( false == PrepareFinancialDumper( XDF_SH, m_oCSVDumper, m_oDumpFileTime ) )		///< 打开上海财经数据落盘文件&获取文件时间
+	{
+		return -2048;
+	}
 
-int SHL1FinancialDbf::Redirect2File()
-{
-	int					nErrCode = 0;
-	int					nRecordCount = GetRecordCount();
+	unsigned __int64	nDBFDateTime = tagDBFSystemTime.wYear * 10000000000000 + tagDBFSystemTime.wMonth * 100000000000 + (__int64)tagDBFSystemTime.wDay * 1000000000 + tagDBFSystemTime.wHour * 10000000 + tagDBFSystemTime.wMinute * 100000 + tagDBFSystemTime.wSecond * 1000 + tagDBFSystemTime.wMilliseconds;
+	unsigned __int64	nFileDateTime = m_oDumpFileTime.wYear * 10000000000000 + m_oDumpFileTime.wMonth * 100000000000 + (__int64)m_oDumpFileTime.wDay * 1000000000 + m_oDumpFileTime.wHour * 10000000 + m_oDumpFileTime.wMinute * 100000 + m_oDumpFileTime.wSecond * 1000 + m_oDumpFileTime.wMilliseconds;
 
+	///< 判断dbf是否比较落盘转存文件的创建时间旧，则直接返回
+	if( nDBFDateTime <= nFileDateTime && 0 != nFileDateTime )
+	{
+		return 0;
+	}
+
+	nRecordCount = GetRecordCount();
 	for( int n = 0; n < nRecordCount; n++ )
 	{
 		char			STOCK_CODE[20] = { 0 };
@@ -289,6 +336,8 @@ int SHL1FinancialDbf::Redirect2File()
 
 		m_oCSVDumper.write( pszRecord, nSize );
 	}
+
+	QuoCollector::GetCollector()->OnLog( TLV_INFO, "SHL1FinancialDbf::Redirect2File() : %d Records dumped ....... ", nRecordCount );
 
 	return 0;
 }
@@ -299,6 +348,7 @@ int SHL1FinancialDbf::Redirect2File()
 
 SZL1FinancialDbf::SZL1FinancialDbf()
 {
+	::memset( &m_oDumpFileTime, 0, sizeof(m_oDumpFileTime) );
 }
 
 SZL1FinancialDbf::~SZL1FinancialDbf()
@@ -306,36 +356,40 @@ SZL1FinancialDbf::~SZL1FinancialDbf()
 	Release();
 }
 
-int SZL1FinancialDbf::Instance()
+int SZL1FinancialDbf::Redirect2File()
 {
 	int					nErrCode = 0;
+	int					nRecordCount = 0;
+	SYSTEMTIME			tagDBFSystemTime = { 0 };
 	std::string&		sFolder = Configuration::GetConfig().GetFinancialDataFolder();
 	std::string			sFilePath = JoinPath( sFolder, "SZSE/szbase.dbf" );
 
-	Release();
+	Close();
+	if( false == GetMyFileCreateTime( sFilePath, tagDBFSystemTime ) )					///< 获取DBF文件时间
+	{
+		return -1024;
+	}
+
 	if( (nErrCode = Open( sFilePath.c_str() )) < 0 )
 	{
 		return nErrCode;
 	}
 
-	if( false == PrepareFinancialDumper( XDF_SZ, m_oCSVDumper ) )		///< 深圳财经数据
+	if( false == PrepareFinancialDumper( XDF_SZ, m_oCSVDumper, m_oDumpFileTime ) )		///< 深圳财经数据
 	{
-		return -1024;
+		return -2048;
 	}
 
-	return 0;
-}
+	unsigned __int64	nDBFDateTime = tagDBFSystemTime.wYear * 10000000000000 + tagDBFSystemTime.wMonth * 100000000000 + (__int64)tagDBFSystemTime.wDay * 1000000000 + tagDBFSystemTime.wHour * 10000000 + tagDBFSystemTime.wMinute * 100000 + tagDBFSystemTime.wSecond * 1000 + tagDBFSystemTime.wMilliseconds;
+	unsigned __int64	nFileDateTime = m_oDumpFileTime.wYear * 10000000000000 + m_oDumpFileTime.wMonth * 100000000000 + (__int64)m_oDumpFileTime.wDay * 1000000000 + m_oDumpFileTime.wHour * 10000000 + m_oDumpFileTime.wMinute * 100000 + m_oDumpFileTime.wSecond * 1000 + m_oDumpFileTime.wMilliseconds;
 
-void SZL1FinancialDbf::Release()
-{
-	Close();
-}
+	///< 判断dbf是否比较落盘转存文件的创建时间旧，则直接返回
+	if( nDBFDateTime <= nFileDateTime && 0 != nFileDateTime )
+	{
+		return 0;
+	}
 
-int SZL1FinancialDbf::Redirect2File()
-{
-	int					nErrCode = 0;
-	int					nRecordCount = GetRecordCount();
-
+	nRecordCount = GetRecordCount();
 	for( int n = 0; n < nRecordCount; n++ )
 	{
 		char			STOCK_CODE[20] = { 0 };
@@ -533,6 +587,12 @@ int SZL1FinancialDbf::Redirect2File()
 		m_oCSVDumper.write( pszRecord, nSize );
 	}
 
+	QuoCollector::GetCollector()->OnLog( TLV_INFO, "SZL1FinancialDbf::Redirect2File() : %d Records dumped ....... ", nRecordCount );
+
 	return 0;
 }
+
+
+
+
 

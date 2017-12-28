@@ -2,7 +2,9 @@
 #define __FINANCIAL_11_FILE_H__
 
 
+#include <stdio.h>
 #include <fstream>
+#include <windows.h>
 #include "../Infrastructure/ReadDbfFile.h"
 
 
@@ -18,23 +20,12 @@ public:
 	~SHL1FinancialDbf();
 
 	/**
-	 * @brief				初始化
-	 * @return				==0				成功
-							!=0				失败
-	 */
-	int						Instance();
-
-	/**
-	 * @brief				释放
-	 */
-	void					Release();
-
-	/**
 	 * @brief				将信息文件转存到文件
 	 */
 	int						Redirect2File();
 
 protected:
+	SYSTEMTIME				m_oDumpFileTime;			///< 落盘文件时间
 	std::ofstream			m_oCSVDumper;				///< CSV输出文件
 };
 
@@ -51,23 +42,12 @@ public:
 	~SZL1FinancialDbf();
 
 	/**
-	 * @brief				初始化
-	 * @return				==0				成功
-							!=0				失败
-	 */
-	int						Instance();
-
-	/**
-	 * @brief				释放
-	 */
-	void					Release();
-
-	/**
 	 * @brief				将信息文件转存到文件
 	 */
 	int						Redirect2File();
 
 protected:
+	SYSTEMTIME				m_oDumpFileTime;			///< 落盘文件时间
 	std::ofstream			m_oCSVDumper;				///< CSV输出文件
 };
 
