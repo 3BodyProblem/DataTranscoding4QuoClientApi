@@ -6,6 +6,11 @@
 #include "../Infrastructure/ReadDbfFile.h"
 
 
+/**
+ * @class			SHL1FinancialDbf
+ * @brief			上海财经数据读取转存类
+ * @author			barry
+ */
 class SHL1FinancialDbf : public ReadDbfFile
 {
 public:
@@ -13,31 +18,70 @@ public:
 	~SHL1FinancialDbf();
 
 	/**
-	 * @brief		初始化
-	 * @return		==0				成功
-					!=0				失败
+	 * @brief				初始化
+	 * @return				==0				成功
+							!=0				失败
 	 */
-	int				Instance();
+	int						Instance();
 
 	/**
-	 * @brief		释放
+	 * @brief				释放
 	 */
-	void			Release();
+	void					Release();
 
 	/**
-	 * @brief		将信息文件转存到文件
-	 * @param[in]	oDumper			文件句柄
+	 * @brief				将信息文件转存到文件
 	 */
-	int				Redirect2File( std::ofstream& oDumper );
+	int						Redirect2File();
 
-private:
-	unsigned long		m_ulSaveDate;
+protected:
+	std::ofstream			m_oCSVDumper;				///< CSV输出文件
+};
 
+
+/**
+ * @class			SZL1FinancialDbf
+ * @brief			深圳财经数据读取转存类
+ * @author			barry
+ */
+class SZL1FinancialDbf : public ReadDbfFile
+{
+public:
+	SZL1FinancialDbf();
+	~SZL1FinancialDbf();
+
+	/**
+	 * @brief				初始化
+	 * @return				==0				成功
+							!=0				失败
+	 */
+	int						Instance();
+
+	/**
+	 * @brief				释放
+	 */
+	void					Release();
+
+	/**
+	 * @brief				将信息文件转存到文件
+	 */
+	int						Redirect2File();
+
+protected:
+	std::ofstream			m_oCSVDumper;				///< CSV输出文件
 };
 
 
 
 #endif
+
+
+
+
+
+
+
+
 
 
 

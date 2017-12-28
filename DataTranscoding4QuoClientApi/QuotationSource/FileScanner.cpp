@@ -68,68 +68,30 @@ int FileScanner::Execute()
 	return NULL;
 }
 
-__inline bool PrepareFinancialDumper( enum XDFMarket eMkID, std::ofstream& oDumper )
-{
-	std::string				sFilePath;
-	char					pszFileName[128] = { 0 };
-	char					pszFilePath[512] = { 0 };
-
-	switch( eMkID )
-	{
-	case XDF_SH:		///< 上海Lv1
-		::sprintf( pszFilePath, "SSE/%d/", DateTime::Now().DateToLong() );
-		break;
-	case XDF_SZ:		///< 深证Lv1
-		::sprintf( pszFilePath, "SZSE/%d/", DateTime::Now().DateToLong() );
-		break;
-	default:
-		QuoCollector::GetCollector()->OnLog( TLV_ERROR, "FileScanner::PrepareFinancialFile() : invalid market id (%s)", eMkID );
-		return false;
-	}
-
-	sFilePath = JoinPath( Configuration::GetConfig().GetDumpFolder(), pszFilePath );
-	File::CreateDirectoryTree( sFilePath );
-	::sprintf( pszFileName, "Financial%u.csv", DateTime::Now().TimeToLong() );
-	sFilePath += pszFileName;
-	oDumper.open( sFilePath.c_str() , std::ios::out|std::ios::app );
-
-	if( !oDumper.is_open() )
-	{
-		QuoCollector::GetCollector()->OnLog( TLV_ERROR, "FileScanner::PrepareFinancialFile() : cannot open file (%s)", sFilePath.c_str() );
-		return false;
-	}
-
-	oDumper.seekp( 0, std::ios::end );
-	if( 0 == oDumper.tellp() )
-	{
-		std::string		sTitle = "date,code,name,lotsize,contractmult,contractunit,startdate,enddate,xqdate,deliverydate,expiredate,underlyingcode,underlyingname,optiontype,callorput,exercisepx\n";
-		oDumper << sTitle;
-	}
-
-	return true;
-}
-
 void FileScanner::ResaveFinancialFile()
 {
 	int						nErrCode = 0;
-	std::ofstream			oSHFinancialDumper;
-	std::ofstream			oSZFinancialDumper;
+	std::ofstream			oSHFinancialDumper;		///< 上海财经数据落盘文件对象
+	std::ofstream			oSZFinancialDumper;		///< 深圳财经数据落盘文件对象
+	SHL1FinancialDbf		objDbfSHL1;				///< 上海财经数据转存对象
+	SZL1FinancialDbf		objDbfSZL1;				///< 深圳财经数据转存对象
 
-	if( true == PrepareFinancialDumper( XDF_SH, oSHFinancialDumper ) )		///< 上海财经数据
+	if( (nErrCode=objDbfSHL1.Instance()) == 0 )
 	{
-		SHL1FinancialDbf	objDbfSHL1;
-
-		if( (nErrCode=objDbfSHL1.Instance()) == 0 )
+		if( (nErrCode=objDbfSHL1.Redirect2File()) != 0 )
 		{
-			objDbfSHL1.Redirect2File( oSHFinancialDumper );
+			QuoCollector::GetCollector()->OnLog( TLV_WARN, "FileScanner::ResaveFinancialFile() : an error occur while saving financial data for SHL1, errorcode = %d", nErrCode );
 		}
 	}
 
-	if( true == PrepareFinancialDumper( XDF_SZ, oSZFinancialDumper ) )		///< 深圳财经数据
+	if( (nErrCode=objDbfSZL1.Instance()) == 0 )
 	{
-		//ReadDbfFile		objDbfSZL1;
-
+		if( (nErrCode=objDbfSZL1.Redirect2File()) != 0 )
+		{
+			QuoCollector::GetCollector()->OnLog( TLV_WARN, "FileScanner::ResaveFinancialFile() : an error occur while saving financial data for SZL1, errorcode = %d", nErrCode );
+		}
 	}
+
 }
 
 void FileScanner::ResaveWeightFile()
