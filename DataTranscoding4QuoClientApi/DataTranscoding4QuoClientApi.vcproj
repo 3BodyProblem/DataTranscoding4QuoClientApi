@@ -230,6 +230,14 @@
 				RelativePath=".\QuotationSource\typedef.h"
 				>
 			</File>
+			<File
+				RelativePath=".\QuotationSource\WeightFile.cpp"
+				>
+			</File>
+			<File
+				RelativePath=".\QuotationSource\WeightFile.h"
+				>
+			</File>
 		</Filter>
 		<Filter
 			Name="Infrastructure"

@@ -50,7 +50,7 @@ int FileScanner::Execute()
 	{
 		try
 		{
-			SimpleThread::Sleep( 1000*10 );
+			SimpleThread::Sleep( 1000*15 );
 
 			ResaveWeightFile();					///< 解析转存权息文件
 			ResaveFinancialFile();				///< 解析转存财经数据文件
@@ -70,9 +70,7 @@ int FileScanner::Execute()
 
 void FileScanner::ResaveFinancialFile()
 {
-	int						nErrCode = 0;
-	std::ofstream			oSHFinancialDumper;		///< 上海财经数据落盘文件对象
-	std::ofstream			oSZFinancialDumper;		///< 深圳财经数据落盘文件对象
+	int						nErrCode = 0;			///< 错误码
 	SHL1FinancialDbf		objDbfSHL1;				///< 上海财经数据转存对象
 	SZL1FinancialDbf		objDbfSZL1;				///< 深圳财经数据转存对象
 
@@ -85,7 +83,6 @@ void FileScanner::ResaveFinancialFile()
 	{
 		QuoCollector::GetCollector()->OnLog( TLV_WARN, "FileScanner::ResaveFinancialFile() : an error occur while saving financial data for SZL1, errorcode = %d", nErrCode );
 	}
-
 }
 
 void FileScanner::ResaveWeightFile()
