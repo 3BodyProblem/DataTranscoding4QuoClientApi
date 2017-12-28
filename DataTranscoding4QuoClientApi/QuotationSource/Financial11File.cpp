@@ -318,7 +318,7 @@ int SZL1FinancialDbf::Instance()
 		return nErrCode;
 	}
 
-	if( false == PrepareFinancialDumper( XDF_SZ, m_oCSVDumper ) )		///< 上海财经数据
+	if( false == PrepareFinancialDumper( XDF_SZ, m_oCSVDumper ) )		///< 深圳财经数据
 	{
 		return -1024;
 	}
