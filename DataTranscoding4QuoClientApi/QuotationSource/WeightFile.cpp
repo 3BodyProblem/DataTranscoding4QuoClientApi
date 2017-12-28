@@ -121,13 +121,13 @@ __inline std::string GenWeightFilePath( enum XDFMarket eMkID, std::string sCode 
 		break;
 	default:
 		QuoCollector::GetCollector()->OnLog( TLV_ERROR, "GenWeightFilePath() : invalid market id (%s)", eMkID );
-		return false;
+		return "";
 	}
 
 	if( true == sCode.empty() )
 	{
 		QuoCollector::GetCollector()->OnLog( TLV_ERROR, "GenWeightFilePath() : mkid(%d), invalid code(%s)", eMkID, sCode.c_str() );
-		return false;
+		return "";
 	}
 
 	sFilePath = JoinPath( Configuration::GetConfig().GetDumpFolder(), pszFilePath );
@@ -158,6 +158,7 @@ WeightFile::WeightFile()
 
 void WeightFile::ScanWeightFiles()
 {
+	int							nErrCode = 0;
 	std::vector<std::string>	vctFilesPath4SHL1;																///< 所有SHL1权重源文件路径
 	std::vector<std::string>	vctFilesPath4SZL1;																///< 所有SZL1权重源文件路径
 	std::string&				sFolder = Configuration::GetConfig().GetWeightFileFolder();						///< 权息文件所在的根目录
@@ -173,6 +174,10 @@ void WeightFile::ScanWeightFiles()
 		std::string				sCode = GrabCodeFromPath( sSrcFilePath );
 		std::string				sDestFilePath = GenWeightFilePath( XDF_SH, sCode );
 
+		if( (nErrCode = Redirect2File( sSrcFilePath, sDestFilePath )) != 0 )
+		{
+			QuoCollector::GetCollector()->OnLog( TLV_ERROR, "WeightFile::ScanWeightFiles() : [SHL1] an error occur while %s ---> %s, errorcode = %d", sSrcFilePath.c_str(), sDestFilePath.c_str(), nErrCode );
+		}
 	}
 
 	///< 深圳L1市场的权息信息列出
@@ -182,6 +187,10 @@ void WeightFile::ScanWeightFiles()
 		std::string				sCode = GrabCodeFromPath( sSrcFilePath );
 		std::string				sDestFilePath = GenWeightFilePath( XDF_SZ, sCode );
 
+		if( (nErrCode = Redirect2File( sSrcFilePath, sDestFilePath )) != 0 )
+		{
+			QuoCollector::GetCollector()->OnLog( TLV_ERROR, "WeightFile::ScanWeightFiles() : [SZL1] an error occur while %s ---> %s, errorcode = %d", sSrcFilePath.c_str(), sDestFilePath.c_str(), nErrCode );
+		}
 	}
 }
 
@@ -191,6 +200,11 @@ int WeightFile::Redirect2File( std::string sSourceFile, std::string sDestFile )
 	std::ifstream			oWeightReader;					///< 权息信息文件
 	SYSTEMTIME				oReadFileTime = { 0 };			///< 源头文件时间
 	SYSTEMTIME				oDumpFileTime = { 0 };			///< 落盘文件时间
+
+	if( sSourceFile.empty() || sDestFile.empty() )
+	{
+		return -1;		///< 文件路径为空无效
+	}
 
 	if( false == GetWeightFileWriteTime( sSourceFile, oReadFileTime ) )
 	{
