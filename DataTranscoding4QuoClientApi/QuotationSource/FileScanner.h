@@ -52,15 +52,16 @@ protected:
 	 * @brief					解析转存权重信息库
 	 */
 	void						ResaveWeightFile();
-
-private:
-	CriticalObject				m_oLock;				///< 临界区对象
 };
 
 
 
 
+
+
 #endif
+
+
 
 
 

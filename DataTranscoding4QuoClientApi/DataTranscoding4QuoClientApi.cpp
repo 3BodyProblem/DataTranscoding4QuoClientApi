@@ -96,7 +96,7 @@ enum E_SS_Status QuoCollector::GetCollectorStatus( char* pszStatusDesc, unsigned
 	WorkStatus&			refStatus = m_oQuotationData.GetWorkStatus();
 	std::string&		sStatus = WorkStatus::CastStatusStr( (enum E_SS_Status)refStatus );
 
-	nStrLen = ::sprintf( pszStatusDesc, "模块名=上海Lv1源驱动,Version=%s,快照路径=%s,连接状态=%s"
+	nStrLen = ::sprintf( pszStatusDesc, "模块名=转码机,Version=%s,落盘路径=%s,连接状态=%s"
 						, g_sVersion.c_str(), refCnf.GetDumpFolder().c_str(), sStatus.c_str() );
 
 	return refStatus;
