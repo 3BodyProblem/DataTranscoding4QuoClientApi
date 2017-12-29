@@ -8,22 +8,31 @@
 #include "../Infrastructure/ReadDbfFile.h"
 
 
-#pragma pack(4)
-/**
- * @class			T_WEIGHT
- * @brief			权息信息
- * @author			barry
- */
-typedef struct
+#pragma pack(1)
+typedef struct								
 {
-	int				Date;				///< 商品日期(YYYYMMDD)
-	int				A;					///< 每10000股送股数(单位:股)
-	int				B;					///< 每10000股配股数(单位:股)
-	double			C;					///< 配股价(单位:元)
-	double			D;					///< 每10股红利(单位:元)
-	int				E;					///< 每10股增股数(单位:股)
-	double			BASE;				///< 总股本(单位:万股)
-	double			FLOWBASE;			///< 流通股本(单位:万股)
+	unsigned long			Minute  : 6;		///< 分[0~59]
+	unsigned long			Hour    : 5;		///< 时[0~23]
+	unsigned long			Day     : 5;		///< 日[0~31]
+	unsigned long			Month   : 4;		///< 月[0~12]
+	unsigned long			Year    : 12;		///< 年[0~4095]
+} tagQlDateTime;
+/**
+ * @class					T_WEIGHT
+ * @brief					权息信息
+ * @author					barry
+ */
+typedef struct						
+{
+	tagQlDateTime			Date;				///< 资料日期
+	unsigned long			A;					///< 每10000股送股数
+	unsigned long			B;					///< 每10000股配股数
+	unsigned long			C;					///< 配股价[元 * 放大倍数]
+	unsigned long			D;					///< 每10000股红利[元 * 放大倍数]
+	unsigned long			E;					///< 每10000股增股数
+	unsigned long			BASE;				///< 总股本[万股]
+	unsigned long			FLOWBASE;			///< 流通股本[万股]
+	char					Reserved[4];		///< 保留
 } T_WEIGHT;
 #pragma pack()
 
