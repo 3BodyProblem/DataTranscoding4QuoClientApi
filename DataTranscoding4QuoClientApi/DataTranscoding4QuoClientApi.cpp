@@ -4,6 +4,7 @@
 #include <functional>
 #include "Configuration.h"
 #include "UnitTest/UnitTest.h"
+#include "QuotationSource/SvrStatus.h"
 #include "DataTranscoding4QuoClientApi.h"
 
 
@@ -95,9 +96,86 @@ enum E_SS_Status QuoCollector::GetCollectorStatus( char* pszStatusDesc, unsigned
 	Configuration&		refCnf = Configuration::GetConfig();
 	WorkStatus&			refStatus = m_oQuotationData.GetWorkStatus();
 	std::string&		sStatus = WorkStatus::CastStatusStr( (enum E_SS_Status)refStatus );
+	ServerStatus&		refSvrStatus = ServerStatus::GetStatusObj();
+	unsigned int		nFinanDate = 0;
+	unsigned int		nFinanTime = 0;
+	unsigned int		nWeightDate = 0;
+	unsigned int		nWeightTime = 0;
 
-	nStrLen = ::sprintf( pszStatusDesc, "模块名=转码机,Version=%s,落盘路径=%s,连接状态=%s"
-						, g_sVersion.c_str(), refCnf.GetDumpFolder().c_str(), sStatus.c_str() );
+	///< 模块基础信息
+	refSvrStatus.GetFinancialUpdateDT( nFinanDate, nFinanTime );
+	refSvrStatus.GetWeightUpdateDT( nWeightDate, nWeightTime );
+	nStrLen = ::sprintf( pszStatusDesc, "模块名=转码机,Version=%s,落盘路径=%s,连接状态=%s,11库落盘=%u %u,权息库落盘=%u %u,Tick落盘:%s,分钟线落盘:%s"
+		, g_sVersion.c_str(), refCnf.GetDumpFolder().c_str(), sStatus.c_str(), nFinanDate, nFinanTime, nWeightDate, nWeightTime
+		, refSvrStatus.FetchTickWritingStatus()?"写入":"空闲", refSvrStatus.FetchMinuteWritingStatus()?"写入":"空闲" );
+
+	///< 各市场商品行情 & 缓存使用信息
+	T_SECURITY_STATUS&	refSHL1Snap = refSvrStatus.FetchSecurity( XDF_SH );
+	T_SECURITY_STATUS&	refSHOPTSnap = refSvrStatus.FetchSecurity( XDF_SHOPT );
+	T_SECURITY_STATUS&	refSZL1Snap = refSvrStatus.FetchSecurity( XDF_SZ );
+	T_SECURITY_STATUS&	refSZOPTSnap = refSvrStatus.FetchSecurity( XDF_SZOPT );
+	T_SECURITY_STATUS&	refSHCFFSnap = refSvrStatus.FetchSecurity( XDF_CF );
+	T_SECURITY_STATUS&	refSHCFFOPTSnap = refSvrStatus.FetchSecurity( XDF_ZJOPT );
+	T_SECURITY_STATUS&	refCNFSnap = refSvrStatus.FetchSecurity( XDF_CNF );
+	T_SECURITY_STATUS&	refCNFOPTSnap = refSvrStatus.FetchSecurity( XDF_CNFOPT );
+	double				dSHL1Rate = refSvrStatus.FetchMkOccupancyRate( XDF_SH );
+	double				dSHOPTRate = refSvrStatus.FetchMkOccupancyRate( XDF_SHOPT );
+	double				dSZL1Rate = refSvrStatus.FetchMkOccupancyRate( XDF_SZ );
+	double				dSZOPTRate = refSvrStatus.FetchMkOccupancyRate( XDF_SZOPT );
+	double				dCFFRate = refSvrStatus.FetchMkOccupancyRate( XDF_CF );
+	double				dCFFOPTRate = refSvrStatus.FetchMkOccupancyRate( XDF_ZJOPT );
+	double				dCNFRate = refSvrStatus.FetchMkOccupancyRate( XDF_CNF );
+	double				dCNFOPTRate = refSvrStatus.FetchMkOccupancyRate( XDF_CNFOPT );
+
+	if( refSHL1Snap.Volume > 0 )	{
+		nStrLen += ::sprintf( pszStatusDesc + nStrLen, ",[SHL1 %s],代码=%s,现价=%.4f,金额=%.4f,量=%I64d", refSHL1Snap.Name, refSHL1Snap.Code, refSHL1Snap.LastPx, refSHL1Snap.Amount, refSHL1Snap.Volume );
+	}
+	if( refSHOPTSnap.Volume > 0 )	{
+		nStrLen += ::sprintf( pszStatusDesc + nStrLen, ",[SH OPTION %s],代码=%s,现价=%.4f,金额=%.4f,量=%I64d", refSHOPTSnap.Name, refSHOPTSnap.Code, refSHOPTSnap.LastPx, refSHOPTSnap.Amount, refSHOPTSnap.Volume );
+	}
+	if( refSZL1Snap.Volume > 0 )	{
+		nStrLen += ::sprintf( pszStatusDesc + nStrLen, ",[SZL1 %s],代码=%s,现价=%.4f,金额=%.4f,量=%I64d", refSZL1Snap.Name, refSZL1Snap.Code, refSZL1Snap.LastPx, refSZL1Snap.Amount, refSZL1Snap.Volume );
+	}
+	if( refSZOPTSnap.Volume > 0 )	{
+		nStrLen += ::sprintf( pszStatusDesc + nStrLen, ",[SZ OPTION %s],代码=%s,现价=%.4f,金额=%.4f,量=%I64d", refSZOPTSnap.Name, refSZOPTSnap.Code, refSZOPTSnap.LastPx, refSZOPTSnap.Amount, refSZOPTSnap.Volume );
+	}
+	if( refSHCFFSnap.Volume > 0 )	{
+		nStrLen += ::sprintf( pszStatusDesc + nStrLen, ",[CFF %s],代码=%s,现价=%.4f,金额=%.4f,量=%I64d", refSHCFFSnap.Name, refSHCFFSnap.Code, refSHCFFSnap.LastPx, refSHCFFSnap.Amount, refSHCFFSnap.Volume );
+	}
+	if( refSHCFFOPTSnap.Volume > 0 )	{
+		nStrLen += ::sprintf( pszStatusDesc + nStrLen, ",[CFF OPTION %s],代码=%s,现价=%.4f,金额=%.4f,量=%I64d", refSHCFFOPTSnap.Name, refSHCFFOPTSnap.Code, refSHCFFOPTSnap.LastPx, refSHCFFOPTSnap.Amount, refSHCFFOPTSnap.Volume );
+	}
+	if( refCNFSnap.Volume > 0 )	{
+		nStrLen += ::sprintf( pszStatusDesc + nStrLen, ",[CNF %s],代码=%s,现价=%.4f,金额=%.4f,量=%I64d", refCNFSnap.Name, refCNFSnap.Code, refCNFSnap.LastPx, refCNFSnap.Amount, refCNFSnap.Volume );
+	}
+	if( refSHCFFSnap.Volume > 0 )	{
+		nStrLen += ::sprintf( pszStatusDesc + nStrLen, ",[CNF OPTION %s],代码=%s,现价=%.4f,金额=%.4f,量=%I64d", refCNFOPTSnap.Name, refCNFOPTSnap.Code, refCNFOPTSnap.LastPx, refCNFOPTSnap.Amount, refCNFOPTSnap.Volume );
+	}
+
+	if( dSHL1Rate > 0 )	{
+		nStrLen += ::sprintf( pszStatusDesc + nStrLen, ",[SHL1],缓存占用率=%.4f", dSHL1Rate );
+	}
+	if( dSHOPTRate > 0 )	{
+		nStrLen += ::sprintf( pszStatusDesc + nStrLen, ",[SH OPTION],缓存占用率=%.4f", dSHOPTRate );
+	}
+	if( dSZL1Rate > 0 )	{
+		nStrLen += ::sprintf( pszStatusDesc + nStrLen, ",[SZL1],缓存占用率=%.4f", dSZL1Rate );
+	}
+	if( dSZOPTRate > 0 )	{
+		nStrLen += ::sprintf( pszStatusDesc + nStrLen, ",[SZ OPTION],缓存占用率=%.4f", dSZOPTRate );
+	}
+	if( dCFFRate > 0 )	{
+		nStrLen += ::sprintf( pszStatusDesc + nStrLen, ",[CFF],缓存占用率=%.4f", dCFFRate );
+	}
+	if( dCFFOPTRate > 0 )	{
+		nStrLen += ::sprintf( pszStatusDesc + nStrLen, ",[CFF OPTION],缓存占用率=%.4f", dCFFOPTRate );
+	}
+	if( dCNFRate > 0 )	{
+		nStrLen += ::sprintf( pszStatusDesc + nStrLen, ",[CNF],缓存占用率=%.4f", dCNFRate );
+	}
+	if( dCNFOPTRate > 0 )	{
+		nStrLen += ::sprintf( pszStatusDesc + nStrLen, ",[CNF OPTION],缓存占用率=%.4f", dCNFOPTRate );
+	}
 
 	return refStatus;
 }

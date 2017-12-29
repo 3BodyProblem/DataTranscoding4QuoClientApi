@@ -8,9 +8,12 @@
 
 ServerStatus::ServerStatus()
  : m_bWritingTick( false ), m_bWritingMinute( false )
+ , m_nFinancialUpdateDate( 0 ), m_nFinancialUpdateTime( 0 )
+ , m_nWeightUpdateDate( 0 ), m_nWeightUpdateTime( 0 )
 {
 	::memset( m_vctMarketTime, 0, sizeof(m_vctMarketTime) );
 	::memset( m_vctLastSecurity, 0, sizeof(m_vctLastSecurity) );
+	::memset( m_vctsBufOccupancyRate, 0, sizeof(m_vctsBufOccupancyRate) );
 }
 
 ServerStatus& ServerStatus::GetStatusObj()
@@ -60,24 +63,16 @@ void ServerStatus::UpdateSecurity( enum XDFMarket eMkID, const char* pszCode, do
 	}
 }
 
-T_SECURITY_STATUS& ServerStatus::FetchSecurity( enum XDFMarket eMkID, const char* pszCode )
+T_SECURITY_STATUS& ServerStatus::FetchSecurity( enum XDFMarket eMkID )
 {
 	unsigned int			nPos = (unsigned int)eMkID;
 
-	if( NULL == pszCode || nPos >= 256 )
+	if( nPos >= 256 )
 	{
 		return m_vctLastSecurity[255];
 	}
 
-	int						nCodeLen = ::strlen( pszCode );
-	T_SECURITY_STATUS&		refSecurity = m_vctLastSecurity[nPos];
-
-	if( ::memcmp( refSecurity.Code, pszCode, nCodeLen ) == 0 )
-	{
-		return refSecurity;
-	}
-
-	return m_vctLastSecurity[255];
+	return m_vctLastSecurity[nPos];
 }
 
 void ServerStatus::UpdateMinuteWritingStatus( bool bStatus )
@@ -124,7 +119,53 @@ unsigned int ServerStatus::FetchMkTime( enum XDFMarket eMkID )
 	return m_vctMarketTime[nPos];
 }
 
+void ServerStatus::UpdateFinancialDT()
+{
+	m_nFinancialUpdateDate = DateTime::Now().DateToLong();
+	m_nFinancialUpdateTime = DateTime::Now().TimeToLong();
+}
 
+void ServerStatus::UpdateWeightDT()
+{
+	m_nWeightUpdateDate = DateTime::Now().DateToLong();
+	m_nWeightUpdateTime = DateTime::Now().TimeToLong();
+}
+
+void ServerStatus::GetWeightUpdateDT( unsigned int& nDate, unsigned int& nTime )
+{
+	nDate = m_nWeightUpdateDate;
+	nTime = m_nWeightUpdateTime;
+}
+
+void ServerStatus::GetFinancialUpdateDT( unsigned int& nDate, unsigned int& nTime )
+{
+	nDate = m_nFinancialUpdateDate;
+	nTime = m_nFinancialUpdateTime;
+}
+
+void ServerStatus::UpdateMkOccupancyRate( enum XDFMarket eMkID, double dRate )
+{
+	unsigned int	nPos = (unsigned int)eMkID;
+
+	if( nPos >= 256 )
+	{
+		return;
+	}
+
+	m_vctsBufOccupancyRate[nPos] = dRate;
+}
+
+double ServerStatus::FetchMkOccupancyRate( enum XDFMarket eMkID )
+{
+	unsigned int	nPos = (unsigned int)eMkID;
+
+	if( nPos >= 256 )
+	{
+		return m_vctsBufOccupancyRate[255];
+	}
+
+	return m_vctsBufOccupancyRate[nPos];
+}
 
 
 

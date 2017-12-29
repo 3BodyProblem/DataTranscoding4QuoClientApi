@@ -1,4 +1,5 @@
 #include "math.h"
+#include "SvrStatus.h"
 #include "./Financial11File.h"
 #include "../DataTranscoding4QuoClientApi.h"
 
@@ -157,6 +158,7 @@ int SHL1FinancialDbf::Redirect2File()
 		return -2048;
 	}
 
+	ServerStatus::GetStatusObj().UpdateFinancialDT();
 	nRecordCount = GetRecordCount();
 	for( int n = 0; n < nRecordCount; n++ )
 	{
@@ -410,6 +412,7 @@ int SZL1FinancialDbf::Redirect2File()
 		return -2048;
 	}
 
+	ServerStatus::GetStatusObj().UpdateFinancialDT();
 	nRecordCount = GetRecordCount();
 	for( int n = 0; n < nRecordCount; n++ )
 	{

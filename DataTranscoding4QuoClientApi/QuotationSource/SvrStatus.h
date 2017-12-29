@@ -57,10 +57,9 @@ public:///< 商品状态更新方法
 	/**
 	 * @brief				获取商品状态引用
 	 * @param[in]			eMkID					市场ID
-	 * @param[in]			pszCode					商品代码
 	 * @return				返回商品状态引用
 	 */
-	T_SECURITY_STATUS&		FetchSecurity( enum XDFMarket eMkID, const char* pszCode );
+	T_SECURITY_STATUS&		FetchSecurity( enum XDFMarket eMkID );
 
 public:///< 行情写盘状态方法
 	/**
@@ -102,11 +101,55 @@ public:///< 市场时间更新方法
 	 */
 	unsigned int			FetchMkTime( enum XDFMarket eMkID );
 
+public:///< 资讯库和权息文件更新记录
+	/**
+	 * @brief				更新财经数据更新日期时间
+	 */
+	void					UpdateFinancialDT();
+
+	/**
+	 * @brief				更新权息文件更新日期时间
+	 */
+	void					UpdateWeightDT();
+
+	/**
+	 * @brief				获取权息文件更新日期时间
+	 * @param[out]			nDate					日期
+	 * @param[out]			nTime					时间
+	 */
+	void					GetWeightUpdateDT( unsigned int& nDate, unsigned int& nTime );
+
+	/**
+	 * @brief				获取资讯库更新日期时间
+	 * @param[out]			nDate					日期
+	 * @param[out]			nTime					时间
+	 */
+	void					GetFinancialUpdateDT( unsigned int& nDate, unsigned int& nTime );
+
+public:///< 各市场的tick缓存占用率存取方法
+	/**
+	 * @brief				更新市场缓存占用率
+	 * @param[in]			eMkID					市场ID
+	 * @param[in]			dRate					tick缓存占用率
+	 */
+	void					UpdateMkOccupancyRate( enum XDFMarket eMkID, double dRate );
+
+	/**
+	 * @brief				获取各市场缓存占用率
+	 * @param[in]			eMkID					市场ID
+	 */
+	double					FetchMkOccupancyRate( enum XDFMarket eMkID );
+
 protected:
 	bool					m_bWritingTick;					///< TICK是否在落盘中
 	bool					m_bWritingMinute;				///< 分钟线是否在落盘中
 	unsigned int			m_vctMarketTime[256];			///< 各市场的时间表
 	T_SECURITY_STATUS		m_vctLastSecurity[256];			///< 各市场的第一个商品的状态更新表
+	unsigned int			m_nFinancialUpdateDate;			///< 资讯库更新日期
+	unsigned int			m_nFinancialUpdateTime;			///< 资讯库更新时间
+	unsigned int			m_nWeightUpdateDate;			///< 权息库更新日期
+	unsigned int			m_nWeightUpdateTime;			///< 权息库更新时间
+	double					m_vctsBufOccupancyRate[256];	///< 各市场缓存占用率统计
 };
 
 

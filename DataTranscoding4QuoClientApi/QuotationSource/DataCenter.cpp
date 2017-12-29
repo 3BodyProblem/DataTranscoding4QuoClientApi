@@ -1055,6 +1055,7 @@ int QuotationData::UpdateTickLine( enum XDFMarket eMarket, char* pSnapData, unsi
 						refTickLine.AskVol2 = pStock->Sell[1].Volume;
 						refTickLine.Voip = pStock->Voip / refParam.dPriceRate;
 						nErrorCode = refTickLineCache.PutData( &refTickLine );
+						ServerStatus::GetStatusObj().UpdateMkOccupancyRate( XDF_SH, refTickLineCache.GetPercent() );		///< 更新市场tick缓存的占用率
 						///< ------------ Minute Lines -----------------------
 						DispatchMinuteLine( eMarket, std::string( pStock->Code, 6 ), refParam, refTickLine.Date, refTickLine.Time );
 						if( 0 == refParam.Valid )							///< 取第一笔数据的部分
@@ -1188,6 +1189,7 @@ int QuotationData::UpdateTickLine( enum XDFMarket eMarket, char* pSnapData, unsi
 				//refTickLine.Voip = pStock->Voip / refParam.dPriceRate;
 				::memcpy( refTickLine.TradingPhaseCode, pStock->TradingPhaseCode, sizeof(pStock->TradingPhaseCode) );
 				nErrorCode = refTickLineCache.PutData( &refTickLine );
+				ServerStatus::GetStatusObj().UpdateMkOccupancyRate( XDF_SHOPT, refTickLineCache.GetPercent() );		///< 更新市场tick缓存的占用率
 				///< ------------ Minute Lines -----------------------
 				DispatchMinuteLine( eMarket, std::string( pStock->Code, 8 ), refParam, refTickLine.Date, refTickLine.Time );
 				if( 0 == refParam.Valid )							///< 取第一笔数据的部分
@@ -1261,6 +1263,7 @@ int QuotationData::UpdateTickLine( enum XDFMarket eMarket, char* pSnapData, unsi
 						refTickLine.Voip = pStock->Voip / refParam.dPriceRate;
 						::memcpy( refTickLine.PreName, refParam.PreName, 4 );
 						nErrorCode = refTickLineCache.PutData( &refTickLine );
+						ServerStatus::GetStatusObj().UpdateMkOccupancyRate( XDF_SZ, refTickLineCache.GetPercent() );		///< 更新市场tick缓存的占用率
 						///< ------------ Minute Lines -----------------------
 						DispatchMinuteLine( eMarket, std::string( pStock->Code, 6 ), refParam, refTickLine.Date, refTickLine.Time );
 						if( 0 == refParam.Valid )							///< 取第一笔数据的部分
@@ -1393,6 +1396,7 @@ int QuotationData::UpdateTickLine( enum XDFMarket eMarket, char* pSnapData, unsi
 				//refTickLine.Voip = pStock->Voip / refParam.dPriceRate;
 				::memcpy( refTickLine.TradingPhaseCode, pStock->TradingPhaseCode, sizeof(pStock->TradingPhaseCode) );
 				nErrorCode = refTickLineCache.PutData( &refTickLine );
+				ServerStatus::GetStatusObj().UpdateMkOccupancyRate( XDF_SZOPT, refTickLineCache.GetPercent() );		///< 更新市场tick缓存的占用率
 				///< ------------ Minute Lines -----------------------
 				DispatchMinuteLine( eMarket, std::string( pStock->Code, 8 ), refParam, refTickLine.Date, refTickLine.Time );
 				if( 0 == refParam.Valid )							///< 取第一笔数据的部分
@@ -1462,6 +1466,7 @@ int QuotationData::UpdateTickLine( enum XDFMarket eMarket, char* pSnapData, unsi
 				refTickLine.AskVol2 = pStock->Sell[1].Volume;
 				//refTickLine.Voip = pStock->Voip / refParam.dPriceRate;
 				nErrorCode = refTickLineCache.PutData( &refTickLine );
+				ServerStatus::GetStatusObj().UpdateMkOccupancyRate( XDF_CF, refTickLineCache.GetPercent() );		///< 更新市场tick缓存的占用率
 				///< ------------ Minute Lines -----------------------
 				DispatchMinuteLine( eMarket, std::string( pStock->Code, 6 ), refParam, refTickLine.Date, refTickLine.Time );
 				if( 0 == refParam.Valid )							///< 取第一笔数据的部分
@@ -1531,6 +1536,7 @@ int QuotationData::UpdateTickLine( enum XDFMarket eMarket, char* pSnapData, unsi
 				refTickLine.AskVol2 = pStock->Sell[1].Volume;
 				//refTickLine.Voip = pStock->Voip / refParam.dPriceRate;
 				nErrorCode = refTickLineCache.PutData( &refTickLine );
+				ServerStatus::GetStatusObj().UpdateMkOccupancyRate( XDF_ZJOPT, refTickLineCache.GetPercent() );		///< 更新市场tick缓存的占用率
 				///< ------------ Minute Lines -----------------------
 				DispatchMinuteLine( eMarket, std::string( pStock->Code ), refParam, refTickLine.Date, refTickLine.Time );
 				if( 0 == refParam.Valid )							///< 取第一笔数据的部分
@@ -1607,6 +1613,7 @@ int QuotationData::UpdateTickLine( enum XDFMarket eMarket, char* pSnapData, unsi
 				refTickLine.AskVol2 = pStock->Sell[1].Volume;
 				//refTickLine.Voip = pStock->Voip / refParam.dPriceRate;
 				nErrorCode = refTickLineCache.PutData( &refTickLine );
+				ServerStatus::GetStatusObj().UpdateMkOccupancyRate( XDF_CNF, refTickLineCache.GetPercent() );		///< 更新市场tick缓存的占用率
 				///< ------------ Minute Lines -----------------------
 				DispatchMinuteLine( eMarket, std::string( pStock->Code, 6 ), refParam, refTickLine.Date, refTickLine.Time );
 				if( 0 == refParam.Valid )							///< 取第一笔数据的部分
@@ -1683,6 +1690,7 @@ int QuotationData::UpdateTickLine( enum XDFMarket eMarket, char* pSnapData, unsi
 				refTickLine.AskVol2 = pStock->Sell[1].Volume;
 				//refTickLine.Voip = pStock->Voip / refParam.dPriceRate;
 				nErrorCode = refTickLineCache.PutData( &refTickLine );
+				ServerStatus::GetStatusObj().UpdateMkOccupancyRate( XDF_CNFOPT, refTickLineCache.GetPercent() );		///< 更新市场tick缓存的占用率
 				///< ------------ Minute Lines -----------------------
 				DispatchMinuteLine( eMarket, std::string( pStock->Code ), refParam, refTickLine.Date, refTickLine.Time );
 				if( 0 == refParam.Valid )							///< 取第一笔数据的部分

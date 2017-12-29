@@ -1,5 +1,6 @@
 #include "math.h"
 #include <vector>
+#include "SvrStatus.h"
 #include "./WeightFile.h"
 #include "../DataTranscoding4QuoClientApi.h"
 
@@ -242,6 +243,7 @@ int WeightFile::Redirect2File( std::string sSourceFile, std::string sDestFile )
 	oWeightReader.seekg( 0, std::ios::beg );
 	sCSVTitle = "date,a,b,c,d,e,base,flowbase\n";					///< format目标文件首行(title)
 	oCSVDumper.write( sCSVTitle.c_str(), sCSVTitle.length() );		///< 写入title
+	ServerStatus::GetStatusObj().UpdateWeightDT();					///< 更新权息文件的更新日期时间
 	while( true )
 	{
 		int				nLen = 0;
