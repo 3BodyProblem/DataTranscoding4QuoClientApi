@@ -3,6 +3,7 @@
 #include <iostream>
 #include <algorithm>
 #include "Quotation.h"
+#include "SvrStatus.h"
 #include "../Infrastructure/File.h"
 #include "../DataTranscoding4QuoClientApi.h"
 
@@ -298,6 +299,9 @@ int Quotation::SaveShLv1_Static_Tick_Day( enum XDFRunStat eStatus, bool bBuild )
 						::memcpy( tagStaticLine.Code, pData->Code, sizeof(pData->Code) );
 						::memcpy( tagStaticLine.Name, pData->Name, sizeof(pData->Name) );
 						tagStaticLine.LotSize = vctKindInfo[pData->SecKind].LotSize;
+						if( pData->SecKind > 0 ) {
+							ServerStatus::GetStatusObj().AnchorSecurity( XDF_SH, tagStaticLine.Code, tagStaticLine.Name );
+						}
 						if( true == PrepareStaticFile( tagStaticLine, oDumper ) )
 						{
 							int		nLen = ::sprintf( pszLine, "%u,%s,%s,%d,%d,%d,%d,%d,%d,%d,%d,%s,%s,%c,%c,%.4f\n"
@@ -482,6 +486,9 @@ int Quotation::SaveShOpt_Static_Tick_Day( enum XDFRunStat eStatus, bool bBuild )
 						tagStaticLine.OptionType = pData->OptionType;		///< 期权类型：'E'-欧式 'A'-美式
 						tagStaticLine.CallOrPut = pData->CallOrPut;			///< 认沽认购：'C'认购 'P'认沽
 						tagStaticLine.ExercisePx = pData->XqPrice / tagParam.dPriceRate;
+						if( pData->SecKind > 0 ) {
+							ServerStatus::GetStatusObj().AnchorSecurity( XDF_SHOPT, tagStaticLine.Code, tagStaticLine.Name );
+						}
 						if( true == PrepareStaticFile( tagStaticLine, oDumper ) )
 						{
 							int		nLen = ::sprintf( pszLine, "%u,%s,%s,%d,%d,%d,%d,%d,%d,%d,%d,%s,%s,%c,%c,%.4f\n"
@@ -639,6 +646,9 @@ int Quotation::SaveSzLv1_Static_Tick_Day( enum XDFRunStat eStatus, bool bBuild )
 						::memcpy( tagStaticLine.Code, pData->Code, sizeof(pData->Code) );
 						::memcpy( tagStaticLine.Name, pData->Name, sizeof(pData->Name) );
 						tagStaticLine.LotSize = vctKindInfo[pData->SecKind].LotSize;
+						if( pData->SecKind > 0 ) {
+							ServerStatus::GetStatusObj().AnchorSecurity( XDF_SZ, tagStaticLine.Code, tagStaticLine.Name );
+						}
 						if( true == PrepareStaticFile( tagStaticLine, oDumper ) )
 						{
 							int		nLen = ::sprintf( pszLine, "%u,%s,%s,%d,%d,%d,%d,%d,%d,%d,%d,%s,%s,%c,%c,%.4f\n"
@@ -824,6 +834,9 @@ int Quotation::SaveSzOpt_Static_Tick_Day( enum XDFRunStat eStatus, bool bBuild )
 						tagStaticLine.OptionType = pData->OptionType;		///< 期权类型：'E'-欧式 'A'-美式
 						tagStaticLine.CallOrPut = pData->CallOrPut;			///< 认沽认购：'C'认购 'P'认沽
 						tagStaticLine.ExercisePx = pData->XqPrice / tagParam.dPriceRate;
+						if( pData->SecKind > 0 ) {
+							ServerStatus::GetStatusObj().AnchorSecurity( XDF_SZOPT, tagStaticLine.Code, tagStaticLine.Name );
+						}
 						if( true == PrepareStaticFile( tagStaticLine, oDumper ) )
 						{
 							int		nLen = ::sprintf( pszLine, "%u,%s,%s,%d,%d,%d,%d,%d,%d,%d,%d,%s,%s,%c,%c,%.4f\n"
@@ -992,6 +1005,9 @@ int Quotation::SaveCFF_Static_Tick_Day( enum XDFRunStat eStatus, bool bBuild )
 						//tagStaticLine.OptionType = pData->OptionType;		///< 期权类型：'E'-欧式 'A'-美式
 						//tagStaticLine.CallOrPut = pData->CallOrPut;			///< 认沽认购：'C'认购 'P'认沽
 						//tagStaticLine.ExercisePx = pData->XqPrice / tagParam.dPriceRate;
+						if( pData->SecKind > 0 ) {
+							ServerStatus::GetStatusObj().AnchorSecurity( XDF_CF, tagStaticLine.Code, tagStaticLine.Name );
+						}
 						if( true == PrepareStaticFile( tagStaticLine, oDumper ) )
 						{
 							int		nLen = ::sprintf( pszLine, "%u,%s,%s,%d,%d,%d,%d,%d,%d,%d,%d,%s,%s,%c,%c,%.4f\n"
@@ -1159,6 +1175,9 @@ int Quotation::SaveCFFOPT_Static_Tick_Day( enum XDFRunStat eStatus, bool bBuild 
 						//tagStaticLine.OptionType = pData->OptionType;		///< 期权类型：'E'-欧式 'A'-美式
 						//tagStaticLine.CallOrPut = pData->CallOrPut;			///< 认沽认购：'C'认购 'P'认沽
 						//tagStaticLine.ExercisePx = pData->XqPrice / tagParam.dPriceRate;
+						if( pData->SecKind > 0 ) {
+							ServerStatus::GetStatusObj().AnchorSecurity( XDF_ZJOPT, tagStaticLine.Code, tagStaticLine.Name );
+						}
 						if( true == PrepareStaticFile( tagStaticLine, oDumper ) )
 						{
 							int		nLen = ::sprintf( pszLine, "%u,%s,%s,%d,%d,%d,%d,%d,%d,%d,%d,%s,%s,%c,%c,%.4f\n"
@@ -1330,6 +1349,9 @@ int Quotation::SaveCNF_Static_Tick_Day( enum XDFRunStat eStatus, bool bBuild )
 						//tagStaticLine.OptionType = pData->OptionType;		///< 期权类型：'E'-欧式 'A'-美式
 						//tagStaticLine.CallOrPut = pData->CallOrPut;			///< 认沽认购：'C'认购 'P'认沽
 						//tagStaticLine.ExercisePx = pData->XqPrice / tagParam.dPriceRate;
+						if( pData->SecKind > 0 ) {
+							ServerStatus::GetStatusObj().AnchorSecurity( XDF_CNF, tagStaticLine.Code, tagStaticLine.Name );
+						}
 						if( true == PrepareStaticFile( tagStaticLine, oDumper ) )
 						{
 							int		nLen = ::sprintf( pszLine, "%u,%s,%s,%d,%d,%d,%d,%d,%d,%d,%d,%s,%s,%c,%c,%.4f\n"
@@ -1500,6 +1522,9 @@ int Quotation::SaveCNFOPT_Static_Tick_Day( enum XDFRunStat eStatus, bool bBuild 
 						//tagStaticLine.OptionType = pData->OptionType;		///< 期权类型：'E'-欧式 'A'-美式
 						//tagStaticLine.CallOrPut = pData->CallOrPut;			///< 认沽认购：'C'认购 'P'认沽
 						tagStaticLine.ExercisePx = pData->XqPrice / tagParam.dPriceRate;
+						if( pData->SecKind > 0 ) {
+							ServerStatus::GetStatusObj().AnchorSecurity( XDF_CNFOPT, tagStaticLine.Code, tagStaticLine.Name );
+						}
 						if( true == PrepareStaticFile( tagStaticLine, oDumper ) )
 						{
 							int		nLen = ::sprintf( pszLine, "%u,%s,%s,%d,%d,%d,%d,%d,%d,%d,%d,%s,%s,%c,%c,%.4f\n"
@@ -1804,8 +1829,8 @@ void __stdcall	Quotation::XDF_OnRspRecvData( XDFAPI_PkgHead * pHead, const char 
 					{
 					case 1:///< 市场状态信息
 						{
-							//XDFAPI_MarketStatusInfo* pData = (XDFAPI_MarketStatusInfo*)pbuf;
-							//::printf( "市场日期=%u,时间=%u\n", pData->MarketDate, pData->MarketTime );
+							XDFAPI_MarketStatusInfo* pData = (XDFAPI_MarketStatusInfo*)pbuf;
+							ServerStatus::GetStatusObj().UpdateMkTime( XDF_SH, pData->MarketTime );
 							pbuf += sizeof(XDFAPI_MarketStatusInfo);
 							nLen -= pMsgHead->MsgLen;
 						}
@@ -1859,6 +1884,8 @@ void __stdcall	Quotation::XDF_OnRspRecvData( XDFAPI_PkgHead * pHead, const char 
 					{
 					case 1:///< 市场状态信息
 						{
+							XDFAPI_ShOptMarketStatus* pData = (XDFAPI_ShOptMarketStatus*)pbuf;
+							ServerStatus::GetStatusObj().UpdateMkTime( XDF_SHOPT, pData->MarketTime );
 							pbuf += sizeof(XDFAPI_ShOptMarketStatus);
 							nLen -= pMsgHead->MsgLen;
 						}
@@ -1928,8 +1955,8 @@ void __stdcall	Quotation::XDF_OnRspRecvData( XDFAPI_PkgHead * pHead, const char 
 					{
 					case 1:///< 市场状态信息
 						{
-							//XDFAPI_MarketStatusInfo* pData = (XDFAPI_MarketStatusInfo*)pbuf;
-							//::printf( "市场日期=%u,时间=%u\n", pData->MarketDate, pData->MarketTime );
+							XDFAPI_MarketStatusInfo* pData = (XDFAPI_MarketStatusInfo*)pbuf;
+							ServerStatus::GetStatusObj().UpdateMkTime( XDF_SZ, pData->MarketTime );
 							pbuf += sizeof(XDFAPI_MarketStatusInfo);
 							nLen -= pMsgHead->MsgLen;
 						}
@@ -1983,6 +2010,8 @@ void __stdcall	Quotation::XDF_OnRspRecvData( XDFAPI_PkgHead * pHead, const char 
 					{
 					case 1:///< 市场状态信息
 						{
+							XDFAPI_MarketStatusInfo* pData = (XDFAPI_MarketStatusInfo*)pbuf;
+							ServerStatus::GetStatusObj().UpdateMkTime( XDF_SZOPT, pData->MarketTime );
 							pbuf += sizeof(XDFAPI_MarketStatusInfo);
 							nLen -= pMsgHead->MsgLen;
 						}
@@ -2029,6 +2058,8 @@ void __stdcall	Quotation::XDF_OnRspRecvData( XDFAPI_PkgHead * pHead, const char 
 					{
 					case 1:///< 市场状态信息
 						{
+							XDFAPI_MarketStatusInfo* pData = (XDFAPI_MarketStatusInfo*)pbuf;
+							ServerStatus::GetStatusObj().UpdateMkTime( XDF_CF, pData->MarketTime );
 							pbuf += sizeof(XDFAPI_MarketStatusInfo);
 							nLen -= pMsgHead->MsgLen;
 						}
@@ -2075,6 +2106,8 @@ void __stdcall	Quotation::XDF_OnRspRecvData( XDFAPI_PkgHead * pHead, const char 
 					{
 					case 1:///< 市场状态信息
 						{
+							XDFAPI_MarketStatusInfo* pData = (XDFAPI_MarketStatusInfo*)pbuf;
+							ServerStatus::GetStatusObj().UpdateMkTime( XDF_ZJOPT, pData->MarketTime );
 							pbuf += sizeof(XDFAPI_MarketStatusInfo);
 							nLen -= pMsgHead->MsgLen;
 						}
@@ -2121,6 +2154,8 @@ void __stdcall	Quotation::XDF_OnRspRecvData( XDFAPI_PkgHead * pHead, const char 
 					{
 					case 1:///< 市场状态信息
 						{
+							XDFAPI_MarketStatusInfo* pData = (XDFAPI_MarketStatusInfo*)pbuf;
+							ServerStatus::GetStatusObj().UpdateMkTime( XDF_CNF, pData->MarketTime );
 							pbuf += sizeof(XDFAPI_MarketStatusInfo);
 							nLen -= pMsgHead->MsgLen;
 						}
@@ -2167,6 +2202,8 @@ void __stdcall	Quotation::XDF_OnRspRecvData( XDFAPI_PkgHead * pHead, const char 
 					{
 					case 1:///< 市场状态信息
 						{
+							XDFAPI_MarketStatusInfo* pData = (XDFAPI_MarketStatusInfo*)pbuf;
+							ServerStatus::GetStatusObj().UpdateMkTime( XDF_CNFOPT, pData->MarketTime );
 							pbuf += sizeof(XDFAPI_MarketStatusInfo);
 							nLen -= pMsgHead->MsgLen;
 						}

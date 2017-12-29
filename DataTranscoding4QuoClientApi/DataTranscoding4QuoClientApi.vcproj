@@ -227,6 +227,14 @@
 				>
 			</File>
 			<File
+				RelativePath=".\QuotationSource\SvrStatus.cpp"
+				>
+			</File>
+			<File
+				RelativePath=".\QuotationSource\SvrStatus.h"
+				>
+			</File>
+			<File
 				RelativePath=".\QuotationSource\typedef.h"
 				>
 			</File>

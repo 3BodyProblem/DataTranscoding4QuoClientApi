@@ -2,96 +2,126 @@
 #include <math.h>
 #include <iostream>
 #include <algorithm>
-#include "FileScanner.h"
-#include "WeightFile.h"
-#include "Financial11File.h"
-#include "../Infrastructure/File.h"
+#include "SvrStatus.h"
 #include "../DataTranscoding4QuoClientApi.h"
 
 
-FileScanner::FileScanner()
+ServerStatus::ServerStatus()
+ : m_bWritingTick( false ), m_bWritingMinute( false )
 {
+	::memset( m_vctMarketTime, 0, sizeof(m_vctMarketTime) );
+	::memset( m_vctLastSecurity, 0, sizeof(m_vctLastSecurity) );
 }
 
-FileScanner::~FileScanner()
+ServerStatus& ServerStatus::GetStatusObj()
 {
-	Release();
+	static	ServerStatus	obj;
+
+	return obj;
 }
 
-int FileScanner::Initialize()
+void ServerStatus::AnchorSecurity( enum XDFMarket eMkID, const char* pszCode, const char* pszName )
 {
-	int							nErrCode = 0;
+	unsigned int			nPos = (unsigned int)eMkID;
 
-	QuoCollector::GetCollector()->OnLog( TLV_INFO, "FileScanner::Initialize() : ............ FileScanner Is Activating............" );
-	Release();
-
-	if( (nErrCode = SimpleTask::Activate()) < 0 )
+	if( NULL == pszCode || NULL == pszName || nPos >= 256 )
 	{
-		QuoCollector::GetCollector()->OnLog( TLV_WARN, "FileScanner::Initialize() : failed 2 initialize file scanner obj, errorcode = %d", nErrCode );
-		return -1;
+		return;
 	}
 
-	QuoCollector::GetCollector()->OnLog( TLV_INFO, "FileScanner::Initialize() : ............ FileScanner Activated!.............." );
+	T_SECURITY_STATUS&		refSecurity = m_vctLastSecurity[nPos];
 
-	return 0;
-}
-
-int FileScanner::Release()
-{
-	QuoCollector::GetCollector()->OnLog( TLV_INFO, "FileScanner::Release() : ............ Destroying .............." );
-
-	QuoCollector::GetCollector()->OnLog( TLV_INFO, "FileScanner::Release() : ............ Destroyed! .............." );
-
-	return 0;
-}
-
-int FileScanner::Execute()
-{
-	while( false == SimpleThread::GetGlobalStopFlag() )
+	if( ::strlen( refSecurity.Code ) > 0 )		///< 如果代码已经存在，则不再重复锚定
 	{
-		try
-		{
-			SimpleThread::Sleep( 1000*15 );
-
-			ResaveWeightFile();					///< 解析转存权息文件
-			ResaveFinancialFile();				///< 解析转存财经数据文件
-		}
-		catch( std::exception& err )
-		{
-			QuoCollector::GetCollector()->OnLog( TLV_WARN, "FileScanner::Execute() : an exception occur in Execute() : %s", err.what() );
-		}
-		catch( ... )
-		{
-			QuoCollector::GetCollector()->OnLog( TLV_WARN, "FileScanner::Execute() : unknow exception throwed" );
-		}
+		return;
 	}
 
-	return NULL;
+	::strcpy( refSecurity.Code, pszCode );
+	::strcpy( refSecurity.Name, pszName );
 }
 
-void FileScanner::ResaveFinancialFile()
+void ServerStatus::UpdateSecurity( enum XDFMarket eMkID, const char* pszCode, double dLastPx, double dAmount, unsigned __int64 nVolume )
 {
-	int						nErrCode = 0;			///< 错误码
-	SHL1FinancialDbf		objDbfSHL1;				///< 上海财经数据转存对象
-	SZL1FinancialDbf		objDbfSZL1;				///< 深圳财经数据转存对象
+	unsigned int			nPos = (unsigned int)eMkID;
 
-	if( (nErrCode=objDbfSHL1.Redirect2File()) != 0 )
+	if( NULL == pszCode || nPos >= 256 )
 	{
-		QuoCollector::GetCollector()->OnLog( TLV_WARN, "FileScanner::ResaveFinancialFile() : an error occur while saving financial data for SHL1, errorcode = %d", nErrCode );
+		return;
 	}
 
-	if( (nErrCode=objDbfSZL1.Redirect2File()) != 0 )
+	int						nCodeLen = ::strlen( pszCode );
+	T_SECURITY_STATUS&		refSecurity = m_vctLastSecurity[nPos];
+
+	if( ::memcmp( refSecurity.Code, pszCode, nCodeLen ) == 0 )
 	{
-		QuoCollector::GetCollector()->OnLog( TLV_WARN, "FileScanner::ResaveFinancialFile() : an error occur while saving financial data for SZL1, errorcode = %d", nErrCode );
+		refSecurity.LastPx = dLastPx;
+		refSecurity.Amount = dAmount;
+		refSecurity.Volume = nVolume;
 	}
 }
 
-void FileScanner::ResaveWeightFile()
+T_SECURITY_STATUS& ServerStatus::FetchSecurity( enum XDFMarket eMkID, const char* pszCode )
 {
-	WeightFile				objWeightFiles;			///< 所以市场的权息文件转存对象
+	unsigned int			nPos = (unsigned int)eMkID;
 
-	objWeightFiles.ScanWeightFiles();				///< 开始转存操作
+	if( NULL == pszCode || nPos >= 256 )
+	{
+		return m_vctLastSecurity[255];
+	}
 
+	int						nCodeLen = ::strlen( pszCode );
+	T_SECURITY_STATUS&		refSecurity = m_vctLastSecurity[nPos];
+
+	if( ::memcmp( refSecurity.Code, pszCode, nCodeLen ) == 0 )
+	{
+		return refSecurity;
+	}
+
+	return m_vctLastSecurity[255];
+}
+
+void ServerStatus::UpdateMinuteWritingStatus( bool bStatus )
+{
+	m_bWritingMinute = bStatus;
+}
+
+bool ServerStatus::FetchMinuteWritingStatus()
+{
+	return m_bWritingMinute;
+}
+
+void ServerStatus::UpdateTickWritingStatus( bool bStatus )
+{
+	m_bWritingTick = bStatus;
+}
+
+bool ServerStatus::FetchTickWritingStatus()
+{
+	return m_bWritingTick;
+}
+
+void ServerStatus::UpdateMkTime( enum XDFMarket eMkID, unsigned int nMkTime )
+{
+	unsigned int	nPos = (unsigned int)eMkID;
+
+	if( nPos >= 256 )
+	{
+		return;
+	}
+
+	m_vctMarketTime[nPos] = nMkTime;
+}
+
+unsigned int ServerStatus::FetchMkTime( enum XDFMarket eMkID )
+{
+	unsigned int	nPos = (unsigned int)eMkID;
+
+	if( nPos >= 256 )
+	{
+		return 0;
+	}
+
+	return m_vctMarketTime[nPos];
 }
 
 
