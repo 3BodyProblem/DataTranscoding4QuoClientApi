@@ -74,6 +74,11 @@ public:
 	int							Release();
 
 	/**
+	 * @brief					获取行情插件版本号
+	 */
+	std::string&				QuoteApiVersion();
+
+	/**
 	 * @brief					获取会话状态信息
 	 */
 	WorkStatus&					GetWorkStatus();

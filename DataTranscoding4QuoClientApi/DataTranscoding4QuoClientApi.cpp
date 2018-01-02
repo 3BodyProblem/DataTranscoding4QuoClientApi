@@ -115,9 +115,10 @@ enum E_SS_Status QuoCollector::GetCollectorStatus( char* pszStatusDesc, unsigned
 	if( nFinanDate != 0 && nFinanTime != 0 )	{
 		::sprintf( pszFinancialFileTime, "%d %d", nFinanDate, nFinanTime );
 	}
-	nStrLen = ::sprintf( pszStatusDesc, "模块名=转码机,转码机版本=V%s,运行时间=%s,11库落盘=%s,权息库落盘=%s,Tick落盘:%s,分钟线落盘:%s"
-		, g_sVersion.c_str(), sProgramDuration.c_str(), pszFinancialFileTime, pszWeightFileTime
-		, refSvrStatus.FetchTickWritingStatus()?"写入":"空闲", refSvrStatus.FetchMinuteWritingStatus()?"写入":"空闲" );
+	nStrLen = ::sprintf( pszStatusDesc, "模块名=转码机,转码机版本=V%s,运行时间=%s,资讯落盘时间=%s,权息落盘时间=%s,行情API版本=%s"
+		, g_sVersion.c_str(), sProgramDuration.c_str(), pszFinancialFileTime, pszWeightFileTime, m_oQuotationData.QuoteApiVersion().c_str() );
+
+	///< 各市场信息
 
 	///< 各市场商品行情 & 缓存使用信息
 	T_SECURITY_STATUS&	refSHL1Snap = refSvrStatus.FetchSecurity( XDF_SH );

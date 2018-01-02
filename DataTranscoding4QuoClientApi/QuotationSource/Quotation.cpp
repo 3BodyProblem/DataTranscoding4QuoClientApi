@@ -143,6 +143,11 @@ int Quotation::Release()
 	return 0;
 }
 
+std::string& Quotation::QuoteApiVersion()
+{
+	return m_oQuotPlugin.GetVersion();
+}
+
 __inline bool	PrepareStaticFile( T_STATIC_LINE& refStaticLine, std::ofstream& oDumper )
 {
 	char	pszFilePath[512] = { 0 };
@@ -1828,7 +1833,7 @@ void __stdcall	Quotation::XDF_OnRspRecvData( XDFAPI_PkgHead * pHead, const char 
 					case 1:///< 市场状态信息
 						{
 							XDFAPI_MarketStatusInfo* pData = (XDFAPI_MarketStatusInfo*)pbuf;
-							ServerStatus::GetStatusObj().UpdateMkTime( XDF_SH, pData->MarketTime );
+							ServerStatus::GetStatusObj().UpdateMkTime( XDF_SH, pData->MarketDate, pData->MarketTime );
 							pbuf += sizeof(XDFAPI_MarketStatusInfo);
 							nLen -= pMsgHead->MsgLen;
 						}
@@ -1883,7 +1888,7 @@ void __stdcall	Quotation::XDF_OnRspRecvData( XDFAPI_PkgHead * pHead, const char 
 					case 1:///< 市场状态信息
 						{
 							XDFAPI_ShOptMarketStatus* pData = (XDFAPI_ShOptMarketStatus*)pbuf;
-							ServerStatus::GetStatusObj().UpdateMkTime( XDF_SHOPT, pData->MarketTime );
+							ServerStatus::GetStatusObj().UpdateMkTime( XDF_SHOPT, pData->MarketDate, pData->MarketTime );
 							pbuf += sizeof(XDFAPI_ShOptMarketStatus);
 							nLen -= pMsgHead->MsgLen;
 						}
@@ -1954,7 +1959,7 @@ void __stdcall	Quotation::XDF_OnRspRecvData( XDFAPI_PkgHead * pHead, const char 
 					case 1:///< 市场状态信息
 						{
 							XDFAPI_MarketStatusInfo* pData = (XDFAPI_MarketStatusInfo*)pbuf;
-							ServerStatus::GetStatusObj().UpdateMkTime( XDF_SZ, pData->MarketTime );
+							ServerStatus::GetStatusObj().UpdateMkTime( XDF_SZ, pData->MarketDate, pData->MarketTime );
 							pbuf += sizeof(XDFAPI_MarketStatusInfo);
 							nLen -= pMsgHead->MsgLen;
 						}
@@ -2009,7 +2014,7 @@ void __stdcall	Quotation::XDF_OnRspRecvData( XDFAPI_PkgHead * pHead, const char 
 					case 1:///< 市场状态信息
 						{
 							XDFAPI_MarketStatusInfo* pData = (XDFAPI_MarketStatusInfo*)pbuf;
-							ServerStatus::GetStatusObj().UpdateMkTime( XDF_SZOPT, pData->MarketTime );
+							ServerStatus::GetStatusObj().UpdateMkTime( XDF_SZOPT, pData->MarketDate, pData->MarketTime );
 							pbuf += sizeof(XDFAPI_MarketStatusInfo);
 							nLen -= pMsgHead->MsgLen;
 						}
@@ -2057,7 +2062,7 @@ void __stdcall	Quotation::XDF_OnRspRecvData( XDFAPI_PkgHead * pHead, const char 
 					case 1:///< 市场状态信息
 						{
 							XDFAPI_MarketStatusInfo* pData = (XDFAPI_MarketStatusInfo*)pbuf;
-							ServerStatus::GetStatusObj().UpdateMkTime( XDF_CF, pData->MarketTime );
+							ServerStatus::GetStatusObj().UpdateMkTime( XDF_CF, pData->MarketDate, pData->MarketTime );
 							pbuf += sizeof(XDFAPI_MarketStatusInfo);
 							nLen -= pMsgHead->MsgLen;
 						}
@@ -2105,7 +2110,7 @@ void __stdcall	Quotation::XDF_OnRspRecvData( XDFAPI_PkgHead * pHead, const char 
 					case 1:///< 市场状态信息
 						{
 							XDFAPI_MarketStatusInfo* pData = (XDFAPI_MarketStatusInfo*)pbuf;
-							ServerStatus::GetStatusObj().UpdateMkTime( XDF_ZJOPT, pData->MarketTime );
+							ServerStatus::GetStatusObj().UpdateMkTime( XDF_ZJOPT, pData->MarketDate, pData->MarketTime );
 							pbuf += sizeof(XDFAPI_MarketStatusInfo);
 							nLen -= pMsgHead->MsgLen;
 						}
@@ -2153,7 +2158,7 @@ void __stdcall	Quotation::XDF_OnRspRecvData( XDFAPI_PkgHead * pHead, const char 
 					case 1:///< 市场状态信息
 						{
 							XDFAPI_MarketStatusInfo* pData = (XDFAPI_MarketStatusInfo*)pbuf;
-							ServerStatus::GetStatusObj().UpdateMkTime( XDF_CNF, pData->MarketTime );
+							ServerStatus::GetStatusObj().UpdateMkTime( XDF_CNF, pData->MarketDate, pData->MarketTime );
 							pbuf += sizeof(XDFAPI_MarketStatusInfo);
 							nLen -= pMsgHead->MsgLen;
 						}
@@ -2201,7 +2206,7 @@ void __stdcall	Quotation::XDF_OnRspRecvData( XDFAPI_PkgHead * pHead, const char 
 					case 1:///< 市场状态信息
 						{
 							XDFAPI_MarketStatusInfo* pData = (XDFAPI_MarketStatusInfo*)pbuf;
-							ServerStatus::GetStatusObj().UpdateMkTime( XDF_CNFOPT, pData->MarketTime );
+							ServerStatus::GetStatusObj().UpdateMkTime( XDF_CNFOPT, pData->MarketDate, pData->MarketTime );
 							pbuf += sizeof(XDFAPI_MarketStatusInfo);
 							nLen -= pMsgHead->MsgLen;
 						}

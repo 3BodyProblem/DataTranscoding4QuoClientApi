@@ -331,7 +331,6 @@ void* QuotationData::ThreadDumpMinuteLine( void* pSelf )
 			std::ofstream			oDumper;
 
 			SimpleThread::Sleep( 1000 * 3 );
-			ServerStatus::GetStatusObj().UpdateMinuteWritingStatus( false );
 			while( true )
 			{
 				char			pszLine[1024] = { 0 };
@@ -352,7 +351,6 @@ void* QuotationData::ThreadDumpMinuteLine( void* pSelf )
 					, tagMinuteLine.Date, tagMinuteLine.Time, tagMinuteLine.OpenPx, tagMinuteLine.HighPx, tagMinuteLine.LowPx, tagMinuteLine.ClosePx
 					, tagMinuteLine.SettlePx, tagMinuteLine.Amount, tagMinuteLine.Volume, tagMinuteLine.OpenInterest, tagMinuteLine.NumTrades, tagMinuteLine.Voip );
 				oDumper.write( pszLine, nLen );
-				ServerStatus::GetStatusObj().UpdateMinuteWritingStatus( true );
 			}
 		}
 		catch( std::exception& err )
@@ -462,7 +460,6 @@ void* QuotationData::ThreadDumpTickLine( void* pSelf )
 			std::ofstream			oDumper;
 			STR_TICK_LINE			pszLine = { 0 };
 
-			ServerStatus::GetStatusObj().UpdateTickWritingStatus( false );
 			SimpleThread::Sleep( 1000 * 1 );
 			if( nDumpNumber > 3000 ) {
 				QuoCollector::GetCollector()->OnLog( TLV_INFO, "QuotationData::ThreadDumpTickLine() : (%I64d) dumped... ( Count=%u )", nDumpNumber, nMaxDataNum );
@@ -503,7 +500,6 @@ void* QuotationData::ThreadDumpTickLine( void* pSelf )
 					oDumper.write( pszLine, nLen );
 					pTickLine->Valid = 0;
 					nDumpNumber++;
-					ServerStatus::GetStatusObj().UpdateTickWritingStatus( true );
 				}
 			}
 

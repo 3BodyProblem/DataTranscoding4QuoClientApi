@@ -91,11 +91,17 @@ public:///< 数据采集模块事件定义
 	 */
 	QuotePrimeApi*			GetPrimeApi();
 
+	/**
+	 * @brief				获取行情插件版本号
+	 */
+	std::string&			GetVersion();
+
 private:
 	Dll						m_oDllPlugin;					///< 插件加载类
 	CollectorStatus			m_oCollectorStatus;				///< 数据采集模块的状态
 	QuoteClientApi*			m_pQuoteClientApi;				///< 导出行情源控制类
 	QuotePrimeApi*			m_pQuotePrimeApi;				///< 行情数据查询接口
+	std::string				m_sPluginVersion;				///< 版本号
 };
 
 

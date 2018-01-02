@@ -13,6 +13,11 @@ typedef QuoteClientApi*		(__stdcall *T_Func_CreateQuoteApi)( const char *pszDebu
  */
 typedef QuotePrimeApi *		(__stdcall *T_Func_CreatePrimeApi)();
 
+/**
+ * @brief					获取版本号
+ */
+typedef	const char *		(__stdcall *T_GetDllVersion)( int &nMajorVersion, int &nMinorVersion );
+int	nMajorVersion, nMinorVersion;
 
 CollectorStatus::CollectorStatus()
 : m_eStatus( ET_SS_UNACTIVE ), m_nMarketID( -1 )
@@ -55,6 +60,7 @@ int DataCollector::Initialize( QuoteClientSpi* pIQuotationSpi )
 	int						nErrorCode = 0;
 	T_Func_CreateQuoteApi	pFuncCreateApi = NULL;
 	T_Func_CreatePrimeApi	pFuncCreatePrimeApi = NULL;
+	T_GetDllVersion			pFuncGetDllVersion = NULL;
 	std::string				sModulePath = GetModulePath(NULL) + Configuration::GetConfig().GetDataCollectorPluginPath();
 
 	///< 加载行情源QuoteClientApi.DLL
@@ -79,31 +85,39 @@ int DataCollector::Initialize( QuoteClientSpi* pIQuotationSpi )
 		return -3;
 	}
 
+	pFuncGetDllVersion = (T_GetDllVersion)m_oDllPlugin.GetDllFunction( "GetDllVersion" );
+	if( NULL == pFuncGetDllVersion )
+	{
+		QuoCollector::GetCollector()->OnLog( TLV_ERROR, "DataCollector::Initialize() : invalid GetDllVersion() return (pointer is NULL)" );
+		return -4;
+	}
+
 	///< 创建控制类对象
 	m_pQuoteClientApi = pFuncCreateApi( "" );
 	m_pQuotePrimeApi = pFuncCreatePrimeApi();
+	m_sPluginVersion = pFuncGetDllVersion( nMajorVersion, nMinorVersion );
 	if( NULL == m_pQuoteClientApi )
 	{
 		QuoCollector::GetCollector()->OnLog( TLV_ERROR, "DataCollector::Initialize() : invalid QuoteClientApi* pointer (equal 2 NULL)" );
-		return -4;
+		return -5;
 	}
 
 	if( NULL == m_pQuotePrimeApi )
 	{
 		QuoCollector::GetCollector()->OnLog( TLV_ERROR, "DataCollector::Initialize() : invalid QuotePrimeApi* pointer (equal 2 NULL)" );
-		return -5;
+		return -6;
 	}
 
 	///< 初始化数据源模块
 	if( m_pQuoteClientApi->Init() <= 0 )
 	{
 		QuoCollector::GetCollector()->OnLog( TLV_ERROR, "DataCollector::Initialize() : failed 2 initialize m_pQuoteClientApi->Init()n" );
-		return -6;
+		return -7;
 	}
 
 	///< 注册行情和事件回调接口
 	m_pQuoteClientApi->RegisterSpi( pIQuotationSpi );
-	QuoCollector::GetCollector()->OnLog( TLV_INFO, "DataCollector::Initialize() : data collector plugin is initialized ......" );
+	QuoCollector::GetCollector()->OnLog( TLV_INFO, "DataCollector::Initialize() : data collector plugin is initialized, plugin version [%s] ......", m_sPluginVersion.c_str() );
 
 	return 0;
 }
@@ -120,6 +134,11 @@ void DataCollector::Release()
 	}
 
 	m_oDllPlugin.CloseDll();
+}
+
+std::string& DataCollector::GetVersion()
+{
+	return m_sPluginVersion;
 }
 
 void DataCollector::HaltDataCollector()

@@ -14,6 +14,9 @@
  */
 typedef struct
 {
+	unsigned int			MkDate;					///< 市场日期
+	unsigned int			MkTime;					///< 市场行情时间
+	double					dBufOccupancyRate;		///< 市场缓存占用率
 	char					Code[32];				///< 商品代码
 	char					Name[64];				///< 商品名称
 	double					LastPx;					///< 最新价格
@@ -61,38 +64,14 @@ public:///< 商品状态更新方法
 	 */
 	T_SECURITY_STATUS&		FetchSecurity( enum XDFMarket eMkID );
 
-public:///< 行情写盘状态方法
-	/**
-	 * @brief				更新Tick行情写盘状态
-	 * @param[in]			bStatus					是否在写盘中
-	 */
-	void					UpdateTickWritingStatus( bool bStatus );
-
-	/**
-	 * @brief				获取Tick行情写盘状态
-	 * @return				true					写盘中...
-	 */
-	bool					FetchTickWritingStatus();
-
-	/**
-	 * @brief				更新Minute行情写盘状态
-	 * @param[in]			bStatus					是否在写盘中
-	 */
-	void					UpdateMinuteWritingStatus( bool bStatus );
-
-	/**
-	 * @brief				获取Minute行情写盘状态
-	 * @return				true					写盘中...
-	 */
-	bool					FetchMinuteWritingStatus();
-
 public:///< 市场时间更新方法
 	/**
 	 * @brief				更新市场时间
 	 * @param[in]			eMkID					市场ID
+	 * @param[in]			nMkDate					市场日期
 	 * @param[in]			nMkTime					市场时间
 	 */
-	void					UpdateMkTime( enum XDFMarket eMkID, unsigned int nMkTime );
+	void					UpdateMkTime( enum XDFMarket eMkID, unsigned nMkDate, unsigned int nMkTime );
 
 	/**
 	 * @brief				获取某市场的时间
@@ -100,6 +79,13 @@ public:///< 市场时间更新方法
 	 * @return				返回市场时间
 	 */
 	unsigned int			FetchMkTime( enum XDFMarket eMkID );
+
+	/**
+	 * @brief				获取某市场的日期
+	 * @param[in]			eMkID					市场ID
+	 * @return				返回市场日期
+	 */
+	unsigned int			FetchMkDate( enum XDFMarket eMkID );
 
 public:///< 资讯库和权息文件更新记录
 	/**
@@ -141,15 +127,11 @@ public:///< 各市场的tick缓存占用率存取方法
 	double					FetchMkOccupancyRate( enum XDFMarket eMkID );
 
 protected:
-	bool					m_bWritingTick;					///< TICK是否在落盘中
-	bool					m_bWritingMinute;				///< 分钟线是否在落盘中
-	unsigned int			m_vctMarketTime[256];			///< 各市场的时间表
 	T_SECURITY_STATUS		m_vctLastSecurity[256];			///< 各市场的第一个商品的状态更新表
 	unsigned int			m_nFinancialUpdateDate;			///< 资讯库更新日期
 	unsigned int			m_nFinancialUpdateTime;			///< 资讯库更新时间
 	unsigned int			m_nWeightUpdateDate;			///< 权息库更新日期
 	unsigned int			m_nWeightUpdateTime;			///< 权息库更新时间
-	double					m_vctsBufOccupancyRate[256];	///< 各市场缓存占用率统计
 };
 
 
