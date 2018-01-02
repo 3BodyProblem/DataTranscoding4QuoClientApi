@@ -172,28 +172,28 @@ enum E_SS_Status QuoCollector::GetCollectorStatus( char* pszStatusDesc, unsigned
 	///< 各市场行情信息
 	nStrLen += ::sprintf( pszStatusDesc + nStrLen, ",[行情信息]" );
 	if( refSHL1Snap.Volume > 0 )	{
-		nStrLen += ::sprintf( pszStatusDesc + nStrLen, ",[SHL1 %s],代码=%s,现价=%.4f,金额=%.4f,量=%I64d", refSHL1Snap.Name, refSHL1Snap.Code, refSHL1Snap.LastPx, refSHL1Snap.Amount, refSHL1Snap.Volume );
+		nStrLen += ::sprintf( pszStatusDesc + nStrLen, ",%s[%s]=%.4f,金额=%.4f", refSHL1Snap.Name, refSHL1Snap.Code, refSHL1Snap.LastPx, refSHL1Snap.Amount );
 	}
 	if( refSHOPTSnap.Volume > 0 )	{
-		nStrLen += ::sprintf( pszStatusDesc + nStrLen, ",[SH OPTION %s],代码=%s,现价=%.4f,金额=%.4f,量=%I64d", refSHOPTSnap.Name, refSHOPTSnap.Code, refSHOPTSnap.LastPx, refSHOPTSnap.Amount, refSHOPTSnap.Volume );
+		nStrLen += ::sprintf( pszStatusDesc + nStrLen, ",%s[%s]=%.4f,金额=%.4f", refSHOPTSnap.Name, refSHOPTSnap.Code, refSHOPTSnap.LastPx, refSHOPTSnap.Amount );
 	}
 	if( refSZL1Snap.Volume > 0 )	{
-		nStrLen += ::sprintf( pszStatusDesc + nStrLen, ",[SZL1 %s],代码=%s,现价=%.4f,金额=%.4f,量=%I64d", refSZL1Snap.Name, refSZL1Snap.Code, refSZL1Snap.LastPx, refSZL1Snap.Amount, refSZL1Snap.Volume );
+		nStrLen += ::sprintf( pszStatusDesc + nStrLen, ",%s[%s]=%.4f,金额=%.4f", refSZL1Snap.Name, refSZL1Snap.Code, refSZL1Snap.LastPx, refSZL1Snap.Amount );
 	}
 	if( refSZOPTSnap.Volume > 0 )	{
-		nStrLen += ::sprintf( pszStatusDesc + nStrLen, ",[SZ OPTION %s],代码=%s,现价=%.4f,金额=%.4f,量=%I64d", refSZOPTSnap.Name, refSZOPTSnap.Code, refSZOPTSnap.LastPx, refSZOPTSnap.Amount, refSZOPTSnap.Volume );
+		nStrLen += ::sprintf( pszStatusDesc + nStrLen, ",%s[%s]=%.4f,金额=%.4f", refSZOPTSnap.Name, refSZOPTSnap.Code, refSZOPTSnap.LastPx, refSZOPTSnap.Amount );
 	}
 	if( refSHCFFSnap.Volume > 0 )	{
-		nStrLen += ::sprintf( pszStatusDesc + nStrLen, ",[CFF %s],代码=%s,现价=%.4f,金额=%.4f,量=%I64d", refSHCFFSnap.Name, refSHCFFSnap.Code, refSHCFFSnap.LastPx, refSHCFFSnap.Amount, refSHCFFSnap.Volume );
+		nStrLen += ::sprintf( pszStatusDesc + nStrLen, ",%s[%s]=%.4f,金额=%.4f", refSHCFFSnap.Name, refSHCFFSnap.Code, refSHCFFSnap.LastPx, refSHCFFSnap.Amount );
 	}
 	if( refSHCFFOPTSnap.Volume > 0 )	{
-		nStrLen += ::sprintf( pszStatusDesc + nStrLen, ",[CFF OPTION %s],代码=%s,现价=%.4f,金额=%.4f,量=%I64d", refSHCFFOPTSnap.Name, refSHCFFOPTSnap.Code, refSHCFFOPTSnap.LastPx, refSHCFFOPTSnap.Amount, refSHCFFOPTSnap.Volume );
+		nStrLen += ::sprintf( pszStatusDesc + nStrLen, ",%s[%s]=%.4f,金额=%.4f", refSHCFFOPTSnap.Name, refSHCFFOPTSnap.Code, refSHCFFOPTSnap.LastPx, refSHCFFOPTSnap.Amount );
 	}
 	if( refCNFSnap.Volume > 0 )	{
-		nStrLen += ::sprintf( pszStatusDesc + nStrLen, ",[CNF %s],代码=%s,现价=%.4f,金额=%.4f,量=%I64d", refCNFSnap.Name, refCNFSnap.Code, refCNFSnap.LastPx, refCNFSnap.Amount, refCNFSnap.Volume );
+		nStrLen += ::sprintf( pszStatusDesc + nStrLen, ",%s[%s]=%.4f,金额=%.4f", refCNFSnap.Name, refCNFSnap.Code, refCNFSnap.LastPx, refCNFSnap.Amount );
 	}
 	if( refSHCFFSnap.Volume > 0 )	{
-		nStrLen += ::sprintf( pszStatusDesc + nStrLen, ",[CNF OPTION %s],代码=%s,现价=%.4f,金额=%.4f,量=%I64d", refCNFOPTSnap.Name, refCNFOPTSnap.Code, refCNFOPTSnap.LastPx, refCNFOPTSnap.Amount, refCNFOPTSnap.Volume );
+		nStrLen += ::sprintf( pszStatusDesc + nStrLen, ",%s[%s]=%.4f,金额=%.4f", refCNFOPTSnap.Name, refCNFOPTSnap.Code, refCNFOPTSnap.LastPx, refCNFOPTSnap.Amount );
 	}
 
 	return refStatus;
