@@ -1618,18 +1618,28 @@ bool __stdcall	Quotation::XDF_OnRspStatusChanged( unsigned char cMarket, int nSt
 	switch( nStatus )
 	{
 	case 0:
-		::strcpy( pszDesc, "不可用" );
+		{
+			::strcpy( pszDesc, "不可用" );
+			ServerStatus::GetStatusObj().UpdateMkStatus( (enum XDFMarket)cMarket, pszDesc );
+		}
 		break;
 	case 1:
-		::strcpy( pszDesc, "未知状态" );
+		{
+			::strcpy( pszDesc, "未知状态" );
+			ServerStatus::GetStatusObj().UpdateMkStatus( (enum XDFMarket)cMarket, pszDesc );
+		}
 		break;
 	case 2:
-		::strcpy( pszDesc, "初始化" );
+		{
+			::strcpy( pszDesc, "初始化" );
+			ServerStatus::GetStatusObj().UpdateMkStatus( (enum XDFMarket)cMarket, pszDesc );
+		}
 		break;
 	case 5:
 		{
-			::strcpy( pszDesc, "可服务" );
 			bNormalStatus = true;
+			::strcpy( pszDesc, "可服务" );
+			ServerStatus::GetStatusObj().UpdateMkStatus( (enum XDFMarket)cMarket, "行情中" );
 		}
 		break;
 	default:
@@ -1733,6 +1743,7 @@ void Quotation::FlushDayLineOnCloseTime()
 				refCfg.LastDate = nDate;
 				QuoCollector::GetCollector()->OnLog( TLV_INFO, "Quotation::FlushDayLineOnCloseTime() : Fetching Closing Prices : Market(%d), Status=%d, CloseTime=%d", nMkID, nMkStatus, refCfg.CloseTime );	
 
+				ServerStatus::GetStatusObj().UpdateMkStatus( (enum XDFMarket)nMkID, "收盘中" );
 				switch( (enum XDFMarket)nMkID )
 				{
 				case XDF_SH:		///< 上证L1
@@ -1766,6 +1777,11 @@ void Quotation::FlushDayLineOnCloseTime()
 				default:
 					break;
 				}
+			}
+
+			if( nNowT >= refCfg.CloseTime )
+			{
+				ServerStatus::GetStatusObj().UpdateMkStatus( (enum XDFMarket)nMkID, "收盘后" );
 			}
 		}
 	}

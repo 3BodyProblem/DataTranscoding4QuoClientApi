@@ -115,12 +115,10 @@ enum E_SS_Status QuoCollector::GetCollectorStatus( char* pszStatusDesc, unsigned
 	if( nFinanDate != 0 && nFinanTime != 0 )	{
 		::sprintf( pszFinancialFileTime, "%d %d", nFinanDate, nFinanTime );
 	}
-	nStrLen = ::sprintf( pszStatusDesc, "模块名=转码机,转码机版本=V%s,运行时间=%s,资讯落盘时间=%s,权息落盘时间=%s,行情API版本=%s"
+	nStrLen = ::sprintf( pszStatusDesc, "模块名=转码机,转码机版本=V%s,运行时间=%s,资讯落盘时间=%s,权息落盘时间=%s,行情API版本=%s,[市场信息]"
 		, g_sVersion.c_str(), sProgramDuration.c_str(), pszFinancialFileTime, pszWeightFileTime, m_oQuotationData.QuoteApiVersion().c_str() );
 
 	///< 各市场信息
-
-	///< 各市场商品行情 & 缓存使用信息
 	T_SECURITY_STATUS&	refSHL1Snap = refSvrStatus.FetchSecurity( XDF_SH );
 	T_SECURITY_STATUS&	refSHOPTSnap = refSvrStatus.FetchSecurity( XDF_SHOPT );
 	T_SECURITY_STATUS&	refSZL1Snap = refSvrStatus.FetchSecurity( XDF_SZ );
@@ -138,6 +136,41 @@ enum E_SS_Status QuoCollector::GetCollectorStatus( char* pszStatusDesc, unsigned
 	double				dCNFRate = refSvrStatus.FetchMkOccupancyRate( XDF_CNF );
 	double				dCNFOPTRate = refSvrStatus.FetchMkOccupancyRate( XDF_CNFOPT );
 
+	if( refSvrStatus.FetchMkDate( XDF_SH ) > 0 )	{
+		nStrLen += ::sprintf( pszStatusDesc + nStrLen, ",上海L1日期=%u,行情时间=%u,行情状态=%s,缓存应用率=%0.3f"
+			, refSvrStatus.FetchMkDate( XDF_SH ), refSvrStatus.FetchMkTime( XDF_SH ), refSvrStatus.GetMkStatus(XDF_SH), dSHL1Rate );
+	}
+	if( refSvrStatus.FetchMkDate( XDF_SHOPT ) > 0 )	{
+		nStrLen += ::sprintf( pszStatusDesc + nStrLen, ",上海期权日期=%u,行情时间=%u,行情状态=%s,缓存应用率=%0.3f"
+			, refSvrStatus.FetchMkDate( XDF_SHOPT ), refSvrStatus.FetchMkTime( XDF_SHOPT ), refSvrStatus.GetMkStatus(XDF_SHOPT), dSHOPTRate );
+	}
+	if( refSvrStatus.FetchMkDate( XDF_SZ ) > 0 )	{
+		nStrLen += ::sprintf( pszStatusDesc + nStrLen, ",深圳L1日期=%u,行情时间=%u,行情状态=%s,缓存应用率=%0.3f"
+			, refSvrStatus.FetchMkDate( XDF_SZ ), refSvrStatus.FetchMkTime( XDF_SZ ), refSvrStatus.GetMkStatus(XDF_SZ), dSZL1Rate );
+	}
+	if( refSvrStatus.FetchMkDate( XDF_SZOPT ) > 0 )	{
+		nStrLen += ::sprintf( pszStatusDesc + nStrLen, ",深圳期权日期=%u,行情时间=%u,行情状态=%s,缓存应用率=%0.3f"
+			, refSvrStatus.FetchMkDate( XDF_SZOPT ), refSvrStatus.FetchMkTime( XDF_SZOPT ), refSvrStatus.GetMkStatus(XDF_SZOPT), dSZOPTRate );
+	}
+	if( refSvrStatus.FetchMkDate( XDF_CF ) > 0 )	{
+		nStrLen += ::sprintf( pszStatusDesc + nStrLen, ",中金期货日期=%u,行情时间=%u,行情状态=%s,缓存应用率=%0.3f"
+			, refSvrStatus.FetchMkDate( XDF_CF ), refSvrStatus.FetchMkTime( XDF_CF ), refSvrStatus.GetMkStatus(XDF_CF), dCFFRate );
+	}
+	if( refSvrStatus.FetchMkDate( XDF_ZJOPT ) > 0 )	{
+		nStrLen += ::sprintf( pszStatusDesc + nStrLen, ",中金期权日期=%u,行情时间=%u,行情状态=%s,缓存应用率=%0.3f"
+			, refSvrStatus.FetchMkDate( XDF_ZJOPT ), refSvrStatus.FetchMkTime( XDF_ZJOPT ), refSvrStatus.GetMkStatus(XDF_ZJOPT), dCFFOPTRate );
+	}
+	if( refSvrStatus.FetchMkDate( XDF_CNF ) > 0 )	{
+		nStrLen += ::sprintf( pszStatusDesc + nStrLen, ",商品期货日期=%u,行情时间=%u,行情状态=%s,缓存应用率=%0.3f"
+			, refSvrStatus.FetchMkDate( XDF_CNF ), refSvrStatus.FetchMkTime( XDF_CNF ), refSvrStatus.GetMkStatus(XDF_CNF), dCNFRate );
+	}
+	if( refSvrStatus.FetchMkDate( XDF_CNFOPT ) > 0 )	{
+		nStrLen += ::sprintf( pszStatusDesc + nStrLen, ",商品期权日期=%u,行情时间=%u,行情状态=%s,缓存应用率=%0.3f"
+			, refSvrStatus.FetchMkDate( XDF_CNFOPT ), refSvrStatus.FetchMkTime( XDF_CNFOPT ), refSvrStatus.GetMkStatus(XDF_CNFOPT), dCNFOPTRate );
+	}
+
+	///< 各市场行情信息
+	nStrLen += ::sprintf( pszStatusDesc + nStrLen, ",[行情信息]" );
 	if( refSHL1Snap.Volume > 0 )	{
 		nStrLen += ::sprintf( pszStatusDesc + nStrLen, ",[SHL1 %s],代码=%s,现价=%.4f,金额=%.4f,量=%I64d", refSHL1Snap.Name, refSHL1Snap.Code, refSHL1Snap.LastPx, refSHL1Snap.Amount, refSHL1Snap.Volume );
 	}
@@ -161,31 +194,6 @@ enum E_SS_Status QuoCollector::GetCollectorStatus( char* pszStatusDesc, unsigned
 	}
 	if( refSHCFFSnap.Volume > 0 )	{
 		nStrLen += ::sprintf( pszStatusDesc + nStrLen, ",[CNF OPTION %s],代码=%s,现价=%.4f,金额=%.4f,量=%I64d", refCNFOPTSnap.Name, refCNFOPTSnap.Code, refCNFOPTSnap.LastPx, refCNFOPTSnap.Amount, refCNFOPTSnap.Volume );
-	}
-
-	if( dSHL1Rate >= 0 )	{
-		nStrLen += ::sprintf( pszStatusDesc + nStrLen, ",[SHL1],缓存占用率=%.4f", dSHL1Rate );
-	}
-	if( dSHOPTRate >= 0 )	{
-		nStrLen += ::sprintf( pszStatusDesc + nStrLen, ",[SH OPTION],缓存占用率=%.4f", dSHOPTRate );
-	}
-	if( dSZL1Rate >= 0 )	{
-		nStrLen += ::sprintf( pszStatusDesc + nStrLen, ",[SZL1],缓存占用率=%.4f", dSZL1Rate );
-	}
-	if( dSZOPTRate >= 0 )	{
-		nStrLen += ::sprintf( pszStatusDesc + nStrLen, ",[SZ OPTION],缓存占用率=%.4f", dSZOPTRate );
-	}
-	if( dCFFRate >= 0 )	{
-		nStrLen += ::sprintf( pszStatusDesc + nStrLen, ",[CFF],缓存占用率=%.4f", dCFFRate );
-	}
-	if( dCFFOPTRate >= 0 )	{
-		nStrLen += ::sprintf( pszStatusDesc + nStrLen, ",[CFF OPTION],缓存占用率=%.4f", dCFFOPTRate );
-	}
-	if( dCNFRate >= 0 )	{
-		nStrLen += ::sprintf( pszStatusDesc + nStrLen, ",[CNF],缓存占用率=%.4f", dCNFRate );
-	}
-	if( dCNFOPTRate >= 0 )	{
-		nStrLen += ::sprintf( pszStatusDesc + nStrLen, ",[CNF OPTION],缓存占用率=%.4f", dCNFOPTRate );
 	}
 
 	return refStatus;

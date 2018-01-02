@@ -16,7 +16,8 @@ typedef struct
 {
 	unsigned int			MkDate;					///< 市场日期
 	unsigned int			MkTime;					///< 市场行情时间
-	double					dBufOccupancyRate;		///< 市场缓存占用率
+	double					MkBufOccupancyRate;		///< 市场缓存占用率
+	char					MkStatusDesc[32];		///< 市场状态描述串
 	char					Code[32];				///< 商品代码
 	char					Name[64];				///< 商品名称
 	double					LastPx;					///< 最新价格
@@ -125,6 +126,20 @@ public:///< 各市场的tick缓存占用率存取方法
 	 * @param[in]			eMkID					市场ID
 	 */
 	double					FetchMkOccupancyRate( enum XDFMarket eMkID );
+
+public:///< 各市场的状态
+	/**
+	 * @brief				获取各市场缓存占用率
+	 * @param[in]			eMkID					市场ID
+	 * @param[in]			pszDesc					市场状态描述串
+	 */
+	void					UpdateMkStatus( enum XDFMarket eMkID, const char* pszDesc );
+
+	/**
+	 * @brief				获取市场行情状态描述串
+	 * @param[in]			eMkID					市场ID
+	 */
+	const char*				GetMkStatus( enum XDFMarket eMkID );
 
 protected:
 	T_SECURITY_STATUS		m_vctLastSecurity[256];			///< 各市场的第一个商品的状态更新表

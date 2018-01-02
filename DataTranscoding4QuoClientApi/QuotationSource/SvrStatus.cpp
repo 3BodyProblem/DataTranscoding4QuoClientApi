@@ -142,7 +142,7 @@ void ServerStatus::UpdateMkOccupancyRate( enum XDFMarket eMkID, double dRate )
 		return;
 	}
 
-	m_vctLastSecurity[nPos].dBufOccupancyRate = dRate;
+	m_vctLastSecurity[nPos].MkBufOccupancyRate = dRate;
 }
 
 double ServerStatus::FetchMkOccupancyRate( enum XDFMarket eMkID )
@@ -151,11 +151,36 @@ double ServerStatus::FetchMkOccupancyRate( enum XDFMarket eMkID )
 
 	if( nPos >= 256 )
 	{
-		return m_vctLastSecurity[255].dBufOccupancyRate;
+		return m_vctLastSecurity[255].MkBufOccupancyRate;
 	}
 
-	return m_vctLastSecurity[nPos].dBufOccupancyRate;
+	return m_vctLastSecurity[nPos].MkBufOccupancyRate;
 }
+
+void ServerStatus::UpdateMkStatus( enum XDFMarket eMkID, const char* pszDesc )
+{
+	unsigned int	nPos = (unsigned int)eMkID;
+
+	if( nPos >= 256 )
+	{
+		return;
+	}
+
+	::strcpy( m_vctLastSecurity[nPos].MkStatusDesc, pszDesc );
+}
+
+const char* ServerStatus::GetMkStatus( enum XDFMarket eMkID )
+{
+	unsigned int	nPos = (unsigned int)eMkID;
+
+	if( nPos >= 256 )
+	{
+		return m_vctLastSecurity[255].MkStatusDesc;
+	}
+
+	return m_vctLastSecurity[nPos].MkStatusDesc;
+}
+
 
 
 
