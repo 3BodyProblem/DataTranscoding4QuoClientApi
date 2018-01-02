@@ -5,6 +5,7 @@
 #include "../../DataNode/DataNode/Interface.h"
 #include "Configuration.h"
 #include "Infrastructure/Lock.h"
+#include "Infrastructure/DateTime.h"
 #include "QuotationSource/Quotation.h"
 #include "QuotationSource/FileScanner.h"
 
@@ -88,6 +89,7 @@ public:
 	enum E_SS_Status			GetCollectorStatus( char* pszStatusDesc, unsigned int& nStrLen );
 
 protected:
+	DateTime					m_oStartTime;				///< 记录初始化的时间
 	I_DataHandle*				m_pCbDataHandle;			///< 数据(行情/日志回调接口)
 	Quotation					m_oQuotationData;			///< 实时行情数据会话对象
 	FileScanner					m_oFileScanner;				///< 数据源文件扫描转存对象

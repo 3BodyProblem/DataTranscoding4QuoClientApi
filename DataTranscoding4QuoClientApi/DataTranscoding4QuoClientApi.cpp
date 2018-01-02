@@ -48,6 +48,8 @@ int QuoCollector::Initialize( I_DataHandle* pIDataHandle )
 		return -3;
 	}
 
+	m_oStartTime.SetCurDateTime();
+
 	return 0;
 }
 
@@ -95,18 +97,26 @@ enum E_SS_Status QuoCollector::GetCollectorStatus( char* pszStatusDesc, unsigned
 {
 	Configuration&		refCnf = Configuration::GetConfig();
 	WorkStatus&			refStatus = m_oQuotationData.GetWorkStatus();
-	std::string&		sStatus = WorkStatus::CastStatusStr( (enum E_SS_Status)refStatus );
 	ServerStatus&		refSvrStatus = ServerStatus::GetStatusObj();
+	std::string&		sProgramDuration = m_oStartTime.GetDurationString();
 	unsigned int		nFinanDate = 0;
 	unsigned int		nFinanTime = 0;
 	unsigned int		nWeightDate = 0;
 	unsigned int		nWeightTime = 0;
+	char				pszWeightFileTime[64] = { 0 };
+	char				pszFinancialFileTime[64] = { 0 };
 
 	///< 模块基础信息
 	refSvrStatus.GetFinancialUpdateDT( nFinanDate, nFinanTime );
 	refSvrStatus.GetWeightUpdateDT( nWeightDate, nWeightTime );
-	nStrLen = ::sprintf( pszStatusDesc, "模块名=转码机,Version=%s,落盘路径=%s,连接状态=%s,11库落盘=%u %u,权息库落盘=%u %u,Tick落盘:%s,分钟线落盘:%s"
-		, g_sVersion.c_str(), refCnf.GetDumpFolder().c_str(), sStatus.c_str(), nFinanDate, nFinanTime, nWeightDate, nWeightTime
+	if( nWeightDate != 0 && nWeightTime != 0 )	{
+		::sprintf( pszWeightFileTime, "%d %d", nWeightDate, nWeightTime );
+	}
+	if( nFinanDate != 0 && nFinanTime != 0 )	{
+		::sprintf( pszFinancialFileTime, "%d %d", nFinanDate, nFinanTime );
+	}
+	nStrLen = ::sprintf( pszStatusDesc, "模块名=转码机,转码机版本=V%s,运行时间=%s,11库落盘=%s,权息库落盘=%s,Tick落盘:%s,分钟线落盘:%s"
+		, g_sVersion.c_str(), sProgramDuration.c_str(), pszFinancialFileTime, pszWeightFileTime
 		, refSvrStatus.FetchTickWritingStatus()?"写入":"空闲", refSvrStatus.FetchMinuteWritingStatus()?"写入":"空闲" );
 
 	///< 各市场商品行情 & 缓存使用信息
