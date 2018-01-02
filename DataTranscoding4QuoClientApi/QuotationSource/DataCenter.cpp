@@ -10,17 +10,17 @@
 
 
 ///< -------------------- Configuration ------------------------------------------------
-const int	XDF_SH_COUNT = 16000;					///< 上海Lv1
-const int	XDF_SHL2_COUNT = 0;						///< 上海Lv2(QuoteClientApi内部屏蔽)
-const int	XDF_SHOPT_COUNT = 500;					///< 上海期权
-const int	XDF_SZ_COUNT = 8000;					///< 深证Lv1
-const int	XDF_SZL2_COUNT = 0;						///< 深证Lv2(QuoteClientApi内部屏蔽)
-const int	XDF_SZOPT_COUNT = 0;					///< 深圳期权
-const int	XDF_CF_COUNT = 500;					///< 中金期货
-const int	XDF_ZJOPT_COUNT = 500;					///< 中金期权
-const int	XDF_CNF_COUNT = 500;					///< 商品期货(上海/郑州/大连)
-const int	XDF_CNFOPT_COUNT = 500;				///< 商品期权(上海/郑州/大连)
-static unsigned int	s_nNumberInSection = 60;		///< 一个市场有可以缓存多少个数据块
+const int		XDF_SH_COUNT = 16000;					///< 上海Lv1
+const int		XDF_SHL2_COUNT = 0;						///< 上海Lv2(QuoteClientApi内部屏蔽)
+const int		XDF_SHOPT_COUNT = 500;					///< 上海期权
+const int		XDF_SZ_COUNT = 8000;					///< 深证Lv1
+const int		XDF_SZL2_COUNT = 0;						///< 深证Lv2(QuoteClientApi内部屏蔽)
+const int		XDF_SZOPT_COUNT = 0;					///< 深圳期权
+const int		XDF_CF_COUNT = 500;						///< 中金期货
+const int		XDF_ZJOPT_COUNT = 500;					///< 中金期权
+const int		XDF_CNF_COUNT = 500;					///< 商品期货(上海/郑州/大连)
+const int		XDF_CNFOPT_COUNT = 500;					///< 商品期权(上海/郑州/大连)
+unsigned int	s_nNumberInSection = 60;				///< 一个市场有可以缓存多少个数据块
 ///< -----------------------------------------------------------------------------------
 
 

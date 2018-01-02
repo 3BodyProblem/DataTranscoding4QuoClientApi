@@ -4,11 +4,38 @@
 #include <map>
 #include <vector>
 #include <string>
+#include <fstream>
 #include "Infrastructure/Lock.h"
+#include "Infrastructure/IniFile.h"
 
 
 extern	HMODULE					g_oModule;							///< 当前dll模块变量
 extern	std::string				GetModulePath( void* hModule );		///< 获取当前模块路径
+
+
+/**
+ * @class						MkCfgWriter
+ * @brief						市场配置写入类
+ * @author						barry
+ */
+class MkCfgWriter
+{
+public:
+	MkCfgWriter( std::string sSubFolder );
+
+	/**
+	 * @brief					更新新连接配置到指定的市场行情配置文件中
+	 * @param[in]				nIndication							配置项指向标识号
+	 * @param[in]				sIP									行情地址
+	 * @param[in]				nPort								行情端口
+	 * @param[in]				sAccountID							用户帐号
+	 * @param[in]				sPswd								用户密码
+	 */
+	virtual bool				ConfigurateConnection4Mk( unsigned int nIndication, std::string sIP, unsigned short nPort, std::string sAccountID, std::string sPswd );
+
+protected:
+	std::string					m_sCfgFolder;						///< 市场驱动所在目录路径
+};
 
 
 /**
@@ -18,13 +45,13 @@ extern	std::string				GetModulePath( void* hModule );		///< 获取当前模块路径
  */
 typedef struct
 {
-	unsigned int				LastDate;				///< 最后落盘日期
-	unsigned int				CloseTime;				///< 收盘时间
+	unsigned int						LastDate;					///< 最后落盘日期
+	unsigned int						CloseTime;					///< 收盘时间
 } CLOSE_CFG;
 
 
-typedef std::vector<CLOSE_CFG>	TB_MK_CLOSECFG;			///< 市场收盘配置表
-typedef std::map<short,TB_MK_CLOSECFG>	MAP_MK_CLOSECFG;///< 各市场收盘配置
+typedef std::vector<CLOSE_CFG>			TB_MK_CLOSECFG;				///< 市场收盘配置表
+typedef std::map<short,TB_MK_CLOSECFG>	MAP_MK_CLOSECFG;			///< 各市场收盘配置
 
 
 /**
@@ -63,27 +90,6 @@ public:
 	const std::string&			GetDataCollectorPluginPath() const;
 
 	/**
-	 * @brief					是否为播放模式
-	 * @return					true				行情自动播放模式
-	 */
-	bool						IsBroadcastModel() const;
-
-	/**
-	 * @brief					获取请求文件的路径
-	 */
-	std::string					GetTradeFilePath() const;
-
-	/**
-	 * @brief					获取行情文件的路径
-	 */
-	std::string					GetQuotationFilePath() const;
-
-	/**
-	 * @brief					获取正常速度播放的开始时间
-	 */
-	unsigned int				GetBroadcastBeginTime() const;
-
-	/**
 	 * @brief					获取市场收盘信息配置
 	 */
 	MAP_MK_CLOSECFG&			GetMkCloseCfg();
@@ -98,16 +104,22 @@ public:
 	 */
 	std::string					GetWeightFileFolder() const;
 
+protected:
+	/**
+	 * @brief					解析各市场的行情配置并转存到对应目录中
+	 * @param[in]				refIniFile					配置文件
+	 */
+	void						ParseAndSaveMkConfig( inifile::IniFile& refIniFile );
+
+protected:
+	std::vector<std::string>	m_vctMkNameCfg;				///< 市场名称列表
+
 private:
-	std::string					m_sQuoPluginPath;			///< 行情插件路径
-	std::string					m_sDumpFileFolder;			///< 快照落盘路径(需要有文件名)
-	bool						m_bBroadcastModel;			///< 数据自动播放模式
-	std::string					m_sBcTradeFile;				///< 播放的请求文件路径
-	std::string					m_sBcQuotationFile;			///< 播放的实时文件路径
-	unsigned int				m_nBcBeginTime;				///< 正常速度的播放时间
-	MAP_MK_CLOSECFG				m_mapMkCloseCfg;			///< 市场收盘时间配置
 	std::string					m_sFinancialFolder;			///< 财经文件路径
 	std::string					m_sWeightFolder;			///< 权息文件路径
+	std::string					m_sQuoPluginPath;			///< 行情插件路径
+	std::string					m_sDumpFileFolder;			///< 快照落盘路径(需要有文件名)
+	MAP_MK_CLOSECFG				m_mapMkCloseCfg;			///< 市场收盘时间配置
 };
 
 

@@ -1,7 +1,6 @@
 #include <string>
 #include <algorithm>
 #include "Configuration.h"
-#include "Infrastructure/IniFile.h"
 #include "DataTranscoding4QuoClientApi.h"
 
 
@@ -58,9 +57,100 @@ std::string GetModulePath( void* hModule )
 HMODULE						g_oModule;
 
 
-Configuration::Configuration()
- : m_bBroadcastModel( false ), m_nBcBeginTime( 0 )
+MkCfgWriter::MkCfgWriter( std::string sSubFolder )
+ : m_sCfgFolder( sSubFolder )
 {
+}
+
+bool MkCfgWriter::ConfigurateConnection4Mk( unsigned int nIndication, std::string sIP, unsigned short nPort, std::string sAccountID, std::string sPswd )
+{
+	inifile::IniFile		oIniFile;
+	std::string				sPath = "./";
+	char					pszKey[64] = { 0 };
+	char					pszPort[64] = { 0 };
+
+	::sprintf( pszPort, "%u", nPort );
+	///< 打开某个市场的配置文件
+	if( "cff_setting" == m_sCfgFolder )	{					///< 中金期货
+		sPath += "cff/tran2ndcff.ini";
+	}
+	else if( "cffopt_setting" == m_sCfgFolder )	{			///< 中金期权
+		sPath += "cffopt/tran2ndcffopt.ini";
+	}
+	else if( "cnf_setting" == m_sCfgFolder )	{			///< 商品期货
+		sPath += "cnf/tran2ndcnf.ini";
+	}
+	else if( "cnfopt_setting" == m_sCfgFolder )	{			///< 商品期权
+		sPath += "cnfopt/tran2ndcnfopt.ini";
+	}
+	else if( "sh_setting" == m_sCfgFolder )	{				///< 上海现货
+		sPath += "sh/tran2ndsh.ini";
+	}
+	else if( "shopt_setting" == m_sCfgFolder )	{			///< 上海期权
+		sPath += "shopt/tran2ndshopt.ini";
+	}
+	else if( "sz_setting" == m_sCfgFolder )	{				///< 深圳现货
+		sPath += "sz/tran2ndsz.ini";
+	}
+	else if( "szopt_setting" == m_sCfgFolder )	{			///< 深圳期权
+		sPath += "szopt/tran2ndszopt.ini";
+	}
+	else	{
+		QuoCollector::GetCollector()->OnLog( TLV_ERROR, "MkCfgWriter::ConfigurateConnection4Mk() : invalid market subfolder name : %s", m_sCfgFolder.c_str() );
+		return false;
+	}
+
+	///< 判断参数是否有效
+	if( sIP == "" || nPort == 0 || sAccountID == "" || sPswd == "" )	{
+		QuoCollector::GetCollector()->OnLog( TLV_WARN
+											, "MkCfgWriter::ConfigurateConnection4Mk() : invalid market paramenters [%s:%u], ip:%s port:%u account:%s pswd:%s"
+											, m_sCfgFolder.c_str(), nIndication, sIP.c_str(), nPort, sAccountID.c_str(), sPswd.c_str() );
+		return true;
+	}
+
+	///< 加载文件 & 判断文件是否存在
+	if( 0 != oIniFile.load( sPath.c_str() ) )	{
+		QuoCollector::GetCollector()->OnLog( TLV_ERROR, "MkCfgWriter::ConfigurateConnection4Mk() : invalid Mk configuration path = %s", sPath.c_str() );
+		return false;
+	}
+
+	///< 写入配置信息到目标文件中
+	::sprintf( pszKey, "ServerIP_%u", nIndication );
+	if( 0 != oIniFile.setValue( std::string("Communication"), std::string(pszKey), sIP ) )	{
+		QuoCollector::GetCollector()->OnLog( TLV_ERROR, "MkCfgWriter::ConfigurateConnection4Mk() : cannot save ip [%s]", pszKey );
+		return false;
+	}
+
+	::sprintf( pszKey, "ServerPort_%u", nIndication );
+	if( 0 != oIniFile.setValue( std::string("Communication"), std::string(pszKey), std::string(pszPort) ) )	{
+		QuoCollector::GetCollector()->OnLog( TLV_ERROR, "MkCfgWriter::ConfigurateConnection4Mk() : cannot save port [%s]", pszKey );
+		return false;
+	}
+
+	::sprintf( pszKey, "LoginName_%u", nIndication );
+	if( 0 != oIniFile.setValue( std::string("Communication"), std::string(pszKey), sAccountID ) )	{
+		QuoCollector::GetCollector()->OnLog( TLV_ERROR, "MkCfgWriter::ConfigurateConnection4Mk() : cannot save account [%s]", pszKey );
+		return false;
+	}
+
+	::sprintf( pszKey, "LoginPWD_%u", nIndication );
+	if( 0 != oIniFile.setValue( std::string("Communication"), std::string(pszKey), sPswd ) )	{
+		QuoCollector::GetCollector()->OnLog( TLV_ERROR, "MkCfgWriter::ConfigurateConnection4Mk() : cannot save password [%s]", pszKey );
+		return false;
+	}
+
+	if( 0 != oIniFile.save() )	{
+		QuoCollector::GetCollector()->OnLog( TLV_ERROR, "MkCfgWriter::ConfigurateConnection4Mk() : cannot save Mk configuration, path = %s", sPath.c_str() );
+		return false;
+	}
+
+	return true;
+}
+
+
+Configuration::Configuration()
+{
+	///< 配置各市场的收盘时间
 	CLOSE_CFG		objDefaultCfg = { 0, 160100 };
 
 	m_mapMkCloseCfg[XDF_SH].push_back( objDefaultCfg );
@@ -73,6 +163,16 @@ Configuration::Configuration()
 	m_mapMkCloseCfg[XDF_ZJOPT].push_back( objDefaultCfg );
 	m_mapMkCloseCfg[XDF_CNF].push_back( objDefaultCfg );
 	m_mapMkCloseCfg[XDF_CNFOPT].push_back( objDefaultCfg );
+
+	///< 配置各市场的传输驱动所在目录名称
+	m_vctMkNameCfg.push_back( "cff_setting" );
+	m_vctMkNameCfg.push_back( "cffopt_setting" );
+	m_vctMkNameCfg.push_back( "cnf_setting" );
+	m_vctMkNameCfg.push_back( "cnfopt_setting" );
+	m_vctMkNameCfg.push_back( "sh_setting" );
+	m_vctMkNameCfg.push_back( "shopt_setting" );
+	m_vctMkNameCfg.push_back( "sz_setting" );
+	m_vctMkNameCfg.push_back( "szopt_setting" );
 }
 
 Configuration& Configuration::GetConfig()
@@ -110,34 +210,14 @@ int Configuration::Initialize()
 		QuoCollector::GetCollector()->OnLog( TLV_WARN, "Configuration::Initialize() : default quotation plugin path: %s", m_sQuoPluginPath.c_str() );
 	}
 
-	std::string	sBroadCastModel = oIniFile.getStringValue( std::string("SRV"), std::string("BroadcastModel"), nErrCode );
-	if( 0 == nErrCode )	{
-		if( sBroadCastModel == "1" )
-		{
-			m_bBroadcastModel = true;
-			QuoCollector::GetCollector()->OnLog( TLV_WARN, "Configuration::Initialize() : ... Enter [Broadcase Model] ... !!! " );
-		}
+	///< 每个市场的缓存中，可以缓存的tick数据的数量
+	int	nNum4OneMarket = oIniFile.getIntValue( std::string("SRV"), std::string("ItemCountInBuffer"), nErrCode );
+	if( nNum4OneMarket > 0 )	{
+		s_nNumberInSection = nNum4OneMarket;
 	}
+	QuoCollector::GetCollector()->OnLog( TLV_INFO, "Configuration::Initialize() : Setting Item Number ( = %d) In One Market Buffer ...", s_nNumberInSection );
 
-	if( true == m_bBroadcastModel )
-	{
-		m_sBcTradeFile = oIniFile.getStringValue( std::string("SRV"), std::string("BroadcastTradeFile"), nErrCode );
-		if( 0 != nErrCode )	{
-			QuoCollector::GetCollector()->OnLog( TLV_WARN, "Configuration::Initialize() : invalid broadcast (trade) file." );
-		}
-
-		m_sBcQuotationFile = oIniFile.getStringValue( std::string("SRV"), std::string("BroadcastQuotationFile"), nErrCode );
-		if( 0 != nErrCode )	{
-			QuoCollector::GetCollector()->OnLog( TLV_WARN, "Configuration::Initialize() : invalid broadcast (quotation) file." );
-		}
-
-		m_nBcBeginTime = oIniFile.getIntValue( std::string("SRV"), std::string("BroadcastBeginTime"), nErrCode );
-		if( 0 != nErrCode )	{
-			m_nBcBeginTime = 0xffffffff;
-			QuoCollector::GetCollector()->OnLog( TLV_WARN, "Configuration::Initialize() : Topspeed Mode...!" );
-		}
-	}
-
+	///< 设置财经数据 和 权息文件 的配置路径
 	m_sFinancialFolder = oIniFile.getStringValue( std::string("DataSource"), std::string("FinancialData"), nErrCode );
 	if( 0 != nErrCode )	{
 		QuoCollector::GetCollector()->OnLog( TLV_WARN, "Configuration::Initialize() : financial file isn\'t exist..." );
@@ -148,7 +228,32 @@ int Configuration::Initialize()
 		QuoCollector::GetCollector()->OnLog( TLV_WARN, "Configuration::Initialize() : weight file isn\'t exist..." );
 	}
 
+	///< 转存各市场的配置到对应的文件
+	ParseAndSaveMkConfig( oIniFile );
+
 	return 0;
+}
+
+void Configuration::ParseAndSaveMkConfig( inifile::IniFile& refIniFile )
+{
+	for( std::vector<std::string>::iterator it = m_vctMkNameCfg.begin(); it != m_vctMkNameCfg.end(); it++ )
+	{
+		int					nErrCode = 0;
+		std::string&		sMkCfgName = *it;
+		char				pszKey[54] = { 0 };
+		std::string			sServerIP_0 = refIniFile.getStringValue( sMkCfgName, std::string("ServerIP_0"), nErrCode );
+		int					nServerPort_0 = refIniFile.getIntValue( sMkCfgName, std::string("ServerPort_0"), nErrCode );
+		std::string			sLoginName_0 = refIniFile.getStringValue( sMkCfgName, std::string("LoginName_0"), nErrCode );
+		std::string			sLoginPWD_0 = refIniFile.getStringValue( sMkCfgName, std::string("LoginPWD_0"), nErrCode );
+		std::string			sServerIP_1 = refIniFile.getStringValue( sMkCfgName, std::string("ServerIP_1"), nErrCode );
+		int					nServerPort_1 = refIniFile.getIntValue( sMkCfgName, std::string("ServerPort_1"), nErrCode );
+		std::string			sLoginName_1 = refIniFile.getStringValue( sMkCfgName, std::string("LoginName_1"), nErrCode );
+		std::string			sLoginPWD_1 = refIniFile.getStringValue( sMkCfgName, std::string("LoginPWD_1"), nErrCode );
+		MkCfgWriter			objCfgWriter( sMkCfgName );
+
+		objCfgWriter.ConfigurateConnection4Mk( 0, sServerIP_0, nServerPort_0, sLoginName_0, sLoginPWD_0 );
+		objCfgWriter.ConfigurateConnection4Mk( 1, sServerIP_1, nServerPort_1, sLoginName_1, sLoginPWD_1 );
+	}
 }
 
 const std::string& Configuration::GetDataCollectorPluginPath() const
@@ -169,26 +274,6 @@ std::string Configuration::GetFinancialDataFolder() const
 std::string Configuration::GetWeightFileFolder() const
 {
 	return m_sWeightFolder;
-}
-
-unsigned int Configuration::GetBroadcastBeginTime() const
-{
-	return m_nBcBeginTime;
-}
-
-std::string Configuration::GetTradeFilePath() const
-{
-	return m_sBcTradeFile;
-}
-
-std::string Configuration::GetQuotationFilePath() const
-{
-	return m_sBcQuotationFile;
-}
-
-bool Configuration::IsBroadcastModel() const
-{
-	return m_bBroadcastModel;
 }
 
 MAP_MK_CLOSECFG& Configuration::GetMkCloseCfg()

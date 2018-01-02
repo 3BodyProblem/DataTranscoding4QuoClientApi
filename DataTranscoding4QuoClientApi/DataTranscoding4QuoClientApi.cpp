@@ -152,28 +152,28 @@ enum E_SS_Status QuoCollector::GetCollectorStatus( char* pszStatusDesc, unsigned
 		nStrLen += ::sprintf( pszStatusDesc + nStrLen, ",[CNF OPTION %s],代码=%s,现价=%.4f,金额=%.4f,量=%I64d", refCNFOPTSnap.Name, refCNFOPTSnap.Code, refCNFOPTSnap.LastPx, refCNFOPTSnap.Amount, refCNFOPTSnap.Volume );
 	}
 
-	if( dSHL1Rate > 0 )	{
+	if( dSHL1Rate >= 0 )	{
 		nStrLen += ::sprintf( pszStatusDesc + nStrLen, ",[SHL1],缓存占用率=%.4f", dSHL1Rate );
 	}
-	if( dSHOPTRate > 0 )	{
+	if( dSHOPTRate >= 0 )	{
 		nStrLen += ::sprintf( pszStatusDesc + nStrLen, ",[SH OPTION],缓存占用率=%.4f", dSHOPTRate );
 	}
-	if( dSZL1Rate > 0 )	{
+	if( dSZL1Rate >= 0 )	{
 		nStrLen += ::sprintf( pszStatusDesc + nStrLen, ",[SZL1],缓存占用率=%.4f", dSZL1Rate );
 	}
-	if( dSZOPTRate > 0 )	{
+	if( dSZOPTRate >= 0 )	{
 		nStrLen += ::sprintf( pszStatusDesc + nStrLen, ",[SZ OPTION],缓存占用率=%.4f", dSZOPTRate );
 	}
-	if( dCFFRate > 0 )	{
+	if( dCFFRate >= 0 )	{
 		nStrLen += ::sprintf( pszStatusDesc + nStrLen, ",[CFF],缓存占用率=%.4f", dCFFRate );
 	}
-	if( dCFFOPTRate > 0 )	{
+	if( dCFFOPTRate >= 0 )	{
 		nStrLen += ::sprintf( pszStatusDesc + nStrLen, ",[CFF OPTION],缓存占用率=%.4f", dCFFOPTRate );
 	}
-	if( dCNFRate > 0 )	{
+	if( dCNFRate >= 0 )	{
 		nStrLen += ::sprintf( pszStatusDesc + nStrLen, ",[CNF],缓存占用率=%.4f", dCNFRate );
 	}
-	if( dCNFOPTRate > 0 )	{
+	if( dCNFOPTRate >= 0 )	{
 		nStrLen += ::sprintf( pszStatusDesc + nStrLen, ",[CNF OPTION],缓存占用率=%.4f", dCNFOPTRate );
 	}
 

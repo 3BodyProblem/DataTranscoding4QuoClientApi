@@ -135,7 +135,7 @@ int Quotation::Release()
 
 		m_oWorkStatus = ET_SS_UNACTIVE;			///< 更新Quotation会话的状态
 		//m_oQuotPlugin.Release();				///< 释放行情源插件
-		m_oQuoDataCenter.Release();				///< 释放行情数据资源
+		//m_oQuoDataCenter.Release();				///< 释放行情数据资源
 
 		QuoCollector::GetCollector()->OnLog( TLV_INFO, "Quotation::Release() : ............ Destroyed! .............." );
 	}
@@ -166,8 +166,6 @@ __inline bool	PrepareStaticFile( T_STATIC_LINE& refStaticLine, std::ofstream& oD
 	case XDF_CNF:		///< 商品期货(上海/郑州/大连)
 	case XDF_CNFOPT:	///< 商品期权(上海/郑州/大连)
 		{
-			if( refStaticLine.Date/10000 == 2011 )
-				int a = 0;
 			switch( refStaticLine.Type )
 			{
 			case 1:

@@ -146,6 +146,7 @@ typedef	std::map<enum XDFMarket,int>					TMAP_MKID2STATUS;			///< 各市场模块状态
 const	unsigned int									MAX_WRITER_NUM = 128;		///< 最大落盘文件句柄
 typedef	std::pair<T_LINE_PARAM,T_TICKLINE_CACHE>		T_QUO_DATA;					///< 数据缓存
 typedef std::map<std::string,T_QUO_DATA>				T_MAP_QUO;					///< 行情数据缓存
+extern unsigned int										s_nNumberInSection;			///< 一个市场有可以缓存多少个数据块(可配)
 
 
 /**
