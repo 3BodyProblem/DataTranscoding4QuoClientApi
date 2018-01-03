@@ -45,7 +45,7 @@ public:
 	//获取数据最大空间
 	int  GetMaxRecord(void);
 	//获取数据百分比
-	int  GetPercent(void);
+	double  GetPercent(void);
 };
 
 //------------------------------------------------------------------------------------------------------------------------------
@@ -302,15 +302,15 @@ template<class tempclass>int  MLoopBufferSt<tempclass>::GetMaxRecord(void)
 	return(m_lMaxRecord);
 }
 
-template<class tempclass>int  MLoopBufferSt<tempclass>::GetPercent(void)
+template<class tempclass>double  MLoopBufferSt<tempclass>::GetPercent(void)
 {
 	if ( m_lMaxRecord == 0 )
 	{
 		assert(0);
-		return(100);
+		return(100.);
 	}
 
-	return(((m_lLastRecord + m_lMaxRecord - m_lFirstRecord) % m_lMaxRecord) * 100 / m_lMaxRecord);
+	return(((m_lLastRecord + m_lMaxRecord - m_lFirstRecord) % m_lMaxRecord) * 100.0 / m_lMaxRecord);
 }
 
 

@@ -504,6 +504,7 @@ void* QuotationData::ThreadDumpTickLine( void* pSelf )
 			}
 
 			refQuotation.FlushDayLineOnCloseTime();		///< 检查是否需要落日线
+			refQuotation.UpdateMarketsTime();			///< 更新各市场的日期和时间
 		}
 		catch( std::exception& err )
 		{

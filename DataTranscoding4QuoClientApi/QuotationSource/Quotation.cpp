@@ -1787,6 +1787,28 @@ void Quotation::FlushDayLineOnCloseTime()
 	}
 }
 
+void Quotation::UpdateMarketsTime()
+{
+	QuotePrimeApi*			pQueryApi = m_oQuotPlugin.GetPrimeApi();
+	enum XDFMarket			vctMkID[] = { XDF_SH, XDF_SHOPT, XDF_SZ, XDF_SZOPT, XDF_CF, XDF_ZJOPT, XDF_CNF, XDF_CNFOPT };
+
+	if( NULL != pQueryApi )
+	{
+		for( int n = 0; n < 8; n++ )
+		{
+			int						nErrCode = 0;
+			char					nMkID = vctMkID[n];
+			XDFAPI_MarketStatusInfo	tagStatus = { 0 };
+
+			nErrCode = pQueryApi->ReqFuncData( 101, &nMkID, &tagStatus );
+			if( 1 == nErrCode )
+			{
+				ServerStatus::GetStatusObj().UpdateMkTime( vctMkID[n], tagStatus.MarketDate, tagStatus.MarketTime );
+			}
+		}
+	}
+}
+
 void __stdcall	Quotation::XDF_OnRspRecvData( XDFAPI_PkgHead * pHead, const char * pszBuf, int nBytes )
 {
 	int						nLen = nBytes;
@@ -1848,8 +1870,6 @@ void __stdcall	Quotation::XDF_OnRspRecvData( XDFAPI_PkgHead * pHead, const char 
 					{
 					case 1:///< 市场状态信息
 						{
-							XDFAPI_MarketStatusInfo* pData = (XDFAPI_MarketStatusInfo*)pbuf;
-							ServerStatus::GetStatusObj().UpdateMkTime( XDF_SH, pData->MarketDate, pData->MarketTime );
 							pbuf += sizeof(XDFAPI_MarketStatusInfo);
 							nLen -= pMsgHead->MsgLen;
 						}
@@ -1903,8 +1923,6 @@ void __stdcall	Quotation::XDF_OnRspRecvData( XDFAPI_PkgHead * pHead, const char 
 					{
 					case 1:///< 市场状态信息
 						{
-							XDFAPI_ShOptMarketStatus* pData = (XDFAPI_ShOptMarketStatus*)pbuf;
-							ServerStatus::GetStatusObj().UpdateMkTime( XDF_SHOPT, pData->MarketDate, pData->MarketTime );
 							pbuf += sizeof(XDFAPI_ShOptMarketStatus);
 							nLen -= pMsgHead->MsgLen;
 						}
@@ -1974,8 +1992,6 @@ void __stdcall	Quotation::XDF_OnRspRecvData( XDFAPI_PkgHead * pHead, const char 
 					{
 					case 1:///< 市场状态信息
 						{
-							XDFAPI_MarketStatusInfo* pData = (XDFAPI_MarketStatusInfo*)pbuf;
-							ServerStatus::GetStatusObj().UpdateMkTime( XDF_SZ, pData->MarketDate, pData->MarketTime );
 							pbuf += sizeof(XDFAPI_MarketStatusInfo);
 							nLen -= pMsgHead->MsgLen;
 						}
@@ -2029,8 +2045,6 @@ void __stdcall	Quotation::XDF_OnRspRecvData( XDFAPI_PkgHead * pHead, const char 
 					{
 					case 1:///< 市场状态信息
 						{
-							XDFAPI_MarketStatusInfo* pData = (XDFAPI_MarketStatusInfo*)pbuf;
-							ServerStatus::GetStatusObj().UpdateMkTime( XDF_SZOPT, pData->MarketDate, pData->MarketTime );
 							pbuf += sizeof(XDFAPI_MarketStatusInfo);
 							nLen -= pMsgHead->MsgLen;
 						}
@@ -2077,8 +2091,6 @@ void __stdcall	Quotation::XDF_OnRspRecvData( XDFAPI_PkgHead * pHead, const char 
 					{
 					case 1:///< 市场状态信息
 						{
-							XDFAPI_MarketStatusInfo* pData = (XDFAPI_MarketStatusInfo*)pbuf;
-							ServerStatus::GetStatusObj().UpdateMkTime( XDF_CF, pData->MarketDate, pData->MarketTime );
 							pbuf += sizeof(XDFAPI_MarketStatusInfo);
 							nLen -= pMsgHead->MsgLen;
 						}
@@ -2125,8 +2137,6 @@ void __stdcall	Quotation::XDF_OnRspRecvData( XDFAPI_PkgHead * pHead, const char 
 					{
 					case 1:///< 市场状态信息
 						{
-							XDFAPI_MarketStatusInfo* pData = (XDFAPI_MarketStatusInfo*)pbuf;
-							ServerStatus::GetStatusObj().UpdateMkTime( XDF_ZJOPT, pData->MarketDate, pData->MarketTime );
 							pbuf += sizeof(XDFAPI_MarketStatusInfo);
 							nLen -= pMsgHead->MsgLen;
 						}
@@ -2173,8 +2183,6 @@ void __stdcall	Quotation::XDF_OnRspRecvData( XDFAPI_PkgHead * pHead, const char 
 					{
 					case 1:///< 市场状态信息
 						{
-							XDFAPI_MarketStatusInfo* pData = (XDFAPI_MarketStatusInfo*)pbuf;
-							ServerStatus::GetStatusObj().UpdateMkTime( XDF_CNF, pData->MarketDate, pData->MarketTime );
 							pbuf += sizeof(XDFAPI_MarketStatusInfo);
 							nLen -= pMsgHead->MsgLen;
 						}
@@ -2221,8 +2229,6 @@ void __stdcall	Quotation::XDF_OnRspRecvData( XDFAPI_PkgHead * pHead, const char 
 					{
 					case 1:///< 市场状态信息
 						{
-							XDFAPI_MarketStatusInfo* pData = (XDFAPI_MarketStatusInfo*)pbuf;
-							ServerStatus::GetStatusObj().UpdateMkTime( XDF_CNFOPT, pData->MarketDate, pData->MarketTime );
 							pbuf += sizeof(XDFAPI_MarketStatusInfo);
 							nLen -= pMsgHead->MsgLen;
 						}

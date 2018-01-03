@@ -89,6 +89,11 @@ public:
 	 */
 	void						FlushDayLineOnCloseTime();
 
+	/**
+	 * @brief					更新获取所有市场的日期和时间
+	 */
+	void						UpdateMarketsTime();
+
 public:///< 行情接口的回调函数
 	virtual bool __stdcall		XDF_OnRspStatusChanged( unsigned char cMarket, int nStatus );
 	virtual void __stdcall		XDF_OnRspRecvData( XDFAPI_PkgHead * pHead, const char * pszBuf, int nBytes );
