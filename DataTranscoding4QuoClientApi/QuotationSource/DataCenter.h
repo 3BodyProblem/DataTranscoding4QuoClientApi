@@ -48,7 +48,6 @@ typedef struct
  */
 typedef struct
 {
-	unsigned char				Valid;					///< ÊÇ·ñÓÐÐ§Êý¾Ý, 1:ÓÐÐ§£¬ÐèÒªÂäÅÌ 0:ÎÞÐ§»òÒÑÂäÅÌ
 	unsigned char				Type;					///< ÀàÐÍ
 	char						eMarketID;				///< ÊÐ³¡ID
 	char						Code[16];				///< ÉÌÆ·´úÂë
@@ -144,8 +143,7 @@ typedef MLoopBufferSt<T_TICK_LINE>						T_TICKLINE_CACHE;			///< TickÏßÑ­»·¶ÓÁÐ»
 typedef MLoopBufferSt<T_MIN_LINE>						T_MINLINE_CACHE;			///< ·ÖÖÓÏßÑ­»·¶ÓÁÐ»º´æ
 typedef	std::map<enum XDFMarket,int>					TMAP_MKID2STATUS;			///< ¸÷ÊÐ³¡Ä£¿é×´Ì¬
 const	unsigned int									MAX_WRITER_NUM = 128;		///< ×î´óÂäÅÌÎÄ¼þ¾ä±ú
-typedef	std::pair<T_LINE_PARAM,T_TICKLINE_CACHE>		T_QUO_DATA;					///< Êý¾Ý»º´æ
-typedef std::map<std::string,T_QUO_DATA>				T_MAP_QUO;					///< ÐÐÇéÊý¾Ý»º´æ
+typedef std::map<std::string,T_LINE_PARAM>				T_MAP_QUO;					///< ÐÐÇéÊý¾Ý»º´æ
 extern unsigned int										s_nNumberInSection;			///< Ò»¸öÊÐ³¡ÓÐ¿ÉÒÔ»º´æ¶àÉÙ¸öÊý¾Ý¿é(¿ÉÅä)
 
 
@@ -179,6 +177,11 @@ public:
 	 * @brief					»ñÈ¡»º´æÖÐÓÐÐ§Êý¾ÝµÄ³¤¶È
 	 */
 	unsigned int				GetDataLength();
+
+	/**
+	 * @brief					»ñÈ¡»º´æ×î´ó³¤¶È
+	 */
+	unsigned int				GetMaxBufLength();
 
 	/**
 	 * @brief					ÎªÒ»¸öÉÌÆ·´úÂë·ÖÅä»º´æ¶ÔÓ¦µÄ×¨ÓÃ»º´æ
@@ -296,6 +299,7 @@ protected:
 	T_MAP_QUO					m_mapCFFOPT;					///< ÖÐ½ðÆÚÈ¨
 	T_MAP_QUO					m_mapCNF;						///< ÉÌÆ·ÆÚ»õ(ÉÏº£/Ö£ÖÝ/´óÁ¬)
 	T_MAP_QUO					m_mapCNFOPT;					///< ÉÌÆ·ÆÚÈ¨(ÉÏº£/Ö£ÖÝ/´óÁ¬)
+	T_TICKLINE_CACHE			m_arrayTickLine;				///< È«ÊÐ³¡tick»º´æ
 protected:
 	unsigned int				m_nMaxMLineBufSize;				///< ·ÖÖÓÏß»º´æ³¤¶È
 	char*						m_pBuf4MinuteLine;				///< ·ÖÖÓÏß»º´æµØÖ·
@@ -303,7 +307,6 @@ protected:
 	CriticalObject				m_oMinuteLock;					///< ÁÙ½çÇø¶ÔÏó
 protected:
 	SimpleThread				m_oThdTickDump;					///< TickÂäÅÌÊý¾Ý
-	SimpleThread				m_oThdTickDump2;				///< TickÂäÅÌÊý¾Ý
 	SimpleThread				m_oThdMinuteDump;				///< ·ÖÖÓÏßÂäÅÌÊý¾Ý
 };
 

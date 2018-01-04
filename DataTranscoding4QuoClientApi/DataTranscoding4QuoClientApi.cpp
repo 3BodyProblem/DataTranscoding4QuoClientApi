@@ -55,6 +55,8 @@ int QuoCollector::Initialize( I_DataHandle* pIDataHandle )
 
 void QuoCollector::Release()
 {
+//	SimpleThread::StopAllThread();
+//	m_oQuotationData.Release();
 }
 
 Quotation& QuoCollector::GetQuoObj()
@@ -74,7 +76,7 @@ I_DataHandle* QuoCollector::operator->()
 
 void QuoCollector::Halt()
 {
-	m_oQuotationData.Release();
+	m_oQuotationData.Halt();
 }
 
 int QuoCollector::RecoverQuotation()
@@ -115,8 +117,10 @@ enum E_SS_Status QuoCollector::GetCollectorStatus( char* pszStatusDesc, unsigned
 	if( nFinanDate != 0 && nFinanTime != 0 )	{
 		::sprintf( pszFinancialFileTime, "%d %d", nFinanDate, nFinanTime );
 	}
-	nStrLen = ::sprintf( pszStatusDesc, "模块名=转码机,转码机版本=V%s,运行时间=%s,Tick落盘失败数=%u,资讯落盘时间=%s,权息落盘时间=%s,行情API版本=%s,[市场信息]"
-		, g_sVersion.c_str(), sProgramDuration.c_str(), refSvrStatus.GetTickLostRef(), pszFinancialFileTime, pszWeightFileTime, m_oQuotationData.QuoteApiVersion().c_str() );
+	nStrLen = ::sprintf( pszStatusDesc, "模块名=转码机,转码机版本=V%s,行情API版本=%s,运行时间=%s,Tick缓存占用=%d%%,Tick落盘失败数=%u,Min线缓存占用=%d%%,Min线落盘失败数=%u,资讯落盘时间=%s,权息落盘时间=%s,[市场信息]"
+		, g_sVersion.c_str(), m_oQuotationData.QuoteApiVersion().c_str(), sProgramDuration.c_str()
+		, refSvrStatus.FetchTickBufOccupancyRate(), refSvrStatus.GetTickLostRef(), refSvrStatus.FetchMinuteBufOccupancyRate(), refSvrStatus.GetMinuteLostRef()
+		, pszFinancialFileTime, pszWeightFileTime );
 
 	///< 各市场信息
 	T_SECURITY_STATUS&	refSHL1Snap = refSvrStatus.FetchSecurity( XDF_SH );
@@ -127,46 +131,38 @@ enum E_SS_Status QuoCollector::GetCollectorStatus( char* pszStatusDesc, unsigned
 	T_SECURITY_STATUS&	refSHCFFOPTSnap = refSvrStatus.FetchSecurity( XDF_ZJOPT );
 	T_SECURITY_STATUS&	refCNFSnap = refSvrStatus.FetchSecurity( XDF_CNF );
 	T_SECURITY_STATUS&	refCNFOPTSnap = refSvrStatus.FetchSecurity( XDF_CNFOPT );
-	int					nSHL1Rate = refSvrStatus.FetchMkOccupancyRate( XDF_SH );
-	int					nSHOPTRate = refSvrStatus.FetchMkOccupancyRate( XDF_SHOPT );
-	int					nSZL1Rate = refSvrStatus.FetchMkOccupancyRate( XDF_SZ );
-	int					nSZOPTRate = refSvrStatus.FetchMkOccupancyRate( XDF_SZOPT );
-	int					nCFFRate = refSvrStatus.FetchMkOccupancyRate( XDF_CF );
-	int					nCFFOPTRate = refSvrStatus.FetchMkOccupancyRate( XDF_ZJOPT );
-	int					nCNFRate = refSvrStatus.FetchMkOccupancyRate( XDF_CNF );
-	int					nCNFOPTRate = refSvrStatus.FetchMkOccupancyRate( XDF_CNFOPT );
 
 	if( refSvrStatus.FetchMkDate( XDF_SH ) > 0 )	{
-		nStrLen += ::sprintf( pszStatusDesc + nStrLen, ",上海L1日期=%u,行情时间=%u,行情状态=%s,缓存应用率=%d%%"
-			, refSvrStatus.FetchMkDate( XDF_SH ), refSvrStatus.FetchMkTime( XDF_SH ), refSvrStatus.GetMkStatus(XDF_SH), nSHL1Rate );
+		nStrLen += ::sprintf( pszStatusDesc + nStrLen, ",市场=上海L1,日期=%u,行情时间=%u,行情状态=%s"
+			, refSvrStatus.FetchMkDate( XDF_SH ), refSvrStatus.FetchMkTime( XDF_SH ), refSvrStatus.GetMkStatus(XDF_SH) );
 	}
 	if( refSvrStatus.FetchMkDate( XDF_SHOPT ) > 0 )	{
-		nStrLen += ::sprintf( pszStatusDesc + nStrLen, ",上海期权日期=%u,行情时间=%u,行情状态=%s,缓存应用率=%d%%"
-			, refSvrStatus.FetchMkDate( XDF_SHOPT ), refSvrStatus.FetchMkTime( XDF_SHOPT ), refSvrStatus.GetMkStatus(XDF_SHOPT), nSHOPTRate );
+		nStrLen += ::sprintf( pszStatusDesc + nStrLen, ",市场=上海期权,日期=%u,行情时间=%u,行情状态=%s"
+			, refSvrStatus.FetchMkDate( XDF_SHOPT ), refSvrStatus.FetchMkTime( XDF_SHOPT ), refSvrStatus.GetMkStatus(XDF_SHOPT) );
 	}
 	if( refSvrStatus.FetchMkDate( XDF_SZ ) > 0 )	{
-		nStrLen += ::sprintf( pszStatusDesc + nStrLen, ",深圳L1日期=%u,行情时间=%u,行情状态=%s,缓存应用率=%d%%"
-			, refSvrStatus.FetchMkDate( XDF_SZ ), refSvrStatus.FetchMkTime( XDF_SZ ), refSvrStatus.GetMkStatus(XDF_SZ), nSZL1Rate );
+		nStrLen += ::sprintf( pszStatusDesc + nStrLen, ",市场=深圳L1,日期=%u,行情时间=%u,行情状态=%s"
+			, refSvrStatus.FetchMkDate( XDF_SZ ), refSvrStatus.FetchMkTime( XDF_SZ ), refSvrStatus.GetMkStatus(XDF_SZ) );
 	}
 	if( refSvrStatus.FetchMkDate( XDF_SZOPT ) > 0 )	{
-		nStrLen += ::sprintf( pszStatusDesc + nStrLen, ",深圳期权日期=%u,行情时间=%u,行情状态=%s,缓存应用率=%d%%"
-			, refSvrStatus.FetchMkDate( XDF_SZOPT ), refSvrStatus.FetchMkTime( XDF_SZOPT ), refSvrStatus.GetMkStatus(XDF_SZOPT), nSZOPTRate );
+		nStrLen += ::sprintf( pszStatusDesc + nStrLen, ",市场=深圳期权,日期=%u,行情时间=%u,行情状态=%s"
+			, refSvrStatus.FetchMkDate( XDF_SZOPT ), refSvrStatus.FetchMkTime( XDF_SZOPT ), refSvrStatus.GetMkStatus(XDF_SZOPT) );
 	}
 	if( refSvrStatus.FetchMkDate( XDF_CF ) > 0 )	{
-		nStrLen += ::sprintf( pszStatusDesc + nStrLen, ",中金期货日期=%u,行情时间=%u,行情状态=%s,缓存应用率=%d%%"
-			, refSvrStatus.FetchMkDate( XDF_CF ), refSvrStatus.FetchMkTime( XDF_CF ), refSvrStatus.GetMkStatus(XDF_CF), nCFFRate );
+		nStrLen += ::sprintf( pszStatusDesc + nStrLen, ",市场=中金期货,日期=%u,行情时间=%u,行情状态=%s"
+			, refSvrStatus.FetchMkDate( XDF_CF ), refSvrStatus.FetchMkTime( XDF_CF ), refSvrStatus.GetMkStatus(XDF_CF) );
 	}
 	if( refSvrStatus.FetchMkDate( XDF_ZJOPT ) > 0 )	{
-		nStrLen += ::sprintf( pszStatusDesc + nStrLen, ",中金期权日期=%u,行情时间=%u,行情状态=%s,缓存应用率=%d%%"
-			, refSvrStatus.FetchMkDate( XDF_ZJOPT ), refSvrStatus.FetchMkTime( XDF_ZJOPT ), refSvrStatus.GetMkStatus(XDF_ZJOPT), nCFFOPTRate );
+		nStrLen += ::sprintf( pszStatusDesc + nStrLen, ",市场=中金期权,日期=%u,行情时间=%u,行情状态=%s"
+			, refSvrStatus.FetchMkDate( XDF_ZJOPT ), refSvrStatus.FetchMkTime( XDF_ZJOPT ), refSvrStatus.GetMkStatus(XDF_ZJOPT) );
 	}
 	if( refSvrStatus.FetchMkDate( XDF_CNF ) > 0 )	{
-		nStrLen += ::sprintf( pszStatusDesc + nStrLen, ",商品期货日期=%u,行情时间=%u,行情状态=%s,缓存应用率=%d%%"
-			, refSvrStatus.FetchMkDate( XDF_CNF ), refSvrStatus.FetchMkTime( XDF_CNF ), refSvrStatus.GetMkStatus(XDF_CNF), nCNFRate );
+		nStrLen += ::sprintf( pszStatusDesc + nStrLen, ",市场=商品期货,日期=%u,行情时间=%u,行情状态=%s"
+			, refSvrStatus.FetchMkDate( XDF_CNF ), refSvrStatus.FetchMkTime( XDF_CNF ), refSvrStatus.GetMkStatus(XDF_CNF) );
 	}
 	if( refSvrStatus.FetchMkDate( XDF_CNFOPT ) > 0 )	{
-		nStrLen += ::sprintf( pszStatusDesc + nStrLen, ",商品期权日期=%u,行情时间=%u,行情状态=%s,缓存应用率=%d%%"
-			, refSvrStatus.FetchMkDate( XDF_CNFOPT ), refSvrStatus.FetchMkTime( XDF_CNFOPT ), refSvrStatus.GetMkStatus(XDF_CNFOPT), nCNFOPTRate );
+		nStrLen += ::sprintf( pszStatusDesc + nStrLen, ",市场=商品期权,日期=%u,行情时间=%u,行情状态=%s"
+			, refSvrStatus.FetchMkDate( XDF_CNFOPT ), refSvrStatus.FetchMkTime( XDF_CNFOPT ), refSvrStatus.GetMkStatus(XDF_CNFOPT) );
 	}
 
 	///< 各市场行情信息

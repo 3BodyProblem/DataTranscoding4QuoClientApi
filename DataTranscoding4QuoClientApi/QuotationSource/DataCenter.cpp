@@ -20,13 +20,14 @@ const int		XDF_CF_COUNT = 500;						///< 中金期货
 const int		XDF_ZJOPT_COUNT = 500;					///< 中金期权
 const int		XDF_CNF_COUNT = 500;					///< 商品期货(上海/郑州/大连)
 const int		XDF_CNFOPT_COUNT = 500;					///< 商品期权(上海/郑州/大连)
-unsigned int	s_nNumberInSection = 60;				///< 一个市场有可以缓存多少个数据块
+unsigned int	s_nNumberInSection = 30;				///< 一个市场有可以缓存多少个数据块
 ///< -----------------------------------------------------------------------------------
 
 
 CacheAlloc::CacheAlloc()
  : m_nMaxCacheSize( 0 ), m_nAllocateSize( 0 ), m_pDataCache( NULL )
 {
+	m_nMaxCacheSize = (XDF_SH_COUNT + XDF_SHOPT_COUNT + XDF_SZ_COUNT + XDF_SZOPT_COUNT + XDF_CF_COUNT + XDF_ZJOPT_COUNT + XDF_CNF_COUNT + XDF_CNFOPT_COUNT) * sizeof(T_TICK_LINE) * s_nNumberInSection;
 }
 
 CacheAlloc::~CacheAlloc()
@@ -45,7 +46,18 @@ char* CacheAlloc::GetBufferPtr()
 {
 	CriticalLock	section( m_oLock );
 
+	if( NULL == m_pDataCache )
+	{
+		m_pDataCache = new char[m_nMaxCacheSize];
+		::memset( m_pDataCache, 0, m_nMaxCacheSize );
+	}
+
 	return m_pDataCache;
+}
+
+unsigned int CacheAlloc::GetMaxBufLength()
+{
+	return m_nMaxCacheSize;
 }
 
 unsigned int CacheAlloc::GetDataLength()
@@ -64,12 +76,7 @@ char* CacheAlloc::GrabCache( enum XDFMarket eMkID, unsigned int& nOutSize )
 	try
 	{
 		nOutSize = 0;
-		if( NULL == m_pDataCache )
-		{
-			m_nMaxCacheSize = (XDF_SH_COUNT + XDF_SHOPT_COUNT + XDF_SZ_COUNT + XDF_SZOPT_COUNT + XDF_CF_COUNT + XDF_ZJOPT_COUNT + XDF_CNF_COUNT + XDF_CNFOPT_COUNT) * sizeof(T_TICK_LINE) * s_nNumberInSection;
-			m_pDataCache = new char[m_nMaxCacheSize];
-			::memset( m_pDataCache, 0, m_nMaxCacheSize );
-		}
+		m_pDataCache = GetBufferPtr();
 
 		if( NULL == m_pDataCache )
 		{
@@ -169,7 +176,7 @@ int QuotationData::Initialize( void* pQuotation )
 	Release();
 	m_pQuotation = pQuotation;
 
-	m_nMaxMLineBufSize = (XDF_SH_COUNT + XDF_SHOPT_COUNT + XDF_SZ_COUNT + XDF_SZOPT_COUNT + XDF_CF_COUNT + XDF_ZJOPT_COUNT + XDF_CNF_COUNT + XDF_CNFOPT_COUNT) * sizeof(T_MIN_LINE) * 2;
+	m_nMaxMLineBufSize = (XDF_SH_COUNT + XDF_SHOPT_COUNT + XDF_SZ_COUNT + XDF_SZOPT_COUNT + XDF_CF_COUNT + XDF_ZJOPT_COUNT + XDF_CNF_COUNT + XDF_CNFOPT_COUNT) * sizeof(T_MIN_LINE) * 10;
 	m_pBuf4MinuteLine = new char[m_nMaxMLineBufSize];
 	if( NULL == m_pBuf4MinuteLine )
 	{
@@ -185,18 +192,17 @@ int QuotationData::Initialize( void* pQuotation )
 		return -2;
 	}
 
+	nErrorCode = m_arrayTickLine.Instance( CacheAlloc::GetObj().GetBufferPtr(), CacheAlloc::GetObj().GetMaxBufLength()/sizeof(T_TICK_LINE) );
+	if( 0 > nErrorCode )
+	{
+		QuoCollector::GetCollector()->OnLog( TLV_ERROR, "QuotationData::Initialize() : failed 2 initialize tick lines manager obj. errorcode = %d", nErrorCode );
+		return -3;
+	}
+
 	if( false == m_oThdTickDump.IsAlive() )
 	{
 		if( 0 != m_oThdTickDump.Create( "ThreadDumpTickLine()", ThreadDumpTickLine, this ) ) {
 			QuoCollector::GetCollector()->OnLog( TLV_ERROR, "QuotationData::Initialize() : failed 2 create tick line thread(1)" );
-			return -3;
-		}
-	}
-
-	if( false == m_oThdTickDump2.IsAlive() )
-	{
-		if( 0 != m_oThdTickDump2.Create( "ThreadDumpTickLine()", ThreadDumpTickLine, this ) ) {
-			QuoCollector::GetCollector()->OnLog( TLV_ERROR, "QuotationData::Initialize() : failed 2 create tick line thread(2)" );
 			return -4;
 		}
 	}
@@ -205,7 +211,7 @@ int QuotationData::Initialize( void* pQuotation )
 	{
 		if( 0 != m_oThdMinuteDump.Create( "ThreadDumpMinuteLine()", ThreadDumpMinuteLine, this ) ) {
 			QuoCollector::GetCollector()->OnLog( TLV_ERROR, "QuotationData::Initialize() : failed 2 create minute line thread(1)" );
-			return -5;
+			return -6;
 		}
 	}
 
@@ -362,8 +368,8 @@ void* QuotationData::ThreadDumpMinuteLine( void* pSelf )
 				oDumper.write( pszLine, nLen );
 			}
 
-			refQuotation.FlushDayLineOnCloseTime();		///< 检查是否需要落日线
-			refQuotation.UpdateMarketsTime();			///< 更新各市场的日期和时间
+			refQuotation.FlushDayLineOnCloseTime();															///< 检查是否需要落日线
+			refQuotation.UpdateMarketsTime();																///< 更新各市场的日期和时间
 		}
 		catch( std::exception& err )
 		{
@@ -454,44 +460,26 @@ __inline bool	PrepareTickFile( T_TICK_LINE* pTickLine, std::string& sCode, std::
 	return true;
 }
 
-unsigned int	nLastTickThreadBeginPos = 0;
 typedef char	STR_TICK_LINE[512];
 void* QuotationData::ThreadDumpTickLine( void* pSelf )
 {
 	unsigned __int64			nDumpNumber = 0;
 	QuotationData&				refData = *(QuotationData*)pSelf;
 	Quotation&					refQuotation = *((Quotation*)refData.m_pQuotation);
-	unsigned int				nBeginPos = nLastTickThreadBeginPos;
-
-	{
-	static CriticalObject		s_oLock;				///< 临界区对象
-	CriticalLock				section( s_oLock );		///< lock()
-
-	if( 0 == nLastTickThreadBeginPos )
-	{
-		nBeginPos = nLastTickThreadBeginPos;
-		nLastTickThreadBeginPos = XDF_SH_COUNT * s_nNumberInSection;
-	}
-	}
 
 	while( false == SimpleThread::GetGlobalStopFlag() )
 	{
 		try
 		{
 			char*					pBufPtr = CacheAlloc::GetObj().GetBufferPtr();
-			unsigned int			nBufLen = CacheAlloc::GetObj().GetDataLength();
-			unsigned int			nMaxDataNum = nBufLen / sizeof(T_TICK_LINE);
+			unsigned int			nMaxDataNum = refData.m_arrayTickLine.GetRecordCount();
 			std::string				sCode;
 			std::ofstream			oDumper;
 			STR_TICK_LINE			pszLine = { 0 };
 
 			SimpleThread::Sleep( 1000 * 1 );
-			if( NULL == pBufPtr || 0 == nBufLen ) {
+			if( NULL == pBufPtr || 0 == nMaxDataNum ) {
 				continue;
-			}
-
-			if( 0 == nBeginPos )	{
-				nMaxDataNum = min(nMaxDataNum, nLastTickThreadBeginPos);
 			}
 
 			if( nDumpNumber > 6000 ) {
@@ -499,42 +487,40 @@ void* QuotationData::ThreadDumpTickLine( void* pSelf )
 				nDumpNumber = 0;
 			}
 
-			for( int n = nBeginPos; n < nMaxDataNum; n++ )
+			while( true )
 			{
-				T_TICK_LINE*				pTickLine = (T_TICK_LINE*)(pBufPtr + n * sizeof(T_TICK_LINE));
+				T_TICK_LINE		tagTickData = { 0 };
 
-				if( 0 == pTickLine->Valid )
+				if( refData.m_arrayTickLine.GetData( &tagTickData ) <= 0 )
 				{
-					continue;
+					break;
 				}
-				else
-				{
-					if( sCode != pTickLine->Code )
-					{
-						if( false == PrepareTickFile( pTickLine, sCode, oDumper ) )
-						{
-							continue;
-						}
-					}
 
-					if( !oDumper.is_open() )
+				if( sCode != tagTickData.Code )
+				{
+					if( false == PrepareTickFile( &tagTickData, sCode, oDumper ) )
 					{
-						QuoCollector::GetCollector()->OnLog( TLV_ERROR, "QuotationData::ThreadDumpTickLine() : invalid file handle" );
-						SimpleThread::Sleep( 1000 * 10 );
 						continue;
 					}
-
-					int		nLen = ::sprintf( pszLine, "%u,%u,%f,%f,%f,%f,%f,%f,%f,%f,%f,%f,%f,%I64d,%I64d,%I64d,%f,%I64d,%f,%I64d,%f,%I64d,%f,%I64d,%f,%s,%s\n"
-						, pTickLine->Date, pTickLine->Time, pTickLine->PreClosePx, pTickLine->PreSettlePx
-						, pTickLine->OpenPx, pTickLine->HighPx, pTickLine->LowPx, pTickLine->ClosePx, pTickLine->NowPx, pTickLine->SettlePx
-						, pTickLine->UpperPx, pTickLine->LowerPx, pTickLine->Amount, pTickLine->Volume, pTickLine->OpenInterest, pTickLine->NumTrades
-						, pTickLine->BidPx1, pTickLine->BidVol1, pTickLine->BidPx2, pTickLine->BidVol2, pTickLine->AskPx1, pTickLine->AskVol1, pTickLine->AskPx2, pTickLine->AskVol2
-						, pTickLine->Voip, pTickLine->TradingPhaseCode, pTickLine->PreName );
-					oDumper.write( pszLine, nLen );
-					pTickLine->Valid = 0;
-					nDumpNumber++;
 				}
+
+				if( !oDumper.is_open() )
+				{
+					QuoCollector::GetCollector()->OnLog( TLV_ERROR, "QuotationData::ThreadDumpTickLine() : invalid file handle" );
+					SimpleThread::Sleep( 1000 * 10 );
+					continue;
+				}
+
+				int		nLen = ::sprintf( pszLine, "%u,%u,%f,%f,%f,%f,%f,%f,%f,%f,%f,%f,%f,%I64d,%I64d,%I64d,%f,%I64d,%f,%I64d,%f,%I64d,%f,%I64d,%f,%s,%s\n"
+					, tagTickData.Date, tagTickData.Time, tagTickData.PreClosePx, tagTickData.PreSettlePx
+					, tagTickData.OpenPx, tagTickData.HighPx, tagTickData.LowPx, tagTickData.ClosePx, tagTickData.NowPx, tagTickData.SettlePx
+					, tagTickData.UpperPx, tagTickData.LowerPx, tagTickData.Amount, tagTickData.Volume, tagTickData.OpenInterest, tagTickData.NumTrades
+					, tagTickData.BidPx1, tagTickData.BidVol1, tagTickData.BidPx2, tagTickData.BidVol2, tagTickData.AskPx1, tagTickData.AskVol1, tagTickData.AskPx2, tagTickData.AskVol2
+					, tagTickData.Voip, tagTickData.TradingPhaseCode, tagTickData.PreName );
+				oDumper.write( pszLine, nLen );
+				nDumpNumber++;
 			}
+
 		}
 		catch( std::exception& err )
 		{
@@ -558,8 +544,8 @@ int QuotationData::UpdatePreName( enum XDFMarket eMarket, std::string& sCode, ch
 			T_MAP_QUO::iterator it = m_mapSZL1.find( sCode );
 			if( it == m_mapSZL1.end() )
 			{
-				T_QUO_DATA&		refData = it->second;
-				::memcpy( refData.first.PreName, pszPreName, 4 );
+				T_LINE_PARAM&		refData = it->second;
+				::memcpy( refData.PreName, pszPreName, 4 );
 			}
 		}
 		break;
@@ -580,10 +566,7 @@ int QuotationData::BuildSecurity( enum XDFMarket eMarket, std::string& sCode, T_
 			T_MAP_QUO::iterator it = m_mapSHL1.find( sCode );
 			if( it == m_mapSHL1.end() )
 			{
-				T_QUO_DATA&		refData = m_mapSHL1[sCode];
-				pDataPtr = CacheAlloc::GetObj().GrabCache( eMarket, nBufSize );
-				refData.first = refParam;
-				nErrorCode = refData.second.Instance( pDataPtr, nBufSize/sizeof(T_TICK_LINE) );
+				m_mapSHL1[sCode] = refParam;
 			}
 		}
 		break;
@@ -592,10 +575,7 @@ int QuotationData::BuildSecurity( enum XDFMarket eMarket, std::string& sCode, T_
 			T_MAP_QUO::iterator it = m_mapSHOPT.find( sCode );
 			if( it == m_mapSHOPT.end() )
 			{
-				T_QUO_DATA&		refData = m_mapSHOPT[sCode];
-				pDataPtr = CacheAlloc::GetObj().GrabCache( eMarket, nBufSize );
-				refData.first = refParam;
-				nErrorCode = refData.second.Instance( pDataPtr, nBufSize/sizeof(T_TICK_LINE) );
+				m_mapSHOPT[sCode] = refParam;
 			}
 		}
 		break;
@@ -604,10 +584,7 @@ int QuotationData::BuildSecurity( enum XDFMarket eMarket, std::string& sCode, T_
 			T_MAP_QUO::iterator it = m_mapSZL1.find( sCode );
 			if( it == m_mapSZL1.end() )
 			{
-				T_QUO_DATA&		refData = m_mapSZL1[sCode];
-				pDataPtr = CacheAlloc::GetObj().GrabCache( eMarket, nBufSize );
-				refData.first = refParam;
-				nErrorCode = refData.second.Instance( pDataPtr, nBufSize/sizeof(T_TICK_LINE) );
+				m_mapSZL1[sCode] = refParam;
 			}
 		}
 		break;
@@ -616,10 +593,7 @@ int QuotationData::BuildSecurity( enum XDFMarket eMarket, std::string& sCode, T_
 			T_MAP_QUO::iterator it = m_mapSZOPT.find( sCode );
 			if( it == m_mapSZOPT.end() )
 			{
-				T_QUO_DATA&		refData = m_mapSZOPT[sCode];
-				pDataPtr = CacheAlloc::GetObj().GrabCache( eMarket, nBufSize );
-				refData.first = refParam;
-				nErrorCode = refData.second.Instance( pDataPtr, nBufSize/sizeof(T_TICK_LINE) );
+				m_mapSZOPT[sCode] = refParam;
 			}
 		}
 		break;
@@ -628,10 +602,7 @@ int QuotationData::BuildSecurity( enum XDFMarket eMarket, std::string& sCode, T_
 			T_MAP_QUO::iterator it = m_mapCFF.find( sCode );
 			if( it == m_mapCFF.end() )
 			{
-				T_QUO_DATA&		refData = m_mapCFF[sCode];
-				pDataPtr = CacheAlloc::GetObj().GrabCache( eMarket, nBufSize );
-				refData.first = refParam;
-				nErrorCode = refData.second.Instance( pDataPtr, nBufSize/sizeof(T_TICK_LINE) );
+				m_mapCFF[sCode] = refParam;
 			}
 		}
 		break;
@@ -640,10 +611,7 @@ int QuotationData::BuildSecurity( enum XDFMarket eMarket, std::string& sCode, T_
 			T_MAP_QUO::iterator it = m_mapCFFOPT.find( sCode );
 			if( it == m_mapCFFOPT.end() )
 			{
-				T_QUO_DATA&		refData = m_mapCFFOPT[sCode];
-				pDataPtr = CacheAlloc::GetObj().GrabCache( eMarket, nBufSize );
-				refData.first = refParam;
-				nErrorCode = refData.second.Instance( pDataPtr, nBufSize/sizeof(T_TICK_LINE) );
+				m_mapCFFOPT[sCode] = refParam;
 			}
 		}
 		break;
@@ -652,10 +620,7 @@ int QuotationData::BuildSecurity( enum XDFMarket eMarket, std::string& sCode, T_
 			T_MAP_QUO::iterator it = m_mapCNF.find( sCode );
 			if( it == m_mapCNF.end() )
 			{
-				T_QUO_DATA&		refData = m_mapCNF[sCode];
-				pDataPtr = CacheAlloc::GetObj().GrabCache( eMarket, nBufSize );
-				refData.first = refParam;
-				nErrorCode = refData.second.Instance( pDataPtr, nBufSize/sizeof(T_TICK_LINE) );
+				m_mapCNF[sCode] = refParam;
 			}
 		}
 		break;
@@ -664,10 +629,7 @@ int QuotationData::BuildSecurity( enum XDFMarket eMarket, std::string& sCode, T_
 			T_MAP_QUO::iterator it = m_mapCNFOPT.find( sCode );
 			if( it == m_mapCNFOPT.end() )
 			{
-				T_QUO_DATA&		refData = m_mapCNFOPT[sCode];
-				pDataPtr = CacheAlloc::GetObj().GrabCache( eMarket, nBufSize );
-				refData.first = refParam;
-				nErrorCode = refData.second.Instance( pDataPtr, nBufSize/sizeof(T_TICK_LINE) );
+				m_mapCNFOPT[sCode] = refParam;
 			}
 		}
 		break;
@@ -781,7 +743,7 @@ int QuotationData::DumpDayLine( enum XDFMarket eMarket, char* pSnapData, unsigne
 
 					if( it != m_mapSHL1.end() )
 					{
-						T_LINE_PARAM&		refParam = it->second.first;
+						T_LINE_PARAM&		refParam = it->second;
 
 						if( true == PreDayFile( oDumper, eMarket, std::string( pStock->Code, 6 ), 0, nMachineDate ) )
 						{
@@ -800,7 +762,7 @@ int QuotationData::DumpDayLine( enum XDFMarket eMarket, char* pSnapData, unsigne
 
 					if( it != m_mapSHL1.end() )
 					{
-						T_LINE_PARAM&		refParam = it->second.first;
+						T_LINE_PARAM&		refParam = it->second;
 
 						if( true == PreDayFile( oDumper, eMarket, std::string( pStock->Code, 6 ), 0, nMachineDate ) )
 						{
@@ -822,7 +784,7 @@ int QuotationData::DumpDayLine( enum XDFMarket eMarket, char* pSnapData, unsigne
 
 			if( it != m_mapSHOPT.end() )
 			{
-				T_LINE_PARAM&		refParam = it->second.first;
+				T_LINE_PARAM&		refParam = it->second;
 
 				if( true == PreDayFile( oDumper, eMarket, std::string( pStock->Code, 8 ), 0, nMachineDate ) )
 				{
@@ -845,7 +807,7 @@ int QuotationData::DumpDayLine( enum XDFMarket eMarket, char* pSnapData, unsigne
 
 					if( it != m_mapSZL1.end() )
 					{
-						T_LINE_PARAM&		refParam = it->second.first;
+						T_LINE_PARAM&		refParam = it->second;
 
 						if( true == PreDayFile( oDumper, eMarket, std::string( pStock->Code, 6 ), 0, nMachineDate ) )
 						{
@@ -864,7 +826,7 @@ int QuotationData::DumpDayLine( enum XDFMarket eMarket, char* pSnapData, unsigne
 
 					if( it != m_mapSZL1.end() )
 					{
-						T_LINE_PARAM&		refParam = it->second.first;
+						T_LINE_PARAM&		refParam = it->second;
 
 						if( true == PreDayFile( oDumper, eMarket, std::string( pStock->Code, 6 ), 0, nMachineDate ) )
 						{
@@ -886,7 +848,7 @@ int QuotationData::DumpDayLine( enum XDFMarket eMarket, char* pSnapData, unsigne
 
 			if( it != m_mapSZOPT.end() )
 			{
-				T_LINE_PARAM&		refParam = it->second.first;
+				T_LINE_PARAM&		refParam = it->second;
 
 				if( true == PreDayFile( oDumper, eMarket, std::string( pStock->Code, 8 ), 0, nMachineDate ) )
 				{
@@ -905,7 +867,7 @@ int QuotationData::DumpDayLine( enum XDFMarket eMarket, char* pSnapData, unsigne
 
 			if( it != m_mapCFF.end() )
 			{
-				T_LINE_PARAM&		refParam = it->second.first;
+				T_LINE_PARAM&		refParam = it->second;
 
 				if( true == PreDayFile( oDumper, eMarket, std::string( pStock->Code, 6 ), 0, nMachineDate ) )
 				{
@@ -924,7 +886,7 @@ int QuotationData::DumpDayLine( enum XDFMarket eMarket, char* pSnapData, unsigne
 
 			if( it != m_mapCFFOPT.end() )
 			{
-				T_LINE_PARAM&		refParam = it->second.first;
+				T_LINE_PARAM&		refParam = it->second;
 
 				if( true == PreDayFile( oDumper, eMarket, std::string( pStock->Code ), 0, nMachineDate ) )
 				{
@@ -943,7 +905,7 @@ int QuotationData::DumpDayLine( enum XDFMarket eMarket, char* pSnapData, unsigne
 
 			if( it != m_mapCNF.end() )
 			{
-				T_LINE_PARAM&			refParam = it->second.first;
+				T_LINE_PARAM&			refParam = it->second;
 
 				if( true == PreDayFile( oDumper, eMarket, std::string( pStock->Code, 6 ), refParam.Type, s_nCNFTradingDate ) )
 				{
@@ -962,7 +924,7 @@ int QuotationData::DumpDayLine( enum XDFMarket eMarket, char* pSnapData, unsigne
 
 			if( it != m_mapCNFOPT.end() )
 			{
-				T_LINE_PARAM&			refParam = it->second.first;
+				T_LINE_PARAM&			refParam = it->second;
 
 				if( true == PreDayFile( oDumper, eMarket, std::string( pStock->Code ), refParam.Type, s_nCNFOPTTradingDate ) )
 				{
@@ -1021,8 +983,11 @@ void QuotationData::DispatchMinuteLine( enum XDFMarket eMarket, std::string& sCo
 		CriticalLock		section( m_oMinuteLock );
 		if( m_arrayMinuteLine.PutData( &tagMinuteLine ) < 0 )
 		{
-			QuoCollector::GetCollector()->OnLog( TLV_ERROR, "QuotationData::DispatchMinuteLine() : failed 2 dispatch minute line, mkid(%d), code(%s), time(%u)"
-												, (int)eMarket, sCode.c_str(), nMkTime );
+			ServerStatus::GetStatusObj().AddMinuteLostRef();
+		}
+		else
+		{
+			ServerStatus::GetStatusObj().UpdateMinuteBufOccupancyRate( m_arrayMinuteLine.GetPercent() );	///< MinuteLine缓存占用率
 		}
 		}
 
@@ -1037,7 +1002,6 @@ int QuotationData::UpdateTickLine( enum XDFMarket eMarket, char* pSnapData, unsi
 	unsigned int	nMachineDate = DateTime::Now().DateToLong();
 	unsigned int	nMachineTime = DateTime::Now().TimeToLong() * 1000;
 
-	refTickLine.Valid = 1;
 	refTickLine.eMarketID = eMarket;
 	refTickLine.Date = nMachineDate;
 	refTickLine.Time = nMachineTime;
@@ -1054,8 +1018,7 @@ int QuotationData::UpdateTickLine( enum XDFMarket eMarket, char* pSnapData, unsi
 
 					if( it != m_mapSHL1.end() )
 					{
-						T_LINE_PARAM&		refParam = it->second.first;
-						T_TICKLINE_CACHE&	refTickLineCache = it->second.second;
+						T_LINE_PARAM&		refParam = it->second;
 						///< ------------ Tick Lines -------------------------
 						::strncpy( refTickLine.Code, pStock->Code, 6 );
 						refTickLine.PreClosePx = pStock->PreClose / refParam.dPriceRate;
@@ -1081,8 +1044,7 @@ int QuotationData::UpdateTickLine( enum XDFMarket eMarket, char* pSnapData, unsi
 						refTickLine.AskPx2 = pStock->Sell[1].Price;
 						refTickLine.AskVol2 = pStock->Sell[1].Volume;
 						refTickLine.Voip = pStock->Voip / refParam.dPriceRate;
-						nErrorCode = refTickLineCache.PutData( &refTickLine );
-						ServerStatus::GetStatusObj().UpdateMkOccupancyRate( XDF_SH, refTickLineCache.GetPercent() );		///< 更新市场tick缓存的占用率
+						nErrorCode = m_arrayTickLine.PutData( &refTickLine );
 						///< ------------ Minute Lines -----------------------
 						DispatchMinuteLine( eMarket, std::string( pStock->Code, 6 ), refParam, refTickLine.Date, refTickLine.Time );
 						if( 0 == refParam.Valid )							///< 取第一笔数据的部分
@@ -1124,8 +1086,7 @@ int QuotationData::UpdateTickLine( enum XDFMarket eMarket, char* pSnapData, unsi
 
 					if( it != m_mapSHL1.end() )
 					{
-						T_LINE_PARAM&		refParam = it->second.first;
-						T_TICKLINE_CACHE&	refTickLineCache = it->second.second;
+						T_LINE_PARAM&		refParam = it->second;
 						///< ------------ Tick Lines -------------------------
 						::strncpy( refTickLine.Code, pStock->Code, 6 );
 						refTickLine.PreClosePx = pStock->PreClose / refParam.dPriceRate;
@@ -1143,7 +1104,7 @@ int QuotationData::UpdateTickLine( enum XDFMarket eMarket, char* pSnapData, unsi
 						//refTickLine.OpenInterest = 0;
 						//refTickLine.NumTrades = pStock->Records;
 						//refTickLine.Voip = pStock->Voip / refParam.dPriceRate;
-						nErrorCode = refTickLineCache.PutData( &refTickLine );
+						nErrorCode = m_arrayTickLine.PutData( &refTickLine );
 						///< ------------ Minute Lines -----------------------
 						DispatchMinuteLine( eMarket, std::string( pStock->Code, 6 ), refParam, refTickLine.Date, refTickLine.Time );
 						if( 0 == refParam.Valid )							///< 取第一笔数据的部分
@@ -1187,8 +1148,7 @@ int QuotationData::UpdateTickLine( enum XDFMarket eMarket, char* pSnapData, unsi
 
 			if( it != m_mapSHOPT.end() )
 			{
-				T_LINE_PARAM&		refParam = it->second.first;
-				T_TICKLINE_CACHE&	refTickLineCache = it->second.second;
+				T_LINE_PARAM&		refParam = it->second;
 				///< ------------ Tick Lines -------------------------
 				::strncpy( refTickLine.Code, pStock->Code, 8 );
 				refTickLine.PreClosePx = refParam.PreClosePx / refParam.dPriceRate;
@@ -1215,8 +1175,7 @@ int QuotationData::UpdateTickLine( enum XDFMarket eMarket, char* pSnapData, unsi
 				refTickLine.AskVol2 = pStock->Sell[1].Volume;
 				//refTickLine.Voip = pStock->Voip / refParam.dPriceRate;
 				::memcpy( refTickLine.TradingPhaseCode, pStock->TradingPhaseCode, sizeof(pStock->TradingPhaseCode) );
-				nErrorCode = refTickLineCache.PutData( &refTickLine );
-				ServerStatus::GetStatusObj().UpdateMkOccupancyRate( XDF_SHOPT, refTickLineCache.GetPercent() );		///< 更新市场tick缓存的占用率
+				nErrorCode = m_arrayTickLine.PutData( &refTickLine );
 				///< ------------ Minute Lines -----------------------
 				DispatchMinuteLine( eMarket, std::string( pStock->Code, 8 ), refParam, refTickLine.Date, refTickLine.Time );
 				if( 0 == refParam.Valid )							///< 取第一笔数据的部分
@@ -1261,8 +1220,7 @@ int QuotationData::UpdateTickLine( enum XDFMarket eMarket, char* pSnapData, unsi
 
 					if( it != m_mapSZL1.end() )
 					{
-						T_LINE_PARAM&		refParam = it->second.first;
-						T_TICKLINE_CACHE&	refTickLineCache = it->second.second;
+						T_LINE_PARAM&		refParam = it->second;
 						///< ------------ Tick Lines -------------------------
 						::strncpy( refTickLine.Code, pStock->Code, 6 );
 						refTickLine.PreClosePx = pStock->PreClose / refParam.dPriceRate;
@@ -1289,8 +1247,7 @@ int QuotationData::UpdateTickLine( enum XDFMarket eMarket, char* pSnapData, unsi
 						refTickLine.AskVol2 = pStock->Sell[1].Volume;
 						refTickLine.Voip = pStock->Voip / refParam.dPriceRate;
 						::memcpy( refTickLine.PreName, refParam.PreName, 4 );
-						nErrorCode = refTickLineCache.PutData( &refTickLine );
-						ServerStatus::GetStatusObj().UpdateMkOccupancyRate( XDF_SZ, refTickLineCache.GetPercent() );		///< 更新市场tick缓存的占用率
+						nErrorCode = m_arrayTickLine.PutData( &refTickLine );
 						///< ------------ Minute Lines -----------------------
 						DispatchMinuteLine( eMarket, std::string( pStock->Code, 6 ), refParam, refTickLine.Date, refTickLine.Time );
 						if( 0 == refParam.Valid )							///< 取第一笔数据的部分
@@ -1331,8 +1288,7 @@ int QuotationData::UpdateTickLine( enum XDFMarket eMarket, char* pSnapData, unsi
 
 					if( it != m_mapSZL1.end() )
 					{
-						T_LINE_PARAM&		refParam = it->second.first;
-						T_TICKLINE_CACHE&	refTickLineCache = it->second.second;
+						T_LINE_PARAM&		refParam = it->second;
 						///< ------------ Tick Lines -------------------------
 						::strncpy( refTickLine.Code, pStock->Code, 6 );
 						refTickLine.PreClosePx = pStock->PreClose / refParam.dPriceRate;
@@ -1350,7 +1306,7 @@ int QuotationData::UpdateTickLine( enum XDFMarket eMarket, char* pSnapData, unsi
 						//refTickLine.OpenInterest = 0;
 						//refTickLine.NumTrades = pStock->Records;
 						//refTickLine.Voip = pStock->Voip / refParam.dPriceRate;
-						nErrorCode = refTickLineCache.PutData( &refTickLine );
+						nErrorCode = m_arrayTickLine.PutData( &refTickLine );
 						///< ------------ Minute Lines -----------------------
 						DispatchMinuteLine( eMarket, std::string( pStock->Code, 6 ), refParam, refTickLine.Date, refTickLine.Time );
 						if( 0 == refParam.Valid )							///< 取第一笔数据的部分
@@ -1394,8 +1350,7 @@ int QuotationData::UpdateTickLine( enum XDFMarket eMarket, char* pSnapData, unsi
 
 			if( it != m_mapSZOPT.end() )
 			{
-				T_LINE_PARAM&		refParam = it->second.first;
-				T_TICKLINE_CACHE&	refTickLineCache = it->second.second;
+				T_LINE_PARAM&		refParam = it->second;
 				///< ------------ Tick Lines -------------------------
 				::strncpy( refTickLine.Code, pStock->Code, 8 );
 				refTickLine.PreClosePx = refParam.PreClosePx / refParam.dPriceRate;
@@ -1422,8 +1377,7 @@ int QuotationData::UpdateTickLine( enum XDFMarket eMarket, char* pSnapData, unsi
 				refTickLine.AskVol2 = pStock->Sell[1].Volume;
 				//refTickLine.Voip = pStock->Voip / refParam.dPriceRate;
 				::memcpy( refTickLine.TradingPhaseCode, pStock->TradingPhaseCode, sizeof(pStock->TradingPhaseCode) );
-				nErrorCode = refTickLineCache.PutData( &refTickLine );
-				ServerStatus::GetStatusObj().UpdateMkOccupancyRate( XDF_SZOPT, refTickLineCache.GetPercent() );		///< 更新市场tick缓存的占用率
+				nErrorCode = m_arrayTickLine.PutData( &refTickLine );
 				///< ------------ Minute Lines -----------------------
 				DispatchMinuteLine( eMarket, std::string( pStock->Code, 8 ), refParam, refTickLine.Date, refTickLine.Time );
 				if( 0 == refParam.Valid )							///< 取第一笔数据的部分
@@ -1464,8 +1418,7 @@ int QuotationData::UpdateTickLine( enum XDFMarket eMarket, char* pSnapData, unsi
 
 			if( it != m_mapCFF.end() )
 			{
-				T_LINE_PARAM&		refParam = it->second.first;
-				T_TICKLINE_CACHE&	refTickLineCache = it->second.second;
+				T_LINE_PARAM&		refParam = it->second;
 				///< ------------ Tick Lines -------------------------
 				::strncpy( refTickLine.Code, pStock->Code, 6 );
 				refTickLine.Time = pStock->DataTimeStamp;
@@ -1492,8 +1445,7 @@ int QuotationData::UpdateTickLine( enum XDFMarket eMarket, char* pSnapData, unsi
 				refTickLine.AskPx2 = pStock->Sell[1].Price;
 				refTickLine.AskVol2 = pStock->Sell[1].Volume;
 				//refTickLine.Voip = pStock->Voip / refParam.dPriceRate;
-				nErrorCode = refTickLineCache.PutData( &refTickLine );
-				ServerStatus::GetStatusObj().UpdateMkOccupancyRate( XDF_CF, refTickLineCache.GetPercent() );		///< 更新市场tick缓存的占用率
+				nErrorCode = m_arrayTickLine.PutData( &refTickLine );
 				///< ------------ Minute Lines -----------------------
 				DispatchMinuteLine( eMarket, std::string( pStock->Code, 6 ), refParam, refTickLine.Date, refTickLine.Time );
 				if( 0 == refParam.Valid )							///< 取第一笔数据的部分
@@ -1534,8 +1486,7 @@ int QuotationData::UpdateTickLine( enum XDFMarket eMarket, char* pSnapData, unsi
 
 			if( it != m_mapCFFOPT.end() )
 			{
-				T_LINE_PARAM&		refParam = it->second.first;
-				T_TICKLINE_CACHE&	refTickLineCache = it->second.second;
+				T_LINE_PARAM&		refParam = it->second;
 				///< ------------ Tick Lines -------------------------
 				::strcpy( refTickLine.Code, pStock->Code );
 				refTickLine.Time = pStock->DataTimeStamp;
@@ -1562,8 +1513,7 @@ int QuotationData::UpdateTickLine( enum XDFMarket eMarket, char* pSnapData, unsi
 				refTickLine.AskPx2 = pStock->Sell[1].Price;
 				refTickLine.AskVol2 = pStock->Sell[1].Volume;
 				//refTickLine.Voip = pStock->Voip / refParam.dPriceRate;
-				nErrorCode = refTickLineCache.PutData( &refTickLine );
-				ServerStatus::GetStatusObj().UpdateMkOccupancyRate( XDF_ZJOPT, refTickLineCache.GetPercent() );		///< 更新市场tick缓存的占用率
+				nErrorCode = m_arrayTickLine.PutData( &refTickLine );
 				///< ------------ Minute Lines -----------------------
 				DispatchMinuteLine( eMarket, std::string( pStock->Code ), refParam, refTickLine.Date, refTickLine.Time );
 				if( 0 == refParam.Valid )							///< 取第一笔数据的部分
@@ -1609,8 +1559,7 @@ int QuotationData::UpdateTickLine( enum XDFMarket eMarket, char* pSnapData, unsi
 
 			if( it != m_mapCNF.end() )
 			{
-				T_LINE_PARAM&		refParam = it->second.first;
-				T_TICKLINE_CACHE&	refTickLineCache = it->second.second;
+				T_LINE_PARAM&		refParam = it->second;
 				///< ------------ Tick Lines -------------------------
 				refTickLine.Type = refParam.Type;
 				::strncpy( refTickLine.Code, pStock->Code, 6 );
@@ -1639,8 +1588,7 @@ int QuotationData::UpdateTickLine( enum XDFMarket eMarket, char* pSnapData, unsi
 				refTickLine.AskPx2 = pStock->Sell[1].Price;
 				refTickLine.AskVol2 = pStock->Sell[1].Volume;
 				//refTickLine.Voip = pStock->Voip / refParam.dPriceRate;
-				nErrorCode = refTickLineCache.PutData( &refTickLine );
-				ServerStatus::GetStatusObj().UpdateMkOccupancyRate( XDF_CNF, refTickLineCache.GetPercent() );		///< 更新市场tick缓存的占用率
+				nErrorCode = m_arrayTickLine.PutData( &refTickLine );
 				///< ------------ Minute Lines -----------------------
 				DispatchMinuteLine( eMarket, std::string( pStock->Code, 6 ), refParam, refTickLine.Date, refTickLine.Time );
 				if( 0 == refParam.Valid )							///< 取第一笔数据的部分
@@ -1686,8 +1634,7 @@ int QuotationData::UpdateTickLine( enum XDFMarket eMarket, char* pSnapData, unsi
 
 			if( it != m_mapCNFOPT.end() )
 			{
-				T_LINE_PARAM&		refParam = it->second.first;
-				T_TICKLINE_CACHE&	refTickLineCache = it->second.second;
+				T_LINE_PARAM&		refParam = it->second;
 				///< ------------ Tick Lines -------------------------
 				refTickLine.Type = refParam.Type;
 				::strcpy( refTickLine.Code, pStock->Code );
@@ -1716,8 +1663,7 @@ int QuotationData::UpdateTickLine( enum XDFMarket eMarket, char* pSnapData, unsi
 				refTickLine.AskPx2 = pStock->Sell[1].Price;
 				refTickLine.AskVol2 = pStock->Sell[1].Volume;
 				//refTickLine.Voip = pStock->Voip / refParam.dPriceRate;
-				nErrorCode = refTickLineCache.PutData( &refTickLine );
-				ServerStatus::GetStatusObj().UpdateMkOccupancyRate( XDF_CNFOPT, refTickLineCache.GetPercent() );		///< 更新市场tick缓存的占用率
+				nErrorCode = m_arrayTickLine.PutData( &refTickLine );
 				///< ------------ Minute Lines -----------------------
 				DispatchMinuteLine( eMarket, std::string( pStock->Code ), refParam, refTickLine.Date, refTickLine.Time );
 				if( 0 == refParam.Valid )							///< 取第一笔数据的部分
@@ -1752,7 +1698,7 @@ int QuotationData::UpdateTickLine( enum XDFMarket eMarket, char* pSnapData, unsi
 		}
 		break;
 	default:
-		nErrorCode = -1024;
+		QuoCollector::GetCollector()->OnLog( TLV_ERROR, "QuotationData::UpdateTickLine() : invalid market id(%d)", (int)eMarket );
 		break;
 	}
 
@@ -1762,6 +1708,7 @@ int QuotationData::UpdateTickLine( enum XDFMarket eMarket, char* pSnapData, unsi
 		return -1;
 	}
 
+	ServerStatus::GetStatusObj().UpdateTickBufOccupancyRate( m_arrayTickLine.GetPercent() );	///< TICK缓存占用率
 	ServerStatus::GetStatusObj().UpdateSecurity( (enum XDFMarket)(refTickLine.eMarketID), refTickLine.Code, refTickLine.NowPx, refTickLine.Amount, refTickLine.Volume );	///< 更新各市场的商品状态
 
 	return 0;

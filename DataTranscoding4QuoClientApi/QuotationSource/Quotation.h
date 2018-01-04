@@ -74,6 +74,11 @@ public:
 	int							Release();
 
 	/**
+	 * @brief					停止工作
+	 */
+	void						Halt();
+
+	/**
 	 * @brief					获取行情插件版本号
 	 */
 	std::string&				QuoteApiVersion();

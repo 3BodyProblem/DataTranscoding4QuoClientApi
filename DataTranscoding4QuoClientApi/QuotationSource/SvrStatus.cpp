@@ -9,7 +9,8 @@
 ServerStatus::ServerStatus()
  : m_nFinancialUpdateDate( 0 ), m_nFinancialUpdateTime( 0 )
  , m_nWeightUpdateDate( 0 ), m_nWeightUpdateTime( 0 )
- , m_nTickLostCount( 0 )
+ , m_nTickLostCount( 0 ), m_nTickBufOccupancyRate( 0 )
+ , m_nMinuteLostCount( 0 )
 {
 	::memset( m_vctLastSecurity, 0, sizeof(m_vctLastSecurity) );
 }
@@ -19,6 +20,16 @@ ServerStatus& ServerStatus::GetStatusObj()
 	static	ServerStatus	obj;
 
 	return obj;
+}
+
+void ServerStatus::AddMinuteLostRef()
+{
+	m_nMinuteLostCount++;
+}
+
+unsigned int ServerStatus::GetMinuteLostRef()
+{
+	return m_nMinuteLostCount;
 }
 
 void ServerStatus::AddTickLostRef()
@@ -147,28 +158,24 @@ void ServerStatus::GetFinancialUpdateDT( unsigned int& nDate, unsigned int& nTim
 	nTime = m_nFinancialUpdateTime;
 }
 
-void ServerStatus::UpdateMkOccupancyRate( enum XDFMarket eMkID, int nRate )
+void ServerStatus::UpdateTickBufOccupancyRate( int nRate )
 {
-	unsigned int	nPos = (unsigned int)eMkID;
-
-	if( nPos >= 256 )
-	{
-		return;
-	}
-
-	m_vctLastSecurity[nPos].MkBufOccupancyRate = nRate;
+	m_nTickBufOccupancyRate = nRate;
 }
 
-int ServerStatus::FetchMkOccupancyRate( enum XDFMarket eMkID )
+int ServerStatus::FetchTickBufOccupancyRate()
 {
-	unsigned int	nPos = (unsigned int)eMkID;
+	return m_nTickBufOccupancyRate;
+}
 
-	if( nPos >= 256 )
-	{
-		return m_vctLastSecurity[255].MkBufOccupancyRate;
-	}
+void ServerStatus::UpdateMinuteBufOccupancyRate( int nRate )
+{
+	m_nMinuteBufOccupancyRate = nRate;
+}
 
-	return m_vctLastSecurity[nPos].MkBufOccupancyRate;
+int ServerStatus::FetchMinuteBufOccupancyRate()
+{
+	return m_nMinuteBufOccupancyRate;
 }
 
 void ServerStatus::UpdateMkStatus( enum XDFMarket eMkID, const char* pszDesc )

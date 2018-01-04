@@ -97,7 +97,6 @@ int Quotation::Initialize()
 		int							nErrCode = 0;
 
 		QuoCollector::GetCollector()->OnLog( TLV_INFO, "Quotation::Initialize() : ............ [%s] Quotation Is Activating............" );
-		Release();
 
 		if( (nErrCode = m_oQuoDataCenter.Initialize( this )) < 0 )
 		{
@@ -127,13 +126,27 @@ int Quotation::Initialize()
 	return 0;
 }
 
+void Quotation::Halt()
+{
+	if( m_oWorkStatus != ET_SS_UNACTIVE )
+	{
+		QuoCollector::GetCollector()->OnLog( TLV_INFO, "Quotation::Halt() : ............ Halting .............." );
+
+		m_oWorkStatus = ET_SS_UNACTIVE;			///< 更新Quotation会话的状态
+//		m_oQuotPlugin.Release();				///< 释放行情源插件
+//		m_oQuoDataCenter.Release();				///< 释放行情数据资源
+
+		QuoCollector::GetCollector()->OnLog( TLV_INFO, "Quotation::Halt() : ............ Halted! .............." );
+	}
+}
+
 int Quotation::Release()
 {
 	if( m_oWorkStatus != ET_SS_UNACTIVE )
 	{
 		QuoCollector::GetCollector()->OnLog( TLV_INFO, "Quotation::Release() : ............ Destroying .............." );
 
-		m_oWorkStatus = ET_SS_UNACTIVE;			///< 更新Quotation会话的状态
+//		m_oWorkStatus = ET_SS_UNACTIVE;			///< 更新Quotation会话的状态
 //		m_oQuotPlugin.Release();				///< 释放行情源插件
 //		m_oQuoDataCenter.Release();				///< 释放行情数据资源
 
