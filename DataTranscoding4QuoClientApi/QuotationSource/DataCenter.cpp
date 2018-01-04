@@ -20,7 +20,7 @@ const int		XDF_CF_COUNT = 500;						///< 中金期货
 const int		XDF_ZJOPT_COUNT = 500;					///< 中金期权
 const int		XDF_CNF_COUNT = 500;					///< 商品期货(上海/郑州/大连)
 const int		XDF_CNFOPT_COUNT = 500;					///< 商品期权(上海/郑州/大连)
-unsigned int	s_nNumberInSection = 30;				///< 一个市场有可以缓存多少个数据块
+unsigned int	s_nNumberInSection = 50;				///< 一个市场有可以缓存多少个数据块
 ///< -----------------------------------------------------------------------------------
 
 
@@ -176,7 +176,7 @@ int QuotationData::Initialize( void* pQuotation )
 	Release();
 	m_pQuotation = pQuotation;
 
-	m_nMaxMLineBufSize = (XDF_SH_COUNT + XDF_SHOPT_COUNT + XDF_SZ_COUNT + XDF_SZOPT_COUNT + XDF_CF_COUNT + XDF_ZJOPT_COUNT + XDF_CNF_COUNT + XDF_CNFOPT_COUNT) * sizeof(T_MIN_LINE) * 10;
+	m_nMaxMLineBufSize = (XDF_SH_COUNT + XDF_SHOPT_COUNT + XDF_SZ_COUNT + XDF_SZOPT_COUNT + XDF_CF_COUNT + XDF_ZJOPT_COUNT + XDF_CNF_COUNT + XDF_CNFOPT_COUNT) * sizeof(T_MIN_LINE) * 15;
 	m_pBuf4MinuteLine = new char[m_nMaxMLineBufSize];
 	if( NULL == m_pBuf4MinuteLine )
 	{
@@ -211,6 +211,14 @@ int QuotationData::Initialize( void* pQuotation )
 	{
 		if( 0 != m_oThdMinuteDump.Create( "ThreadDumpMinuteLine()", ThreadDumpMinuteLine, this ) ) {
 			QuoCollector::GetCollector()->OnLog( TLV_ERROR, "QuotationData::Initialize() : failed 2 create minute line thread(1)" );
+			return -6;
+		}
+	}
+
+	if( false == m_oThdIdle.IsAlive() )
+	{
+		if( 0 != m_oThdIdle.Create( "ThreadOnIdle()", ThreadOnIdle, this ) ) {
+			QuoCollector::GetCollector()->OnLog( TLV_ERROR, "QuotationData::Initialize() : failed 2 create onidle line thread" );
 			return -6;
 		}
 	}
@@ -367,9 +375,6 @@ void* QuotationData::ThreadDumpMinuteLine( void* pSelf )
 					, tagMinuteLine.SettlePx, tagMinuteLine.Amount, tagMinuteLine.Volume, tagMinuteLine.OpenInterest, tagMinuteLine.NumTrades, tagMinuteLine.Voip );
 				oDumper.write( pszLine, nLen );
 			}
-
-			refQuotation.FlushDayLineOnCloseTime();															///< 检查是否需要落日线
-			refQuotation.UpdateMarketsTime();																///< 更新各市场的日期和时间
 		}
 		catch( std::exception& err )
 		{
@@ -378,6 +383,38 @@ void* QuotationData::ThreadDumpMinuteLine( void* pSelf )
 		catch( ... )
 		{
 			QuoCollector::GetCollector()->OnLog( TLV_ERROR, "QuotationData::ThreadDumpMinuteLine() : unknow exception" );
+		}
+	}
+
+	return NULL;
+}
+
+void* QuotationData::ThreadOnIdle( void* pSelf )
+{
+	ServerStatus&		refStatus = ServerStatus::GetStatusObj();
+	QuotationData&		refData = *(QuotationData*)pSelf;
+	Quotation&			refQuotation = *((Quotation*)refData.m_pQuotation);
+	T_TICKLINE_CACHE&	refTickBuf = refData.m_arrayTickLine;
+	T_MINLINE_CACHE&	refMinuBuf = refData.m_arrayMinuteLine;
+
+	while( false == SimpleThread::GetGlobalStopFlag() )
+	{
+		try
+		{
+			SimpleThread::Sleep( 1000 * 2 );
+
+			refQuotation.FlushDayLineOnCloseTime();									///< 检查是否需要落日线
+			refQuotation.UpdateMarketsTime();										///< 更新各市场的日期和时间
+			refStatus.UpdateTickBufOccupancyRate( refTickBuf.GetPercent() );		///< TICK缓存占用率
+			refStatus.UpdateMinuteBufOccupancyRate( refMinuBuf.GetPercent() );		///< MinuteLine缓存占用率
+		}
+		catch( std::exception& err )
+		{
+			QuoCollector::GetCollector()->OnLog( TLV_ERROR, "QuotationData::ThreadOnIdle() : exception : %s", err.what() );
+		}
+		catch( ... )
+		{
+			QuoCollector::GetCollector()->OnLog( TLV_ERROR, "QuotationData::ThreadOnIdle() : unknow exception" );
 		}
 	}
 
@@ -984,10 +1021,6 @@ void QuotationData::DispatchMinuteLine( enum XDFMarket eMarket, std::string& sCo
 		if( m_arrayMinuteLine.PutData( &tagMinuteLine ) < 0 )
 		{
 			ServerStatus::GetStatusObj().AddMinuteLostRef();
-		}
-		else
-		{
-			ServerStatus::GetStatusObj().UpdateMinuteBufOccupancyRate( m_arrayMinuteLine.GetPercent() );	///< MinuteLine缓存占用率
 		}
 		}
 
@@ -1708,7 +1741,6 @@ int QuotationData::UpdateTickLine( enum XDFMarket eMarket, char* pSnapData, unsi
 		return -1;
 	}
 
-	ServerStatus::GetStatusObj().UpdateTickBufOccupancyRate( m_arrayTickLine.GetPercent() );	///< TICK缓存占用率
 	ServerStatus::GetStatusObj().UpdateSecurity( (enum XDFMarket)(refTickLine.eMarketID), refTickLine.Code, refTickLine.NowPx, refTickLine.Amount, refTickLine.Volume );	///< 更新各市场的商品状态
 
 	return 0;

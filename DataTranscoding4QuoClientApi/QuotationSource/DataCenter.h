@@ -285,6 +285,7 @@ public:
 protected:
 	static void*	__stdcall	ThreadDumpTickLine( void* pSelf );			///< 日线落盘线程
 	static void*	__stdcall	ThreadDumpMinuteLine( void* pSelf );		///< 分钟落盘线程
+	static void*	__stdcall	ThreadOnIdle( void* pSelf );				///< 空闲线程
 
 protected:
 	TMAP_MKID2STATUS			m_mapModuleStatus;				///< 模块状态表
@@ -308,6 +309,7 @@ protected:
 protected:
 	SimpleThread				m_oThdTickDump;					///< Tick落盘数据
 	SimpleThread				m_oThdMinuteDump;				///< 分钟线落盘数据
+	SimpleThread				m_oThdIdle;						///< 空闲线程
 };
 
 
