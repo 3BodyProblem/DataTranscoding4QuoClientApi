@@ -178,7 +178,7 @@ int QuotationData::Initialize( void* pQuotation )
 	}
 
 	::memset( m_pBuf4MinuteLine, 0, m_nMaxMLineBufSize );
-	nErrorCode = m_arrayMinuteLine.Instance( m_pBuf4MinuteLine, m_nMaxMLineBufSize );
+	nErrorCode = m_arrayMinuteLine.Instance( m_pBuf4MinuteLine, m_nMaxMLineBufSize/sizeof(T_MIN_LINE) );
 	if( 0 > nErrorCode )
 	{
 		QuoCollector::GetCollector()->OnLog( TLV_ERROR, "QuotationData::Initialize() : failed 2 initialize minutes lines manager obj. errorcode = %d", nErrorCode );
@@ -193,11 +193,19 @@ int QuotationData::Initialize( void* pQuotation )
 		}
 	}
 
+	if( false == m_oThdTickDump2.IsAlive() )
+	{
+		if( 0 != m_oThdTickDump2.Create( "ThreadDumpTickLine()", ThreadDumpTickLine, this ) ) {
+			QuoCollector::GetCollector()->OnLog( TLV_ERROR, "QuotationData::Initialize() : failed 2 create tick line thread(2)" );
+			return -4;
+		}
+	}
+
 	if( false == m_oThdMinuteDump.IsAlive() )
 	{
 		if( 0 != m_oThdMinuteDump.Create( "ThreadDumpMinuteLine()", ThreadDumpMinuteLine, this ) ) {
 			QuoCollector::GetCollector()->OnLog( TLV_ERROR, "QuotationData::Initialize() : failed 2 create minute line thread(1)" );
-			return -4;
+			return -5;
 		}
 	}
 
@@ -322,6 +330,7 @@ __inline bool	PrepareMinuteFile( T_MIN_LINE&	refMinuteLine, std::string& sCode, 
 void* QuotationData::ThreadDumpMinuteLine( void* pSelf )
 {
 	QuotationData&		refData = *(QuotationData*)pSelf;
+	Quotation&			refQuotation = *((Quotation*)refData.m_pQuotation);
 
 	while( false == SimpleThread::GetGlobalStopFlag() )
 	{
@@ -352,6 +361,9 @@ void* QuotationData::ThreadDumpMinuteLine( void* pSelf )
 					, tagMinuteLine.SettlePx, tagMinuteLine.Amount, tagMinuteLine.Volume, tagMinuteLine.OpenInterest, tagMinuteLine.NumTrades, tagMinuteLine.Voip );
 				oDumper.write( pszLine, nLen );
 			}
+
+			refQuotation.FlushDayLineOnCloseTime();		///< 检查是否需要落日线
+			refQuotation.UpdateMarketsTime();			///< 更新各市场的日期和时间
 		}
 		catch( std::exception& err )
 		{
@@ -407,13 +419,13 @@ __inline bool	PrepareTickFile( T_TICK_LINE* pTickLine, std::string& sCode, std::
 				::sprintf( pszFilePath, "INE/TICK/%s/%u/", pTickLine->Code, pTickLine->Date );
 				break;
 			default:
-				QuoCollector::GetCollector()->OnLog( TLV_ERROR, "QuotationData::ThreadDumpTickLine() : invalid market subid (Type=%d)", pTickLine->Type );
+				QuoCollector::GetCollector()->OnLog( TLV_ERROR, "QuotationData::PrepareTickFile() : invalid market subid (Type=%d)", pTickLine->Type );
 				return false;
 			}
 		}
 		break;
 	default:
-		QuoCollector::GetCollector()->OnLog( TLV_ERROR, "QuotationData::ThreadDumpTickLine() : invalid market id (%s)", pTickLine->eMarketID );
+		QuoCollector::GetCollector()->OnLog( TLV_ERROR, "QuotationData::PrepareTickFile() : invalid market id (%s)", pTickLine->eMarketID );
 		return false;
 	}
 
@@ -427,7 +439,7 @@ __inline bool	PrepareTickFile( T_TICK_LINE* pTickLine, std::string& sCode, std::
 
 	if( !oDumper.is_open() )
 	{
-		QuoCollector::GetCollector()->OnLog( TLV_ERROR, "QuotationData::ThreadDumpTickLine() : cannot open file (%s)", sFilePath.c_str() );
+		QuoCollector::GetCollector()->OnLog( TLV_ERROR, "QuotationData::PrepareTickFile() : cannot open file (%s)", sFilePath.c_str() );
 		return false;
 	}
 
@@ -442,12 +454,25 @@ __inline bool	PrepareTickFile( T_TICK_LINE* pTickLine, std::string& sCode, std::
 	return true;
 }
 
+unsigned int	nLastTickThreadBeginPos = 0;
 typedef char	STR_TICK_LINE[512];
 void* QuotationData::ThreadDumpTickLine( void* pSelf )
 {
 	unsigned __int64			nDumpNumber = 0;
 	QuotationData&				refData = *(QuotationData*)pSelf;
 	Quotation&					refQuotation = *((Quotation*)refData.m_pQuotation);
+	unsigned int				nBeginPos = nLastTickThreadBeginPos;
+
+	{
+	static CriticalObject		s_oLock;				///< 临界区对象
+	CriticalLock				section( s_oLock );		///< lock()
+
+	if( 0 == nLastTickThreadBeginPos )
+	{
+		nBeginPos = nLastTickThreadBeginPos;
+		nLastTickThreadBeginPos = XDF_SH_COUNT * s_nNumberInSection;
+	}
+	}
 
 	while( false == SimpleThread::GetGlobalStopFlag() )
 	{
@@ -461,12 +486,20 @@ void* QuotationData::ThreadDumpTickLine( void* pSelf )
 			STR_TICK_LINE			pszLine = { 0 };
 
 			SimpleThread::Sleep( 1000 * 1 );
-			if( nDumpNumber > 3000 ) {
+			if( NULL == pBufPtr || 0 == nBufLen ) {
+				continue;
+			}
+
+			if( 0 == nBeginPos )	{
+				nMaxDataNum = min(nMaxDataNum, nLastTickThreadBeginPos);
+			}
+
+			if( nDumpNumber > 6000 ) {
 				QuoCollector::GetCollector()->OnLog( TLV_INFO, "QuotationData::ThreadDumpTickLine() : (%I64d) dumped... ( Count=%u )", nDumpNumber, nMaxDataNum );
 				nDumpNumber = 0;
 			}
 
-			for( int n = 0; n < nMaxDataNum; n++ )
+			for( int n = nBeginPos; n < nMaxDataNum; n++ )
 			{
 				T_TICK_LINE*				pTickLine = (T_TICK_LINE*)(pBufPtr + n * sizeof(T_TICK_LINE));
 
@@ -502,9 +535,6 @@ void* QuotationData::ThreadDumpTickLine( void* pSelf )
 					nDumpNumber++;
 				}
 			}
-
-			refQuotation.FlushDayLineOnCloseTime();		///< 检查是否需要落日线
-			refQuotation.UpdateMarketsTime();			///< 更新各市场的日期和时间
 		}
 		catch( std::exception& err )
 		{
@@ -553,7 +583,7 @@ int QuotationData::BuildSecurity( enum XDFMarket eMarket, std::string& sCode, T_
 				T_QUO_DATA&		refData = m_mapSHL1[sCode];
 				pDataPtr = CacheAlloc::GetObj().GrabCache( eMarket, nBufSize );
 				refData.first = refParam;
-				nErrorCode = refData.second.Instance( pDataPtr, nBufSize );
+				nErrorCode = refData.second.Instance( pDataPtr, nBufSize/sizeof(T_TICK_LINE) );
 			}
 		}
 		break;
@@ -565,7 +595,7 @@ int QuotationData::BuildSecurity( enum XDFMarket eMarket, std::string& sCode, T_
 				T_QUO_DATA&		refData = m_mapSHOPT[sCode];
 				pDataPtr = CacheAlloc::GetObj().GrabCache( eMarket, nBufSize );
 				refData.first = refParam;
-				nErrorCode = refData.second.Instance( pDataPtr, nBufSize );
+				nErrorCode = refData.second.Instance( pDataPtr, nBufSize/sizeof(T_TICK_LINE) );
 			}
 		}
 		break;
@@ -577,7 +607,7 @@ int QuotationData::BuildSecurity( enum XDFMarket eMarket, std::string& sCode, T_
 				T_QUO_DATA&		refData = m_mapSZL1[sCode];
 				pDataPtr = CacheAlloc::GetObj().GrabCache( eMarket, nBufSize );
 				refData.first = refParam;
-				nErrorCode = refData.second.Instance( pDataPtr, nBufSize );
+				nErrorCode = refData.second.Instance( pDataPtr, nBufSize/sizeof(T_TICK_LINE) );
 			}
 		}
 		break;
@@ -589,7 +619,7 @@ int QuotationData::BuildSecurity( enum XDFMarket eMarket, std::string& sCode, T_
 				T_QUO_DATA&		refData = m_mapSZOPT[sCode];
 				pDataPtr = CacheAlloc::GetObj().GrabCache( eMarket, nBufSize );
 				refData.first = refParam;
-				nErrorCode = refData.second.Instance( pDataPtr, nBufSize );
+				nErrorCode = refData.second.Instance( pDataPtr, nBufSize/sizeof(T_TICK_LINE) );
 			}
 		}
 		break;
@@ -601,7 +631,7 @@ int QuotationData::BuildSecurity( enum XDFMarket eMarket, std::string& sCode, T_
 				T_QUO_DATA&		refData = m_mapCFF[sCode];
 				pDataPtr = CacheAlloc::GetObj().GrabCache( eMarket, nBufSize );
 				refData.first = refParam;
-				nErrorCode = refData.second.Instance( pDataPtr, nBufSize );
+				nErrorCode = refData.second.Instance( pDataPtr, nBufSize/sizeof(T_TICK_LINE) );
 			}
 		}
 		break;
@@ -613,7 +643,7 @@ int QuotationData::BuildSecurity( enum XDFMarket eMarket, std::string& sCode, T_
 				T_QUO_DATA&		refData = m_mapCFFOPT[sCode];
 				pDataPtr = CacheAlloc::GetObj().GrabCache( eMarket, nBufSize );
 				refData.first = refParam;
-				nErrorCode = refData.second.Instance( pDataPtr, nBufSize );
+				nErrorCode = refData.second.Instance( pDataPtr, nBufSize/sizeof(T_TICK_LINE) );
 			}
 		}
 		break;
@@ -625,7 +655,7 @@ int QuotationData::BuildSecurity( enum XDFMarket eMarket, std::string& sCode, T_
 				T_QUO_DATA&		refData = m_mapCNF[sCode];
 				pDataPtr = CacheAlloc::GetObj().GrabCache( eMarket, nBufSize );
 				refData.first = refParam;
-				nErrorCode = refData.second.Instance( pDataPtr, nBufSize );
+				nErrorCode = refData.second.Instance( pDataPtr, nBufSize/sizeof(T_TICK_LINE) );
 			}
 		}
 		break;
@@ -637,7 +667,7 @@ int QuotationData::BuildSecurity( enum XDFMarket eMarket, std::string& sCode, T_
 				T_QUO_DATA&		refData = m_mapCNFOPT[sCode];
 				pDataPtr = CacheAlloc::GetObj().GrabCache( eMarket, nBufSize );
 				refData.first = refParam;
-				nErrorCode = refData.second.Instance( pDataPtr, nBufSize );
+				nErrorCode = refData.second.Instance( pDataPtr, nBufSize/sizeof(T_TICK_LINE) );
 			}
 		}
 		break;
@@ -1728,7 +1758,7 @@ int QuotationData::UpdateTickLine( enum XDFMarket eMarket, char* pSnapData, unsi
 
 	if( nErrorCode < 0 )
 	{
-		QuoCollector::GetCollector()->OnLog( TLV_ERROR, "QuotationData::UpdateTickLine() : an error occur while updating tick line(%s), marketid=%d, errorcode=%d", refTickLine.Code, (int)eMarket, nErrorCode );
+		ServerStatus::GetStatusObj().AddTickLostRef();
 		return -1;
 	}
 

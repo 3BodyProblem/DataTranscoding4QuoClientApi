@@ -1,6 +1,7 @@
 #include <string>
 #include <algorithm>
 #include "Configuration.h"
+#include "QuotationSource/SvrStatus.h"
 #include "DataTranscoding4QuoClientApi.h"
 
 
@@ -175,6 +176,29 @@ Configuration::Configuration()
 	m_vctMkNameCfg.push_back( "szopt_setting" );
 }
 
+int	CvtStr2MkID( std::string sStr )
+{
+	if( sStr == "cff_setting" )	{
+		return XDF_CF;
+	} else if( sStr == "cffopt_setting" )	{
+		return XDF_ZJOPT;
+	} else if( sStr == "cnf_setting" )	{
+		return XDF_CNF;
+	} else if( sStr == "cnfopt_setting" )	{
+		return XDF_CNFOPT;
+	} else if( sStr == "sh_setting" )	{
+		return XDF_SH;
+	} else if( sStr == "shopt_setting" )	{
+		return XDF_SHOPT;
+	} else if( sStr == "sz_setting" )	{
+		return XDF_SZ;
+	} else if( sStr == "sz_setting" )	{
+		return XDF_SZOPT;
+	} else {
+		return -1;				///< 不能识别的市场配置标识字符串
+	}
+}
+
 Configuration& Configuration::GetConfig()
 {
 	static Configuration	obj;
@@ -228,7 +252,7 @@ int Configuration::Initialize()
 		QuoCollector::GetCollector()->OnLog( TLV_WARN, "Configuration::Initialize() : weight file isn\'t exist..." );
 	}
 
-	///< 转存各市场的配置到对应的文件
+	///< 转存各市场的配置到对应的文件 && 解析出需要被监控的各市场的代码
 	ParseAndSaveMkConfig( oIniFile );
 
 	return 0;
@@ -249,10 +273,15 @@ void Configuration::ParseAndSaveMkConfig( inifile::IniFile& refIniFile )
 		int					nServerPort_1 = refIniFile.getIntValue( sMkCfgName, std::string("ServerPort_1"), nErrCode );
 		std::string			sLoginName_1 = refIniFile.getStringValue( sMkCfgName, std::string("LoginName_1"), nErrCode );
 		std::string			sLoginPWD_1 = refIniFile.getStringValue( sMkCfgName, std::string("LoginPWD_1"), nErrCode );
+		std::string			sShowCode = refIniFile.getStringValue( sMkCfgName, std::string("ShowCode"), nErrCode );
 		MkCfgWriter			objCfgWriter( sMkCfgName );
+		short				nMarketID = CvtStr2MkID( sMkCfgName );
 
 		objCfgWriter.ConfigurateConnection4Mk( 0, sServerIP_0, nServerPort_0, sLoginName_0, sLoginPWD_0 );
 		objCfgWriter.ConfigurateConnection4Mk( 1, sServerIP_1, nServerPort_1, sLoginName_1, sLoginPWD_1 );
+		if( nMarketID >= 0 && sShowCode.length() > 2 )	{
+			ServerStatus::GetStatusObj().AnchorSecurity( (enum XDFMarket)nMarketID, sShowCode.c_str(), "" );
+		}
 	}
 }
 

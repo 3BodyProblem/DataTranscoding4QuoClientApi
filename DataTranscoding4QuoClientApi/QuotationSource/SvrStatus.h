@@ -16,7 +16,7 @@ typedef struct
 {
 	unsigned int			MkDate;					///< 市场日期
 	unsigned int			MkTime;					///< 市场行情时间
-	double					MkBufOccupancyRate;		///< 市场缓存占用率
+	int						MkBufOccupancyRate;		///< 市场缓存占用率
 	char					MkStatusDesc[32];		///< 市场状态描述串
 	char					Code[32];				///< 商品代码
 	char					Name[64];				///< 商品名称
@@ -119,13 +119,13 @@ public:///< 各市场的tick缓存占用率存取方法
 	 * @param[in]			eMkID					市场ID
 	 * @param[in]			dRate					tick缓存占用率
 	 */
-	void					UpdateMkOccupancyRate( enum XDFMarket eMkID, double dRate );
+	void					UpdateMkOccupancyRate( enum XDFMarket eMkID, int nRate );
 
 	/**
 	 * @brief				获取各市场缓存占用率
 	 * @param[in]			eMkID					市场ID
 	 */
-	double					FetchMkOccupancyRate( enum XDFMarket eMkID );
+	int						FetchMkOccupancyRate( enum XDFMarket eMkID );
 
 public:///< 各市场的状态
 	/**
@@ -141,12 +141,24 @@ public:///< 各市场的状态
 	 */
 	const char*				GetMkStatus( enum XDFMarket eMkID );
 
+public:///< 落盘丢失数据统计
+	/**
+	 * @brief				自增tick落盘失败计数
+	 */
+	void					AddTickLostRef();
+
+	/**
+	 * @brief				获取tick落盘失败计数
+	 */
+	unsigned int			GetTickLostRef();
+
 protected:
 	T_SECURITY_STATUS		m_vctLastSecurity[256];			///< 各市场的第一个商品的状态更新表
 	unsigned int			m_nFinancialUpdateDate;			///< 资讯库更新日期
 	unsigned int			m_nFinancialUpdateTime;			///< 资讯库更新时间
 	unsigned int			m_nWeightUpdateDate;			///< 权息库更新日期
 	unsigned int			m_nWeightUpdateTime;			///< 权息库更新时间
+	unsigned int			m_nTickLostCount;				///< Tick落盘失败统计
 };
 
 

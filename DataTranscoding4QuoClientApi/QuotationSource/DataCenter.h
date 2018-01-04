@@ -183,6 +183,7 @@ public:
 	/**
 	 * @brief					为一个商品代码分配缓存对应的专用缓存
 	 * @param[in]				eMkID			市场ID
+	 * @param[out]				nOutSize		输出为这一个商品分配的缓存的大小
 	 */
 	char*						GrabCache( enum XDFMarket eMkID, unsigned int& nOutSize );
 
@@ -302,6 +303,7 @@ protected:
 	CriticalObject				m_oMinuteLock;					///< 临界区对象
 protected:
 	SimpleThread				m_oThdTickDump;					///< Tick落盘数据
+	SimpleThread				m_oThdTickDump2;				///< Tick落盘数据
 	SimpleThread				m_oThdMinuteDump;				///< 分钟线落盘数据
 };
 

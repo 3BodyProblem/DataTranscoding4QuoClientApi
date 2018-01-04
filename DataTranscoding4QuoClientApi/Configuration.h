@@ -45,8 +45,8 @@ protected:
  */
 typedef struct
 {
-	unsigned int						LastDate;					///< 最后落盘日期
-	unsigned int						CloseTime;					///< 收盘时间
+	unsigned int				LastDate;							///< 最后落盘日期
+	unsigned int				CloseTime;							///< 收盘时间
 } CLOSE_CFG;
 
 

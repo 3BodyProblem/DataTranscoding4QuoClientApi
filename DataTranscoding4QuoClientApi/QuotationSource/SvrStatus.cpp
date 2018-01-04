@@ -9,6 +9,7 @@
 ServerStatus::ServerStatus()
  : m_nFinancialUpdateDate( 0 ), m_nFinancialUpdateTime( 0 )
  , m_nWeightUpdateDate( 0 ), m_nWeightUpdateTime( 0 )
+ , m_nTickLostCount( 0 )
 {
 	::memset( m_vctLastSecurity, 0, sizeof(m_vctLastSecurity) );
 }
@@ -18,6 +19,16 @@ ServerStatus& ServerStatus::GetStatusObj()
 	static	ServerStatus	obj;
 
 	return obj;
+}
+
+void ServerStatus::AddTickLostRef()
+{
+	m_nTickLostCount++;
+}
+
+unsigned int ServerStatus::GetTickLostRef()
+{
+	return m_nTickLostCount;
 }
 
 void ServerStatus::AnchorSecurity( enum XDFMarket eMkID, const char* pszCode, const char* pszName )
@@ -30,8 +41,11 @@ void ServerStatus::AnchorSecurity( enum XDFMarket eMkID, const char* pszCode, co
 	}
 
 	T_SECURITY_STATUS&		refSecurity = m_vctLastSecurity[nPos];
+	unsigned int			nCodeLen = ::strlen( refSecurity.Code );
+	unsigned int			nNewCodeLen = ::strlen( pszCode );
 
-	if( ::strlen( refSecurity.Code ) > 0 )		///< 如果代码已经存在，则不再重复锚定
+	///< 如果代码已经存在 && 新旧代码相等, 则不再重复锚定
+	if( nCodeLen > 0 && ::strncmp( refSecurity.Code, pszCode, max(nCodeLen, nNewCodeLen) ) != 0 )
 	{
 		return;
 	}
@@ -133,7 +147,7 @@ void ServerStatus::GetFinancialUpdateDT( unsigned int& nDate, unsigned int& nTim
 	nTime = m_nFinancialUpdateTime;
 }
 
-void ServerStatus::UpdateMkOccupancyRate( enum XDFMarket eMkID, double dRate )
+void ServerStatus::UpdateMkOccupancyRate( enum XDFMarket eMkID, int nRate )
 {
 	unsigned int	nPos = (unsigned int)eMkID;
 
@@ -142,10 +156,10 @@ void ServerStatus::UpdateMkOccupancyRate( enum XDFMarket eMkID, double dRate )
 		return;
 	}
 
-	m_vctLastSecurity[nPos].MkBufOccupancyRate = dRate;
+	m_vctLastSecurity[nPos].MkBufOccupancyRate = nRate;
 }
 
-double ServerStatus::FetchMkOccupancyRate( enum XDFMarket eMkID )
+int ServerStatus::FetchMkOccupancyRate( enum XDFMarket eMkID )
 {
 	unsigned int	nPos = (unsigned int)eMkID;
 

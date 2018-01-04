@@ -134,8 +134,8 @@ int Quotation::Release()
 		QuoCollector::GetCollector()->OnLog( TLV_INFO, "Quotation::Release() : ............ Destroying .............." );
 
 		m_oWorkStatus = ET_SS_UNACTIVE;			///< 更新Quotation会话的状态
-		//m_oQuotPlugin.Release();				///< 释放行情源插件
-		//m_oQuoDataCenter.Release();				///< 释放行情数据资源
+//		m_oQuotPlugin.Release();				///< 释放行情源插件
+//		m_oQuoDataCenter.Release();				///< 释放行情数据资源
 
 		QuoCollector::GetCollector()->OnLog( TLV_INFO, "Quotation::Release() : ............ Destroyed! .............." );
 	}
@@ -302,9 +302,7 @@ int Quotation::SaveShLv1_Static_Tick_Day( enum XDFRunStat eStatus, bool bBuild )
 						::memcpy( tagStaticLine.Code, pData->Code, sizeof(pData->Code) );
 						::memcpy( tagStaticLine.Name, pData->Name, sizeof(pData->Name) );
 						tagStaticLine.LotSize = vctKindInfo[pData->SecKind].LotSize;
-						if( pData->SecKind > 0 ) {
-							ServerStatus::GetStatusObj().AnchorSecurity( XDF_SH, tagStaticLine.Code, tagStaticLine.Name );
-						}
+						ServerStatus::GetStatusObj().AnchorSecurity( XDF_SH, tagStaticLine.Code, tagStaticLine.Name );
 						if( true == PrepareStaticFile( tagStaticLine, oDumper ) )
 						{
 							int		nLen = ::sprintf( pszLine, "%u,%s,%s,%d,%d,%d,%d,%d,%d,%d,%d,%s,%s,%c,%c,%.4f\n"
@@ -489,9 +487,7 @@ int Quotation::SaveShOpt_Static_Tick_Day( enum XDFRunStat eStatus, bool bBuild )
 						tagStaticLine.OptionType = pData->OptionType;		///< 期权类型：'E'-欧式 'A'-美式
 						tagStaticLine.CallOrPut = pData->CallOrPut;			///< 认沽认购：'C'认购 'P'认沽
 						tagStaticLine.ExercisePx = pData->XqPrice / tagParam.dPriceRate;
-						if( pData->SecKind > 0 ) {
-							ServerStatus::GetStatusObj().AnchorSecurity( XDF_SHOPT, tagStaticLine.Code, tagStaticLine.Name );
-						}
+						ServerStatus::GetStatusObj().AnchorSecurity( XDF_SHOPT, tagStaticLine.Code, tagStaticLine.Name );
 						if( true == PrepareStaticFile( tagStaticLine, oDumper ) )
 						{
 							int		nLen = ::sprintf( pszLine, "%u,%s,%s,%d,%d,%d,%d,%d,%d,%d,%d,%s,%s,%c,%c,%.4f\n"
@@ -649,9 +645,7 @@ int Quotation::SaveSzLv1_Static_Tick_Day( enum XDFRunStat eStatus, bool bBuild )
 						::memcpy( tagStaticLine.Code, pData->Code, sizeof(pData->Code) );
 						::memcpy( tagStaticLine.Name, pData->Name, sizeof(pData->Name) );
 						tagStaticLine.LotSize = vctKindInfo[pData->SecKind].LotSize;
-						if( pData->SecKind > 0 ) {
-							ServerStatus::GetStatusObj().AnchorSecurity( XDF_SZ, tagStaticLine.Code, tagStaticLine.Name );
-						}
+						ServerStatus::GetStatusObj().AnchorSecurity( XDF_SZ, tagStaticLine.Code, tagStaticLine.Name );
 						if( true == PrepareStaticFile( tagStaticLine, oDumper ) )
 						{
 							int		nLen = ::sprintf( pszLine, "%u,%s,%s,%d,%d,%d,%d,%d,%d,%d,%d,%s,%s,%c,%c,%.4f\n"
@@ -837,9 +831,7 @@ int Quotation::SaveSzOpt_Static_Tick_Day( enum XDFRunStat eStatus, bool bBuild )
 						tagStaticLine.OptionType = pData->OptionType;		///< 期权类型：'E'-欧式 'A'-美式
 						tagStaticLine.CallOrPut = pData->CallOrPut;			///< 认沽认购：'C'认购 'P'认沽
 						tagStaticLine.ExercisePx = pData->XqPrice / tagParam.dPriceRate;
-						if( pData->SecKind > 0 ) {
-							ServerStatus::GetStatusObj().AnchorSecurity( XDF_SZOPT, tagStaticLine.Code, tagStaticLine.Name );
-						}
+						ServerStatus::GetStatusObj().AnchorSecurity( XDF_SZOPT, tagStaticLine.Code, tagStaticLine.Name );
 						if( true == PrepareStaticFile( tagStaticLine, oDumper ) )
 						{
 							int		nLen = ::sprintf( pszLine, "%u,%s,%s,%d,%d,%d,%d,%d,%d,%d,%d,%s,%s,%c,%c,%.4f\n"
@@ -1008,9 +1000,7 @@ int Quotation::SaveCFF_Static_Tick_Day( enum XDFRunStat eStatus, bool bBuild )
 						//tagStaticLine.OptionType = pData->OptionType;		///< 期权类型：'E'-欧式 'A'-美式
 						//tagStaticLine.CallOrPut = pData->CallOrPut;			///< 认沽认购：'C'认购 'P'认沽
 						//tagStaticLine.ExercisePx = pData->XqPrice / tagParam.dPriceRate;
-						if( pData->SecKind > 0 ) {
-							ServerStatus::GetStatusObj().AnchorSecurity( XDF_CF, tagStaticLine.Code, tagStaticLine.Name );
-						}
+						ServerStatus::GetStatusObj().AnchorSecurity( XDF_CF, tagStaticLine.Code, tagStaticLine.Name );
 						if( true == PrepareStaticFile( tagStaticLine, oDumper ) )
 						{
 							int		nLen = ::sprintf( pszLine, "%u,%s,%s,%d,%d,%d,%d,%d,%d,%d,%d,%s,%s,%c,%c,%.4f\n"
@@ -1178,9 +1168,7 @@ int Quotation::SaveCFFOPT_Static_Tick_Day( enum XDFRunStat eStatus, bool bBuild 
 						//tagStaticLine.OptionType = pData->OptionType;		///< 期权类型：'E'-欧式 'A'-美式
 						//tagStaticLine.CallOrPut = pData->CallOrPut;			///< 认沽认购：'C'认购 'P'认沽
 						//tagStaticLine.ExercisePx = pData->XqPrice / tagParam.dPriceRate;
-						if( pData->SecKind > 0 ) {
-							ServerStatus::GetStatusObj().AnchorSecurity( XDF_ZJOPT, tagStaticLine.Code, tagStaticLine.Name );
-						}
+						ServerStatus::GetStatusObj().AnchorSecurity( XDF_ZJOPT, tagStaticLine.Code, tagStaticLine.Name );
 						if( true == PrepareStaticFile( tagStaticLine, oDumper ) )
 						{
 							int		nLen = ::sprintf( pszLine, "%u,%s,%s,%d,%d,%d,%d,%d,%d,%d,%d,%s,%s,%c,%c,%.4f\n"
@@ -1352,9 +1340,7 @@ int Quotation::SaveCNF_Static_Tick_Day( enum XDFRunStat eStatus, bool bBuild )
 						//tagStaticLine.OptionType = pData->OptionType;		///< 期权类型：'E'-欧式 'A'-美式
 						//tagStaticLine.CallOrPut = pData->CallOrPut;			///< 认沽认购：'C'认购 'P'认沽
 						//tagStaticLine.ExercisePx = pData->XqPrice / tagParam.dPriceRate;
-						if( pData->SecKind > 0 ) {
-							ServerStatus::GetStatusObj().AnchorSecurity( XDF_CNF, tagStaticLine.Code, tagStaticLine.Name );
-						}
+						ServerStatus::GetStatusObj().AnchorSecurity( XDF_CNF, tagStaticLine.Code, tagStaticLine.Name );
 						if( true == PrepareStaticFile( tagStaticLine, oDumper ) )
 						{
 							int		nLen = ::sprintf( pszLine, "%u,%s,%s,%d,%d,%d,%d,%d,%d,%d,%d,%s,%s,%c,%c,%.4f\n"
@@ -1525,9 +1511,7 @@ int Quotation::SaveCNFOPT_Static_Tick_Day( enum XDFRunStat eStatus, bool bBuild 
 						//tagStaticLine.OptionType = pData->OptionType;		///< 期权类型：'E'-欧式 'A'-美式
 						//tagStaticLine.CallOrPut = pData->CallOrPut;			///< 认沽认购：'C'认购 'P'认沽
 						tagStaticLine.ExercisePx = pData->XqPrice / tagParam.dPriceRate;
-						if( pData->SecKind > 0 ) {
-							ServerStatus::GetStatusObj().AnchorSecurity( XDF_CNFOPT, tagStaticLine.Code, tagStaticLine.Name );
-						}
+						ServerStatus::GetStatusObj().AnchorSecurity( XDF_CNFOPT, tagStaticLine.Code, tagStaticLine.Name );
 						if( true == PrepareStaticFile( tagStaticLine, oDumper ) )
 						{
 							int		nLen = ::sprintf( pszLine, "%u,%s,%s,%d,%d,%d,%d,%d,%d,%d,%d,%s,%s,%c,%c,%.4f\n"

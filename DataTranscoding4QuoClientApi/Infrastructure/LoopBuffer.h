@@ -45,7 +45,7 @@ public:
 	//获取数据最大空间
 	int  GetMaxRecord(void);
 	//获取数据百分比
-	double  GetPercent(void);
+	int  GetPercent(void);
 };
 
 //------------------------------------------------------------------------------------------------------------------------------
@@ -103,8 +103,6 @@ template<class tempclass>int  MLoopBufferSt<tempclass>::PutData(const tempclass 
 	register int				errorcode;
 	register int				icopysize;
 
-	assert(lpIn != NULL);
-	
 	if ( lInSize == 0 )
 	{
 		return(0);
@@ -117,14 +115,14 @@ template<class tempclass>int  MLoopBufferSt<tempclass>::PutData(const tempclass 
 	}
 
 	errorcode = (m_lFirstRecord + m_lMaxRecord - m_lLastRecord - 1) % m_lMaxRecord;
-	if ( lInSize*sizeof(tempclass) > errorcode )
+	if ( lInSize > errorcode )
 	{
 #ifdef _DEBUG	//	GUOGUO TEMP
 //printf("FAIL:%d,%d, %d, %d, %d, %d\n", m_lFirstRecord, m_lMaxRecord, m_lLastRecord, m_lMaxRecord, errorcode, lInSize);fflush(stdout);
 #endif
 		return -2;
 	}
-
+	
 	icopysize = m_lMaxRecord - m_lLastRecord;
 	if ( icopysize >= lInSize )
 	{
@@ -148,8 +146,6 @@ template<class tempclass>int  MLoopBufferSt<tempclass>::GetData(tempclass * lpOu
 	register int				errorcode;
 	register int				icopysize;
 	
-	assert(lpOut != NULL);
-
 	if ( m_lpRecordData == NULL || m_lMaxRecord == 0 )
 	{
 		assert(0);
@@ -194,7 +190,8 @@ template<class tempclass>int  MLoopBufferSt<tempclass>::LookData(tempclass * lpO
 		assert(0);
 		return -1;
 	}
-	
+
+	lInSize = lInSize * sizeof(tempclass);
 	errorcode = (m_lLastRecord + m_lMaxRecord - m_lFirstRecord) % m_lMaxRecord;
 	if ( errorcode <= 0 )
 	{
@@ -208,15 +205,15 @@ template<class tempclass>int  MLoopBufferSt<tempclass>::LookData(tempclass * lpO
 	icopysize = m_lMaxRecord - m_lFirstRecord;
 	if ( icopysize >= lInSize )
 	{
-		memcpy(lpOut,&m_lpRecordData[m_lFirstRecord],sizeof(tempclass) * lInSize);
+		memcpy( lpOut, &m_lpRecordData[m_lFirstRecord], lInSize );
 	}
 	else
 	{
-		memcpy(lpOut,&m_lpRecordData[m_lFirstRecord],sizeof(tempclass) * icopysize);
-		memcpy(lpOut + icopysize,&m_lpRecordData[0],sizeof(tempclass) * (lInSize - icopysize));
+		memcpy( lpOut, &m_lpRecordData[m_lFirstRecord], icopysize );
+		memcpy( lpOut + icopysize, &m_lpRecordData[0], lInSize - icopysize );
 	}
-	
-	return(lInSize);
+
+	return lInSize;
 }
 
 template<class tempclass>int  MLoopBufferSt<tempclass>::MoveData(unsigned long lInSize)
@@ -302,15 +299,15 @@ template<class tempclass>int  MLoopBufferSt<tempclass>::GetMaxRecord(void)
 	return(m_lMaxRecord);
 }
 
-template<class tempclass>double  MLoopBufferSt<tempclass>::GetPercent(void)
+template<class tempclass>int  MLoopBufferSt<tempclass>::GetPercent(void)
 {
 	if ( m_lMaxRecord == 0 )
 	{
 		assert(0);
-		return(100.);
+		return(100);
 	}
 
-	return(((m_lLastRecord + m_lMaxRecord - m_lFirstRecord) % m_lMaxRecord) * 100.0 / m_lMaxRecord);
+	return(((m_lLastRecord + m_lMaxRecord - m_lFirstRecord) % m_lMaxRecord) * 100 / m_lMaxRecord);
 }
 
 
