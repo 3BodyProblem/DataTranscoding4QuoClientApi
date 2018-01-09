@@ -206,6 +206,7 @@ int QuotationData::Initialize( void* pQuotation )
 			return -4;
 		}
 	}
+git add -u
 
 	if( false == m_oThdMinuteDump.IsAlive() )
 	{

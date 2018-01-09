@@ -146,7 +146,7 @@ int Quotation::Release()
 	{
 		QuoCollector::GetCollector()->OnLog( TLV_INFO, "Quotation::Release() : ............ Destroying .............." );
 
-//		m_oWorkStatus = ET_SS_UNACTIVE;			///< 更新Quotation会话的状态
+		m_oWorkStatus = ET_SS_UNACTIVE;			///< 更新Quotation会话的状态
 //		m_oQuotPlugin.Release();				///< 释放行情源插件
 //		m_oQuoDataCenter.Release();				///< 释放行情数据资源
 

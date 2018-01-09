@@ -56,7 +56,7 @@ int QuoCollector::Initialize( I_DataHandle* pIDataHandle )
 void QuoCollector::Release()
 {
 //	SimpleThread::StopAllThread();
-//	m_oQuotationData.Release();
+	m_oQuotationData.Release();
 }
 
 Quotation& QuoCollector::GetQuoObj()
