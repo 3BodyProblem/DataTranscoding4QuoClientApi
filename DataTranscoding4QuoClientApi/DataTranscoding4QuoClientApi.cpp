@@ -8,7 +8,7 @@
 #include "DataTranscoding4QuoClientApi.h"
 
 
-const std::string		g_sVersion = "1.3.4";
+const std::string		g_sVersion = "1.0.1";
 
 
 QuoCollector::QuoCollector()
