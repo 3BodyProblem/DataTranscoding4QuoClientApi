@@ -132,9 +132,9 @@ void Quotation::Halt()
 	{
 		QuoCollector::GetCollector()->OnLog( TLV_INFO, "Quotation::Halt() : ............ Halting .............." );
 
-		m_oWorkStatus = ET_SS_UNACTIVE;			///< 更新Quotation会话的状态
-//		m_oQuotPlugin.Release();				///< 释放行情源插件
-//		m_oQuoDataCenter.Release();				///< 释放行情数据资源
+///<		m_oWorkStatus = ET_SS_UNACTIVE;			///< 更新Quotation会话的状态
+///<		m_oQuotPlugin.Release();				///< 释放行情源插件
+///<		m_oQuoDataCenter.Release();				///< 释放行情数据资源
 
 		QuoCollector::GetCollector()->OnLog( TLV_INFO, "Quotation::Halt() : ............ Halted! .............." );
 	}
@@ -146,9 +146,10 @@ int Quotation::Release()
 	{
 		QuoCollector::GetCollector()->OnLog( TLV_INFO, "Quotation::Release() : ............ Destroying .............." );
 
-//		m_oWorkStatus = ET_SS_UNACTIVE;			///< 更新Quotation会话的状态
-//		m_oQuotPlugin.Release();				///< 释放行情源插件
-//		m_oQuoDataCenter.Release();				///< 释放行情数据资源
+		m_oQuoDataCenter.StopThreads();			///< 停止所有任务线程
+		m_oWorkStatus = ET_SS_UNACTIVE;			///< 更新Quotation会话的状态
+		m_oQuotPlugin.Release();				///< 释放行情源插件
+		m_oQuoDataCenter.Release();				///< 释放行情数据资源
 
 		QuoCollector::GetCollector()->OnLog( TLV_INFO, "Quotation::Release() : ............ Destroyed! .............." );
 	}
@@ -1606,6 +1607,11 @@ bool __stdcall	Quotation::XDF_OnRspStatusChanged( unsigned char cMarket, int nSt
 	bool	bNormalStatus = false;
 	char	pszDesc[128] = { 0 };
 
+	if( true == SimpleThread::GetGlobalStopFlag() )
+	{
+		return true;
+	}
+
 	if( XDF_CF == cMarket && nStatus >= 2 )		///< 此处为特别处理，中金期货不会有“可服务”状态的通知(BUG)
 	{
 		nStatus = XRS_Normal;
@@ -1734,6 +1740,11 @@ void Quotation::FlushDayLineOnCloseTime()
 			unsigned int	nNowT = DateTime::Now().TimeToLong();
 			unsigned int	nDate = DateTime::Now().DateToLong();
 			int				nDiffTime = nNowT - refCfg.CloseTime;
+
+			if( true == SimpleThread::GetGlobalStopFlag() )
+			{
+				return;
+			}
 
 			if( ( (nDiffTime>0&&nDiffTime<1500) || 0==refCfg.LastDate ) && ( refCfg.LastDate!=nDate ) && ( nNowT >= refCfg.CloseTime ) )
 			{

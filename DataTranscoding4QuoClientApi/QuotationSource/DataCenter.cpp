@@ -226,6 +226,17 @@ int QuotationData::Initialize( void* pQuotation )
 	return 0;
 }
 
+bool QuotationData::StopThreads()
+{
+	SimpleThread::StopAllThread();
+	SimpleThread::Sleep( 3000 );
+	m_oThdTickDump.Join( 5000 );
+	m_oThdMinuteDump.Join( 5000 );
+	m_oThdIdle.Join( 5000 );
+
+	return true;
+}
+
 void QuotationData::Release()
 {
 	m_mapModuleStatus.clear();
@@ -354,7 +365,7 @@ void* QuotationData::ThreadDumpMinuteLine( void* pSelf )
 			std::ofstream			oDumper;
 
 			SimpleThread::Sleep( 1000 * 3 );
-			while( true )
+			while( false == SimpleThread::GetGlobalStopFlag() )
 			{
 				char			pszLine[1024] = { 0 };
 				T_MIN_LINE		tagMinuteLine = { 0 };
@@ -385,6 +396,8 @@ void* QuotationData::ThreadDumpMinuteLine( void* pSelf )
 			QuoCollector::GetCollector()->OnLog( TLV_ERROR, "QuotationData::ThreadDumpMinuteLine() : unknow exception" );
 		}
 	}
+
+	QuoCollector::GetCollector()->OnLog( TLV_INFO, "QuotationData::ThreadDumpMinuteLine() : misson complete!" );
 
 	return NULL;
 }
@@ -417,6 +430,8 @@ void* QuotationData::ThreadOnIdle( void* pSelf )
 			QuoCollector::GetCollector()->OnLog( TLV_ERROR, "QuotationData::ThreadOnIdle() : unknow exception" );
 		}
 	}
+
+	QuoCollector::GetCollector()->OnLog( TLV_INFO, "QuotationData::ThreadOnIdle() : misson complete!" );
 
 	return NULL;
 }
@@ -524,7 +539,7 @@ void* QuotationData::ThreadDumpTickLine( void* pSelf )
 				nDumpNumber = 0;
 			}
 
-			while( true )
+			while( false == SimpleThread::GetGlobalStopFlag() )
 			{
 				T_TICK_LINE		tagTickData = { 0 };
 
@@ -568,6 +583,8 @@ void* QuotationData::ThreadDumpTickLine( void* pSelf )
 			QuoCollector::GetCollector()->OnLog( TLV_ERROR, "QuotationData::ThreadDumpTickLine() : unknow exception" );
 		}
 	}
+
+	QuoCollector::GetCollector()->OnLog( TLV_INFO, "QuotationData::ThreadDumpTickLine() : misson complete!" );
 
 	return NULL;
 }

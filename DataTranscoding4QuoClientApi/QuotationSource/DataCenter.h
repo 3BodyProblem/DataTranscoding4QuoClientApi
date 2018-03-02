@@ -237,6 +237,11 @@ public:
 	 */
 	short						GetModuleStatus( enum XDFMarket eMarket );
 
+	/**
+	 * @brief					停止线程
+	 */
+	bool						StopThreads();
+
 public:
 	/**
 	 * @brief					更新商品的参数信息

@@ -89,7 +89,6 @@ template<class tempclass>void MLoopBufferSt<tempclass>::Release(void)
 {
 	if ( m_lpRecordData != NULL )
 	{
-		delete [] m_lpRecordData;
 		m_lpRecordData = NULL;
 	}
 

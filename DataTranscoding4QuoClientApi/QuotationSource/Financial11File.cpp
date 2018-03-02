@@ -119,7 +119,6 @@ SHL1FinancialDbf::SHL1FinancialDbf()
 
 SHL1FinancialDbf::~SHL1FinancialDbf()
 {
-	Release();
 }
 
 int SHL1FinancialDbf::Redirect2File()
@@ -373,7 +372,6 @@ SZL1FinancialDbf::SZL1FinancialDbf()
 
 SZL1FinancialDbf::~SZL1FinancialDbf()
 {
-	Release();
 }
 
 int SZL1FinancialDbf::Redirect2File()
