@@ -1657,17 +1657,6 @@ bool __stdcall	Quotation::XDF_OnRspStatusChanged( unsigned char cMarket, int nSt
 	static CriticalObject	oLock;				///< 临界区对象
 	CriticalLock			section( oLock );
 
-	///< 判断是否需要重入加载过程
-	unsigned int	nNowT = ::time( NULL );
-	if( (nNowT - m_mapMkBuildTimeT[cMarket]) <= 3 )
-	{
-		return true;
-	}
-	else
-	{
-		m_mapMkBuildTimeT[cMarket] = nNowT;
-	}
-
 	///< 加载各市场基础信息
 	if( true == bNormalStatus )
 	{

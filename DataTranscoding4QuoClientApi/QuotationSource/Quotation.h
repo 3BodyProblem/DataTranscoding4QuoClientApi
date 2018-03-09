@@ -184,13 +184,14 @@ private:
 	DataCollector				m_oQuotPlugin;			///< 行情插件
 	QuotationData				m_oQuoDataCenter;		///< 行情数据集合
 	WorkStatus					m_oWorkStatus;			///< 工作状态
-	std::map<int,int>			m_mapMkBuildTimeT;		///< 各市场码表构建时间记录(和当前时间小于3秒的都可以再重入进行初始化)
 };
 
 
 
 
 #endif
+
+
 
 
 
