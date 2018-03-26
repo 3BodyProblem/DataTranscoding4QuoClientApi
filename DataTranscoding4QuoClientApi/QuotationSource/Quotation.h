@@ -116,15 +116,6 @@ protected:///< 加载市场行情数据: 落盘 静态数据文件 + tick文件 或者 创建日线文件
 	int							SaveShLv1_Static_Tick_Day( enum XDFRunStat eStatus, bool bBuild );
 
 	/**
-	 * @brief					加载上海Option的基础信息
-	 * @param[in]				eStatus		市场模块状态
-	 * @param[in]				bBuild		是否为初始过程中:true,创建静态信息文件+tick信息 false,只创建日线信息
-	 * @return					==0			成功
-								!=0			失败
-	 */
-	int							SaveShOpt_Static_Tick_Day( enum XDFRunStat eStatus, bool bBuild );
-
-	/**
 	 * @brief					加载深圳Lv1的基础信息
 	 * @param[in]				eStatus		市场模块状态
 	 * @param[in]				bBuild		是否为初始过程中:true,创建静态信息文件+tick信息 false,只创建日线信息
@@ -132,51 +123,6 @@ protected:///< 加载市场行情数据: 落盘 静态数据文件 + tick文件 或者 创建日线文件
 								!=0			失败
 	 */
 	int							SaveSzLv1_Static_Tick_Day( enum XDFRunStat eStatus, bool bBuild );
-
-	/**
-	 * @brief					加载深圳期权的基础信息
-	 * @param[in]				eStatus		市场模块状态
-	 * @param[in]				bBuild		是否为初始过程中:true,创建静态信息文件+tick信息 false,只创建日线信息
-	 * @return					==0			成功
-								!=0			失败
-	 */
-	int							SaveSzOpt_Static_Tick_Day( enum XDFRunStat eStatus, bool bBuild );
-
-	/**
-	 * @brief					加载中金期货的基础信息
-	 * @param[in]				eStatus		市场模块状态
-	 * @param[in]				bBuild		是否为初始过程中:true,创建静态信息文件+tick信息 false,只创建日线信息
-	 * @return					==0			成功
-								!=0			失败
-	 */
-	int							SaveCFF_Static_Tick_Day( enum XDFRunStat eStatus, bool bBuild );
-
-	/**
-	 * @brief					加载中金期权的基础信息
-	 * @param[in]				eStatus		市场模块状态
-	 * @param[in]				bBuild		是否为初始过程中:true,创建静态信息文件+tick信息 false,只创建日线信息
-	 * @return					==0			成功
-								!=0			失败
-	 */
-	int							SaveCFFOPT_Static_Tick_Day( enum XDFRunStat eStatus, bool bBuild );
-
-	/**
-	 * @brief					加载商品期货的基础信息
-	 * @param[in]				eStatus		市场模块状态
-	 * @param[in]				bBuild		是否为初始过程中:true,创建静态信息文件+tick信息 false,只创建日线信息
-	 * @return					==0			成功
-								!=0			失败
-	 */
-	int							SaveCNF_Static_Tick_Day( enum XDFRunStat eStatus, bool bBuild );
-
-	/**
-	 * @brief					加载商品期权的基础信息
-	 * @param[in]				eStatus		市场模块状态
-	 * @param[in]				bBuild		是否为初始过程中:true,创建静态信息文件+tick信息 false,只创建日线信息
-	 * @return					==0			成功
-								!=0			失败
-	 */
-	int							SaveCNFOPT_Static_Tick_Day( enum XDFRunStat eStatus, bool bBuild );
 
 private:
 	CriticalObject				m_oLock;				///< 临界区对象

@@ -86,9 +86,6 @@ typedef struct
  */
 typedef struct
 {
-	unsigned char				Type;					///< ÀàĞÍ
-	char						eMarketID;				///< ÊĞ³¡ID
-	char						Code[16];				///< ÉÌÆ·´úÂë
 	unsigned int				Date;					///< YYYYMMDD£¨Èç20170705£©
 	unsigned int				Time;					///< HHMMSSmmm£¨Èç093005000)
 	double						OpenPx;					///< ¿ªÅÌ¼ÛÒ»·ÖÖÓÄÚµÄµÚÒ»±ÊµÄnowpx
@@ -105,7 +102,7 @@ typedef struct
 
 /**
  * @class						T_LINE_PARAM
- * @brief						»ù´¡²ÎÊıs
+ * @brief						»ù´¡²ÎÊı
  */
 typedef struct
 {
@@ -137,29 +134,114 @@ typedef struct
 } T_LINE_PARAM;
 #pragma pack()
 
-
 /**
- * @class						MinuteGenerator
- * @brief						·ÖÖÓÏßÉú²úÆ÷
+ * @class						MinGenerator
+ * @brief						ÉÌÆ·1·ÖÖÓÏßÉú²úÕß
  * @author						barry
  */
-class MinuteGenerator
+class MinGenerator
 {
 public:
-	MinuteGenerator();
+	typedef struct
+	{
+		unsigned int			Time;					///< HHMMSSmmm£¨Èç093005000)
+		unsigned int			OpenPx;
+		unsigned int			HighPx;
+		unsigned int			LowPx;
+		unsigned int			ClosePx;
+		unsigned int			Voip;
+		double					Amount;
+		unsigned __int64		Volume;
+		unsigned __int64		NumTrades;
+	} T_DATA;											///< ÉÌÆ·¿ìÕÕ
+	const unsigned int			m_nMaxLineCount;		///< ×î¶àÖ§³ÖµÄ·ÖÖÓÏßÊıÁ¿(241¸ù)
+public:
+	MinGenerator();
+	MinGenerator( enum XDFMarket eMkID, unsigned int nDate, const std::string& sCode, double dPriceRate, T_DATA& objData, T_DATA* pBufPtr );
+	MinGenerator&				operator=( const MinGenerator& obj );
 
-	operator T_LINE_PARAM&();
-	void						SetCode( enum XDFMarket eMarket, const char* pszCode );
-	MinuteGenerator&			operator=( T_LINE_PARAM& refBasicParam );
-	void						Dispatch( enum XDFMarket eMarket, std::string& sCode, unsigned int nMkDate, unsigned int nMkTime );
+	/**
+	 * @brief					½«ĞĞÇéÖĞµÄÃ¿·ÖÖÓµÄµÚÒ»±Ê¿ìÕÕ£¬¸üĞÂµ½¶ÔÓ¦µÄ241Ìõ·ÖÖÓÏßÊı¾İ²ÛÖĞ
+	 * @param[in]				objData					ĞĞÇé¿ìÕÕ
+	 * @return					0						³É¹¦
+	 */
+	int							Update( T_DATA& objData );
 
-	void						Update( const XDFAPI_StockData5& refObj, unsigned int nDate, unsigned int nTime );
-	void						Update( const XDFAPI_IndexData& refObj, unsigned int nDate, unsigned int nTime );
-
+	/**
+	 * @brief					Éú³É·ÖÖÓÏß²¢´æÅÌ
+	 */
+	void						DumpMinutes();
 protected:
 	enum XDFMarket				m_eMarket;				///< ÊĞ³¡±àºÅ
-	char						m_pszCode[20];			///< ÉÌÆ·´úÂë
-	T_LINE_PARAM				m_tagBasicParam;		///< »ù´¡·ÖÖÓÏßÉú³ÉµÄ»ù´¡ĞÅÏ¢
+	unsigned int				m_nDate;				///< YYYYMMDD£¨Èç20170705£©
+	char						m_pszCode[16];			///< ÉÌÆ·´úÂë
+	T_DATA*						m_pDataCache;			///< 241¸ù1·ÖÖÓ»º´æ
+	double						m_dPriceRate;			///< ·Å´ó±¶Êı
+	int							m_nWriteSize;			///< Ğ´Èë·ÖÖÓÏßµÄ³¤¶È
+	int							m_nDataSize;			///< Êı¾İ³¤¶È
+};
+
+
+/**
+ * @class						SecurityCache
+ * @brief						ËùÓĞÉÌÆ··ÖÖÓÏßµÄ»º´æ
+ * @author						barry
+ */
+class SecurityCache
+{
+public:
+	typedef std::map<std::string,MinGenerator>	T_MAP_MINUTES;
+public:
+	SecurityCache();
+	~SecurityCache();
+
+	/**
+	 * @brief					·ÖÖÓÏß»º´æ³õÊ¼»¯
+	 * @param[in]				nSecurityCount			ÊĞ³¡ÖĞµÄÉÌÆ·ÊıÁ¿
+	 * @return					0						³É¹¦
+	 */
+	int							Initialize( unsigned int nSecurityCount );
+
+	/**
+	 * @brief					ÊÍ·Å×ÊÔ´
+	 */
+	void						Release();
+
+public:
+	/**
+	 * @brief					¼¤»î·ÖÖÓÏßÂäÅÌÏß³Ì
+	 */
+	void						ActivateDumper();
+
+	/**
+	 * @brief					¸üĞÂÉÌÆ·µÄ²ÎÊıĞÅÏ¢
+	 * @param[in]				eMarket			ÊĞ³¡ID
+	 * @param[in]				sCode			ÉÌÆ·´úÂë
+	 * @param[in]				nDate			ĞĞÇéÈÕÆÚ
+	 * @param[in]				dPriceRate		·Å´ó±¶ÂÊ
+	 * @param[in]				objData			ĞĞÇé¼Û¸ñ
+	 * @return					==0				³É¹¦
+	 */
+	int							NewSecurity( enum XDFMarket eMarket, const std::string& sCode, unsigned int nDate, double dPriceRate, MinGenerator::T_DATA& objData );
+
+	/**
+	 * @brief					¸üĞÂÉÌÆ·ĞÅÏ¢
+	 * @param[in]				objData			ĞĞÇé¼Û¸ñ
+	 * @return					==0				³É¹¦
+	 */
+	int							UpdateSecurity( const XDFAPI_IndexData& refObj, unsigned int nDate, unsigned int nTime );
+	int							UpdateSecurity( const XDFAPI_StockData5& refObj, unsigned int nDate, unsigned int nTime );
+
+protected:
+	static void*	__stdcall	DumpThread( void* pSelf );
+
+protected:
+	SimpleThread				m_oDumpThread;			///< ·ÖÖÓÏßÂäÅÌÊı¾İ
+	unsigned int				m_nAlloPos;				///< »º´æÒÑ¾­·ÖÅäµÄÎ»ÖÃ
+	unsigned int				m_nSecurityCount;		///< ÉÌÆ·ÊıÁ¿
+	MinGenerator::T_DATA*		m_pMinDataTable;		///< ·ÖÖÓÏß»º´æ
+	T_MAP_MINUTES				m_objMapMinutes;		///< ·ÖÖÓÏßMap
+	CriticalObject				m_oLockData;			///< ·ÖÖÓÏßÊı¾İËø
 };
 
 
@@ -167,7 +249,7 @@ typedef MLoopBufferSt<T_TICK_LINE>						T_TICKLINE_CACHE;			///< TickÏßÑ­»·¶ÓÁĞ»
 typedef MLoopBufferSt<T_MIN_LINE>						T_MINLINE_CACHE;			///< ·ÖÖÓÏßÑ­»·¶ÓÁĞ»º´æ
 typedef	std::map<enum XDFMarket,int>					TMAP_MKID2STATUS;			///< ¸÷ÊĞ³¡Ä£¿é×´Ì¬
 const	unsigned int									MAX_WRITER_NUM = 128;		///< ×î´óÂäÅÌÎÄ¼ş¾ä±ú
-typedef std::map<std::string,MinuteGenerator>			T_MAP_GEN_MLINES;			///< ·ÖÖÓÏßÉú³ÉÆ÷Map
+typedef std::map<std::string,T_LINE_PARAM>				T_MAP_GEN_MLINES;			///< ·ÖÖÓÏßÉú³ÉÆ÷Map
 extern unsigned int										s_nNumberInSection;			///< Ò»¸öÊĞ³¡ÓĞ¿ÉÒÔ»º´æ¶àÉÙ¸öÊı¾İ¿é(¿ÉÅä)
 
 
@@ -297,10 +379,17 @@ public:
 	 * @brief					¸üĞÂÉÌÆ·µÄ²ÎÊıĞÅÏ¢
 	 * @param[in]				eMarket			ÊĞ³¡ID
 	 * @param[in]				sCode			ÉÌÆ·´úÂë
-	 * @param[in]				refParam		ĞĞÇé²ÎÊı
 	 * @return					==0				³É¹¦
 	 */
 	int							BuildSecurity( enum XDFMarket eMarket, std::string& sCode, T_LINE_PARAM& refParam );
+
+	/**
+	 * @brief					¸üĞÂÉÌÆ·µÄ²ÎÊıĞÅÏ¢
+	 * @param[in]				eMarket			ÊĞ³¡ID
+	 * @param[in]				sCode			ÉÌÆ·´úÂë
+	 * @return					==0				³É¹¦
+	 */
+	int							BuildSecurity4Min( enum XDFMarket eMarket, std::string& sCode, unsigned int nDate, double dPriceRate, MinGenerator::T_DATA& objData );
 
 	/**
 	 * @brief					¸üĞÂÇ°×º
@@ -326,15 +415,17 @@ public:
 
 	/**
 	 * @brief					ÈÕÏßÂäÅÌ
-	 * @param[in]				pSnapData		¿ìÕÕÖ¸Õë
+	 * @param[in]				pSnapData		¿ìÕÕÖ¸Õëe
 	 * @param[in]				nSnapSize		¿ìÕÕ´óĞ¡
 	 * @param[in]				nTradeDate		½»Ò×ÈÕÆÚ
 	 */
 	int							DumpDayLine( enum XDFMarket eMarket, char* pSnapData, unsigned int nSnapSize, unsigned int nTradeDate = 0 );
 
+	SecurityCache&				GetSHL1Cache();
+	SecurityCache&				GetSZL1Cache();
+
 protected:
 	static void*	__stdcall	ThreadDumpTickLine( void* pSelf );			///< ÈÕÏßÂäÅÌÏß³Ì
-	static void*	__stdcall	ThreadDumpMinuteLine( void* pSelf );		///< ·ÖÖÓÂäÅÌÏß³Ì
 	static void*	__stdcall	ThreadOnIdle( void* pSelf );				///< ¿ÕÏĞÏß³Ì
 
 protected:
@@ -343,10 +434,12 @@ protected:
 	void*						m_pQuotation;					///< ĞĞÇé¶ÔÏó
 protected:
 	CriticalObject				m_oLockSHL1;					///< ÉÏÖ¤L1Ëø
+	SecurityCache				m_objMinCache4SHL1;				///< ÉÏÖ¤L1·ÖÖÓÏß»º´æ
+	SecurityCache				m_objMinCache4SZL1;				///< ÉîÖ¤L1·ÖÖÓÏß»º´æ
 	T_MAP_GEN_MLINES			m_mapSHL1;						///< ÉÏÖ¤L1
+	T_MAP_GEN_MLINES			m_mapSZL1;						///< ÉîÖ¤L1
 	T_MAP_GEN_MLINES			m_mapSHOPT;						///< ÉÏÖ¤ÆÚÈ¨
 	CriticalObject				m_oLockSZL1;					///< ÉîÖ¤L1Ëø
-	T_MAP_GEN_MLINES			m_mapSZL1;						///< ÉîÖ¤L1
 	T_MAP_GEN_MLINES			m_mapSZOPT;						///< ÉîÖ¤ÆÚÈ¨
 	T_MAP_GEN_MLINES			m_mapCFF;						///< ÖĞ½ğÆÚ»õ
 	T_MAP_GEN_MLINES			m_mapCFFOPT;					///< ÖĞ½ğÆÚÈ¨
@@ -359,7 +452,6 @@ protected:
 	char*						m_pBuf4MinuteLine;				///< ·ÖÖÓÏß»º´æµØÖ·
 protected:
 	SimpleThread				m_oThdTickDump;					///< TickÂäÅÌÊı¾İ
-	SimpleThread				m_oThdMinuteDump;				///< ·ÖÖÓÏßÂäÅÌÊı¾İ
 	SimpleThread				m_oThdIdle;						///< ¿ÕÏĞÏß³Ì
 };
 
