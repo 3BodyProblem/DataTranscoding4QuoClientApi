@@ -128,7 +128,7 @@ int MinGenerator::Update( T_DATA& objData )
 		m_dAmountBefore930 = objData.Amount;		///< 9:30前的金额
 		m_nVolumeBefore930 = objData.Volume;		///< 9:30前的量
 		m_nNumTradesBefore930 = objData.NumTrades;	///< 9:30前的笔数
-	} else if( nMKTime >= 93000 && nMKTime < 113000 ) {
+	} else if( nMKTime >= 93000 && nMKTime <= 113000 ) {
 		nDataIndex = 0;								///< 需要包含9:30这根线
 		if( 9 == nHH ) {
 			nDataIndex += (nMM - 30);				///< 9:30~9:59 = 30根
@@ -140,16 +140,16 @@ int MinGenerator::Update( T_DATA& objData )
 	} else if( nMKTime >= 130000 && nMKTime <= 150000 ) {
 		nDataIndex = 121;							///< 上午共121根
 		if( 13 == nHH ) {
-			nDataIndex += (59 + nMM);				///< 13:01~13:59 = 59根
+			nDataIndex += nMM;						///< 13:01~13:59 = 59根
 		} else if( 14 == nHH ) {
-			nDataIndex += (60 + nMM);				///< 14:00~14:59 = 60根
+			nDataIndex += (59 + nMM);				///< 14:00~14:59 = 60根
 		} else if( 15 == nHH ) {
-			nDataIndex += (1 + nMM);				///< 15:00~15:00 = 1根
+			nDataIndex += (59 + 1 + 60);			///< 15:00~15:00 = 1根
 		}
 	}
 
 	if( nDataIndex < 0 ) {
-		return -3;
+		return 0;
 	}
 
 	if( nDataIndex >= 241 ) {
