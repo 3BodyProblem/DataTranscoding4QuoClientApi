@@ -126,6 +126,10 @@ int MinGenerator::Update( T_DATA& objData )
 	unsigned int		nMM = nMKTime % 10000 / 100;
 	int					nDataIndex = -1;
 
+	if( nMKTime >= 150000 ) {
+		s_bCloseMarket = true;		///< 如果有商品的市场时间为15:00，则标记为需要集体生成分钟线
+	}
+
 	if( nMKTime < 93000 ) {
 		m_dAmountBefore930 = objData.Amount;		///< 9:30前的金额
 		m_nVolumeBefore930 = objData.Volume;		///< 9:30前的量
@@ -187,9 +191,6 @@ int MinGenerator::Update( T_DATA& objData )
 
 	if( nDataIndex > m_nDataSize ) {
 		m_nDataSize = nDataIndex;
-		if( nDataIndex >= (m_nMaxLineCount-1) && false == s_bCloseMarket ) {
-			s_bCloseMarket = true;		///< 如果有商品的市场时间为15:00，则标记为需要集体生成分钟线
-		}
 	}
 
 	return 0;
@@ -208,13 +209,14 @@ void MinGenerator::DumpMinutes()
 		return;
 	}
 
-	if( true == s_bCloseMarket ) {						///< 收市，需要生成所有分钟线
-		m_nDataSize = m_nMaxLineCount;
-	}
-
+	if( true == s_bCloseMarket ) m_nDataSize = m_nMaxLineCount;
 	///< 从头遍历，直到最后一个收到的时间节点上
 	for( int i = 0; i < m_nDataSize; i++ )
 	{
+		///< 收市，需要生成所有分钟线
+		if( true == s_bCloseMarket ) {
+			m_nDataSize = m_nMaxLineCount;
+		}
 		///< 跳过已经落盘过的时间节点，以m_pDataCache[i].Time大于零为标识，进行"后续写入"
 		if( i > m_nWriteSize ) {
 			char			pszLine[1024] = { 0 };
@@ -439,7 +441,7 @@ void* SecurityCache::DumpThread( void* pSelf )
 
 	while( false == SimpleThread::GetGlobalStopFlag() )
 	{
-		SimpleThread::Sleep( 1000 * 60 * 3 );
+		SimpleThread::Sleep( 1000 * 30 );
 
 		try
 		{
