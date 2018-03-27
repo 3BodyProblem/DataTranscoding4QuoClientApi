@@ -546,24 +546,24 @@ TickGenerator::TickGenerator( enum XDFMarket eMkID, unsigned int nDate, const st
 
 	if( XDF_SH == eMkID )
 	{
-		if( nCode >= 1 && nCode <= 999 ) {
+		/*if( nCode >= 1 && nCode <= 999 ) {
 			m_bCloseFile = false;
 		} else if( nCode >= 600000 && nCode <= 609999 ) {
 			m_bCloseFile = false;
-		} else if( nCode >= 510000 && nCode <= 519999 ) {
+		}/* else if( nCode >= 510000 && nCode <= 519999 ) {
 			m_bCloseFile = false;
-		}
+		}*/
 	}
 	else if( XDF_SZ == eMkID ) {
-		if( nCode >= 399000 && nCode <= 399999 ) {
+		/*if( nCode >= 399000 && nCode <= 399999 ) {
 			m_bCloseFile = false;
 		} else if( nCode >= 1 && nCode <= 9999 ) {
 			m_bCloseFile = false;
-		} else if( nCode >= 300000 && nCode <= 300999 ) {
+		}/* else if( nCode >= 300000 && nCode <= 300999 ) {
 			m_bCloseFile = false;
 		} else if( nCode >= 159000 && nCode <= 159999 ) {
 			m_bCloseFile = false;
-		}
+		}*/
 	}
 
 }
@@ -579,7 +579,7 @@ int TickGenerator::Initialize()
 	}
 
 	m_objTickQueue.Release();
-	if( (nErrCode = m_objTickQueue.Instance( (char*)m_pDataCache, sizeof(T_DATA) * s_nMaxLineCount ) ) < 0 )
+	if( (nErrCode = m_objTickQueue.Instance( (char*)m_pDataCache, s_nMaxLineCount ) ) < 0 )
 	{
 		QuoCollector::GetCollector()->OnLog( TLV_ERROR, "TickGenerator::Initialize() : cannot initialize tick queue 4 code : %s", m_pszCode );
 		return -2;
@@ -652,6 +652,19 @@ void TickGenerator::DumpTicks()
 	}
 
 	unsigned int	nPercentage = m_objTickQueue.GetPercent();
+
+	if( XDF_SH == m_eMarket ) {
+		T_SECURITY_STATUS&	refSHL1Snap = ServerStatus::GetStatusObj().FetchSecurity( XDF_SH );
+		if( ::strncmp( m_pszCode, refSHL1Snap.Code, 6 ) == 0 ) {
+			ServerStatus::GetStatusObj().UpdateTickBufShL1OccupancyRate( nPercentage );			///< TICK缓存占用率
+		}
+	} else if( XDF_SZ == m_eMarket ) {
+		T_SECURITY_STATUS&	refSZL1Snap = ServerStatus::GetStatusObj().FetchSecurity( XDF_SZ );
+		if( ::strncmp( m_pszCode, refSZL1Snap.Code, 6 ) == 0 ) {
+			ServerStatus::GetStatusObj().UpdateTickBufSzL1OccupancyRate( nPercentage );			///< TICK缓存占用率
+		}
+	}
+
 	///< 对需要进行closefile的低交易频率的商品，在缓存使用超过30%时,才进行落盘  (注，午盘休息时间段除外)
 	if( true == m_bCloseFile && nPercentage < 20 && (m_nMkTime < 113010||m_nMkTime > 125010) ) {
 		return;
@@ -913,12 +926,17 @@ void* SecurityTickCache::DumpThread( void* pSelf )
 
 			for( unsigned int n = 0; n < nCodeNumber && false == SimpleThread::GetGlobalStopFlag(); n++ )
 			{
-				CriticalLock			section( refData.m_oLockData );
-				T_MAP_TICKS::iterator	it = refData.m_objMapTicks.find( refData.m_vctCode[n] );
+				T_MAP_TICKS::iterator	it = NULL;
 
-				if( it != refData.m_objMapTicks.end() ) {
-					it->second.DumpTicks();
+				{
+					CriticalLock			section( refData.m_oLockData );
+					it = refData.m_objMapTicks.find( refData.m_vctCode[n] );
+					if( it == refData.m_objMapTicks.end() ) {
+						continue;
+					}
 				}
+
+				it->second.DumpTicks();
 			}
 		}
 		catch( std::exception& err )
@@ -1046,8 +1064,6 @@ void* QuotationData::ThreadOnIdle( void* pSelf )
 
 			refQuotation.FlushDayLineOnCloseTime();				///< 检查是否需要落日线
 			refQuotation.UpdateMarketsTime();					///< 更新各市场的日期和时间
-			refStatus.UpdateTickBufOccupancyRate( 50 );			///< TICK缓存占用率
-			refStatus.UpdateMinuteBufOccupancyRate( 20 );		///< MinuteLine缓存占用率
 		}
 		catch( std::exception& err )
 		{
@@ -1396,6 +1412,9 @@ int QuotationData::UpdateTickLine( enum XDFMarket eMarket, char* pSnapData, unsi
 				{
 					XDFAPI_StockData5*				pStock = (XDFAPI_StockData5*)pSnapData;
 
+					nLastPrice = pStock->Now;
+					dAmount = pStock->Amount;
+					dVolume = pStock->Volume;
 					::memcpy( pszCode, pStock->Code, 6 );
 					///< ------------ Tick Lines -------------------------
 					nErrorCode = m_objTickCache4SHL1.UpdateSecurity( *pStock, nTradeDate, nMkTime );
@@ -1408,6 +1427,9 @@ int QuotationData::UpdateTickLine( enum XDFMarket eMarket, char* pSnapData, unsi
 				{
 					XDFAPI_IndexData*				pStock = (XDFAPI_IndexData*)pSnapData;
 
+					nLastPrice = pStock->Now;
+					dAmount = pStock->Amount;
+					dVolume = pStock->Volume;
 					::memcpy( pszCode, pStock->Code, 6 );
 					///< ------------ Tick Lines -------------------------
 					nErrorCode = m_objTickCache4SHL1.UpdateSecurity( *pStock, nTradeDate, nMkTime );
@@ -1426,6 +1448,9 @@ int QuotationData::UpdateTickLine( enum XDFMarket eMarket, char* pSnapData, unsi
 				{
 					XDFAPI_StockData5*				pStock = (XDFAPI_StockData5*)pSnapData;
 
+					nLastPrice = pStock->Now;
+					dAmount = pStock->Amount;
+					dVolume = pStock->Volume;
 					::memcpy( pszCode, pStock->Code, 6 );
 					///< ------------ Tick Lines -------------------------
 					nErrorCode = m_objTickCache4SZL1.UpdateSecurity( *pStock, nTradeDate, nMkTime );
@@ -1437,6 +1462,9 @@ int QuotationData::UpdateTickLine( enum XDFMarket eMarket, char* pSnapData, unsi
 				{
 					XDFAPI_IndexData*				pStock = (XDFAPI_IndexData*)pSnapData;
 
+					nLastPrice = pStock->Now;
+					dAmount = pStock->Amount;
+					dVolume = pStock->Volume;
 					::memcpy( pszCode, pStock->Code, 6 );
 					///< ------------ Tick Lines -------------------------
 					nErrorCode = m_objTickCache4SZL1.UpdateSecurity( *pStock, nTradeDate, nMkTime );

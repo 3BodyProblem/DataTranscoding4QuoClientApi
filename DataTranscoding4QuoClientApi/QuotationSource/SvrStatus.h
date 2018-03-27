@@ -117,23 +117,23 @@ public:///< 各市场的tick缓存占用率存取方法
 	 * @brief				更新tick缓存占用率
 	 * @param[in]			nRate					tick缓存占用率
 	 */
-	void					UpdateTickBufOccupancyRate( int nRate );
+	void					UpdateTickBufShL1OccupancyRate( int nRate );
 
 	/**
 	 * @brief				获取tick缓存占用率
 	 */
-	int						FetchTickBufOccupancyRate();
+	int						FetchTickBufShL1OccupancyRate();
 
 	/**
 	 * @brief				更新Minute缓存占用率
 	 * @param[in]			nRate					tick缓存占用率
 	 */
-	void					UpdateMinuteBufOccupancyRate( int nRate );
+	void					UpdateTickBufSzL1OccupancyRate( int nRate );
 
 	/**
 	 * @brief				获取Minute缓存占用率
 	 */
-	int						FetchMinuteBufOccupancyRate();
+	int						FetchTickBufSzL1OccupancyRate();
 
 public:///< 各市场的状态
 	/**
@@ -178,8 +178,8 @@ protected:
 	unsigned int			m_nWeightUpdateTime;			///< 权息库更新时间
 	unsigned int			m_nTickLostCount;				///< Tick落盘失败统计
 	unsigned int			m_nMinuteLostCount;				///< 分钟线落盘失败统计
-	unsigned int			m_nTickBufOccupancyRate;			///< Tick缓存的占用率
-	unsigned int			m_nMinuteBufOccupancyRate;		///< 分钟线缓存的占用率
+	unsigned int			m_nTickBufSHL1OccupancyRate;	///< Tick缓存的占用率
+	unsigned int			m_nTickBufSZL1OccupancyRate;		///< 分钟线缓存的占用率
 };
 
 

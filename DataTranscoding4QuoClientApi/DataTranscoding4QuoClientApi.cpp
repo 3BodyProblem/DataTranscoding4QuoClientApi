@@ -122,9 +122,9 @@ enum E_SS_Status QuoCollector::GetCollectorStatus( char* pszStatusDesc, unsigned
 		if( nFinanDate != 0 && nFinanTime != 0 )	{
 			::sprintf( pszFinancialFileTime, "%d %d", nFinanDate, nFinanTime );
 		}
-		nStrLen = ::sprintf( pszStatusDesc, "模块名=转码机,转码机版本=V%s,行情API版本=%s,运行时间=%s,Tick缓存占用=%d%%,Tick落盘失败数=%u,Min线缓存占用=%d%%,Min线落盘失败数=%u,资讯落盘时间=%s,权息落盘时间=%s,[市场信息]"
+		nStrLen = ::sprintf( pszStatusDesc, "模块名=转码机,转码机版本=V%s,行情API版本=%s,运行时间=%s,Tick落盘失败数=%u,Min线落盘失败数=%u,资讯落盘时间=%s,权息落盘时间=%s,[市场信息]"
 			, g_sVersion.c_str(), m_oQuotationData.QuoteApiVersion().c_str(), sProgramDuration.c_str()
-			, refSvrStatus.FetchTickBufOccupancyRate(), refSvrStatus.GetTickLostRef(), refSvrStatus.FetchMinuteBufOccupancyRate(), refSvrStatus.GetMinuteLostRef()
+			, refSvrStatus.GetTickLostRef(), refSvrStatus.GetMinuteLostRef()
 			, pszFinancialFileTime, pszWeightFileTime );
 
 		///< 各市场信息
@@ -170,31 +170,13 @@ enum E_SS_Status QuoCollector::GetCollectorStatus( char* pszStatusDesc, unsigned
 				, refSvrStatus.FetchMkDate( XDF_CNFOPT ), refSvrStatus.FetchMkTime( XDF_CNFOPT ), refSvrStatus.GetMkStatus(XDF_CNFOPT) );
 		}
 
-		///< 各市场行情信息
+		///< 各市场行情信息,
 		nStrLen += ::sprintf( pszStatusDesc + nStrLen, ",[行情信息]" );
 		if( refSHL1Snap.LastPx > 0 )	{
-			nStrLen += ::sprintf( pszStatusDesc + nStrLen, ",市场=上海L1,代码=%s,名称=%s,现价=%.2f", refSHL1Snap.Code, refSHL1Snap.Name, refSHL1Snap.LastPx );
-		}
-		if( refSHOPTSnap.LastPx > 0 )	{
-			nStrLen += ::sprintf( pszStatusDesc + nStrLen, ",市场=上海期权,代码=%s,名称=%s,现价=%.2f", refSHOPTSnap.Code, refSHOPTSnap.Name, refSHOPTSnap.LastPx );
+			nStrLen += ::sprintf( pszStatusDesc + nStrLen, ",上海L1缓存=%d%%,代码=%s,名称=%s,现价=%.2f", refSvrStatus.FetchTickBufShL1OccupancyRate(), refSHL1Snap.Code, refSHL1Snap.Name, refSHL1Snap.LastPx );
 		}
 		if( refSZL1Snap.LastPx > 0 )	{
-			nStrLen += ::sprintf( pszStatusDesc + nStrLen, ",市场=深圳L1,代码=%s,名称=%s,现价=%.2f", refSZL1Snap.Code, refSZL1Snap.Name, refSZL1Snap.LastPx );
-		}
-		if( refSZOPTSnap.LastPx > 0 )	{
-			nStrLen += ::sprintf( pszStatusDesc + nStrLen, ",市场=深圳L1期权,代码=%s,名称=%s,现价=%.2f", refSZOPTSnap.Code, refSZOPTSnap.Name, refSZOPTSnap.LastPx );
-		}
-		if( refSHCFFSnap.LastPx > 0 )	{
-			nStrLen += ::sprintf( pszStatusDesc + nStrLen, ",市场=中金期货,代码=%s,名称=%s,现价=%.2f", refSHCFFSnap.Code, refSHCFFSnap.Name, refSHCFFSnap.LastPx );
-		}
-		if( refSHCFFOPTSnap.LastPx > 0 )	{
-			nStrLen += ::sprintf( pszStatusDesc + nStrLen, ",市场=中金期权,代码=%s,名称=%s,现价=%.2f", refSHCFFOPTSnap.Code, refSHCFFOPTSnap.Name, refSHCFFOPTSnap.LastPx );
-		}
-		if( refCNFSnap.LastPx > 0 )	{
-			nStrLen += ::sprintf( pszStatusDesc + nStrLen, ",市场=商品期货,代码=%s,名称=%s,现价=%.2f", refCNFSnap.Code, refCNFSnap.Name, refCNFSnap.LastPx );
-		}
-		if( refSHCFFSnap.LastPx > 0 )	{
-			nStrLen += ::sprintf( pszStatusDesc + nStrLen, ",市场=商品期权,代码=%s,名称=%s,现价=%.2f", refCNFOPTSnap.Code, refCNFOPTSnap.Name, refCNFOPTSnap.LastPx );
+			nStrLen += ::sprintf( pszStatusDesc + nStrLen, ",深圳L1缓存=%d%%,代码=%s,名称=%s,现价=%.2f", refSvrStatus.FetchTickBufSzL1OccupancyRate(), refSZL1Snap.Code, refSZL1Snap.Name, refSZL1Snap.LastPx );
 		}
 
 		return refStatus;
