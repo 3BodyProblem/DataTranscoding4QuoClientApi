@@ -318,6 +318,7 @@ void MinGenerator::DumpMinutes()
 SecurityMinCache::SecurityMinCache()
  : m_nSecurityCount( 0 ), m_pMinDataTable( NULL ), m_nAlloPos( 0 ), m_eMarketID( XDF_SZOPT )
 {
+	m_vctCode.clear();
 	m_objMapMinutes.clear();
 }
 
@@ -339,6 +340,7 @@ int SecurityMinCache::Initialize( unsigned int nSecurityCount )
 	m_nAlloPos = 0;
 	m_nSecurityCount = nTotalCount;
 	::memset( m_pMinDataTable, 0, sizeof(MinGenerator::T_DATA) * nTotalCount );
+	m_vctCode.reserve( nSecurityCount + 32 );
 
 	return 0;
 }
@@ -347,18 +349,19 @@ void SecurityMinCache::Release()
 {
 	if( NULL != m_pMinDataTable )
 	{
+		m_oDumpThread.StopThread();
+
 		CriticalLock			section( m_oLockData );
 
 		delete [] m_pMinDataTable;
 		m_pMinDataTable = NULL;
 		m_objMapMinutes.clear();
-		m_oDumpThread.StopThread();
+		m_vctCode.clear();
 		m_oDumpThread.Join( 5000 );
 	}
 
 	m_nAlloPos = 0;
 	m_nSecurityCount = 0;
-	m_objMapMinutes.clear();
 }
 
 void SecurityMinCache::ActivateDumper()
@@ -390,6 +393,7 @@ int SecurityMinCache::NewSecurity( enum XDFMarket eMarket, const std::string& sC
 
 	m_objMapMinutes[sCode] = MinGenerator( eMarket, nDate, sCode, dPriceRate, objData, m_pMinDataTable + m_nAlloPos );
 	m_nAlloPos += 241;
+	m_vctCode.push_back( sCode );
 
 	return 0;
 }
@@ -449,16 +453,26 @@ void* SecurityMinCache::DumpThread( void* pSelf )
 	SecurityMinCache&		refData = *(SecurityMinCache*)pSelf;
 	QuoCollector::GetCollector()->OnLog( TLV_INFO, "SecurityMinCache::DumpThread() : MarketID = %d, enter...................", (int)(refData.m_eMarketID) );
 
-	while( false == SimpleThread::GetGlobalStopFlag() )
+	while( true == refData.m_oDumpThread.IsAlive() )
 	{
 		SimpleThread::Sleep( 1000 * 60 * 3 );
 
 		try
 		{
-			for( T_MAP_MINUTES::iterator it = refData.m_objMapMinutes.begin()
-				; it != refData.m_objMapMinutes.end() && false == SimpleThread::GetGlobalStopFlag()
-				; it++ )
+			unsigned int	nCodeNumber = refData.m_vctCode.size();
+
+			for( unsigned int n = 0; n < nCodeNumber && true == refData.m_oDumpThread.IsAlive(); n++ )
 			{
+				T_MAP_MINUTES::iterator	it;
+
+				{
+					CriticalLock			section( refData.m_oLockData );
+					it = refData.m_objMapMinutes.find( refData.m_vctCode[n] );
+					if( it == refData.m_objMapMinutes.end() ) {
+						continue;
+					}
+				}
+
 				it->second.DumpMinutes();
 			}
 		}
@@ -770,13 +784,14 @@ void SecurityTickCache::Release()
 {
 	if( NULL != m_pTickDataTable )
 	{
+		m_oDumpThread.StopThread();
+
 		CriticalLock			section( m_oLockData );
 
 		delete [] m_pTickDataTable;
 		m_pTickDataTable = NULL;
 		m_objMapTicks.clear();
 		m_vctCode.clear();
-		m_oDumpThread.StopThread();
 		m_oDumpThread.Join( 5000 );
 	}
 
@@ -921,7 +936,7 @@ void* SecurityTickCache::DumpThread( void* pSelf )
 	SecurityTickCache&		refData = *(SecurityTickCache*)pSelf;
 	QuoCollector::GetCollector()->OnLog( TLV_INFO, "SecurityTickCache::DumpThread() : MarketID = %d, enter...................", (int)(refData.m_eMarketID) );
 
-	while( false == SimpleThread::GetGlobalStopFlag() )
+	while( true == refData.m_oDumpThread.IsAlive() )
 	{
 		SimpleThread::Sleep( 1000 * 3 );
 
@@ -929,7 +944,7 @@ void* SecurityTickCache::DumpThread( void* pSelf )
 		{
 			unsigned int	nCodeNumber = refData.m_vctCode.size();
 
-			for( unsigned int n = 0; n < nCodeNumber && false == SimpleThread::GetGlobalStopFlag(); n++ )
+			for( unsigned int n = 0; n < nCodeNumber && true == refData.m_oDumpThread.IsAlive(); n++ )
 			{
 				T_MAP_TICKS::iterator	it;
 

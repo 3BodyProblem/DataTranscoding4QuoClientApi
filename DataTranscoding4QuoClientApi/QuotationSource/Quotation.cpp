@@ -751,10 +751,22 @@ void Quotation::FlushDayLineOnCloseTime()
 				switch( (enum XDFMarket)nMkID )
 				{
 				case XDF_SH:		///< 上证L1
-					SaveShLv1_Static_Tick_Day( XRS_Normal, false );
+					{
+						SaveShLv1_Static_Tick_Day( XRS_Normal, false );	///< 日线落盘
+						m_oQuoDataCenter.GetSHL1Cache().Release();		///< 退出1分钟线落盘线程
+						QuoCollector::GetCollector()->OnLog( TLV_INFO, "Quotation::FlushDayLineOnCloseTime() : SHL1 Minite Line Thread released!" );	
+						m_oQuoDataCenter.GetSHL1TickCache().Release();	///< 退出TICK线落盘线程
+						QuoCollector::GetCollector()->OnLog( TLV_INFO, "Quotation::FlushDayLineOnCloseTime() : SHL1 TICK Line Thread released!" );	
+					}
 					break;
 				case XDF_SZ:		///< 深证L1
-					SaveSzLv1_Static_Tick_Day( XRS_Normal, false );
+					{
+						SaveSzLv1_Static_Tick_Day( XRS_Normal, false );	///< 日线落盘
+						m_oQuoDataCenter.GetSZL1Cache().Release();		///< 退出1分钟线落盘线程
+						QuoCollector::GetCollector()->OnLog( TLV_INFO, "Quotation::FlushDayLineOnCloseTime() : SZL1 Minite Line Thread released!" );	
+						m_oQuoDataCenter.GetSHL1TickCache().Release();	///< 退出TICK线落盘线程
+						QuoCollector::GetCollector()->OnLog( TLV_INFO, "Quotation::FlushDayLineOnCloseTime() : SZL1 TICK Line Thread released!" );	
+					}
 					break;
 				default:
 					break;

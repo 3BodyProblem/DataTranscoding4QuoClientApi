@@ -250,6 +250,7 @@ protected:
 	unsigned int				m_nSecurityCount;		///< 商品数量
 	MinGenerator::T_DATA*		m_pMinDataTable;		///< 分钟线缓存
 	T_MAP_MINUTES				m_objMapMinutes;		///< 分钟线Map
+	std::vector<std::string>	m_vctCode;				///< CodeInTicks
 	CriticalObject				m_oLockData;			///< 分钟线数据锁
 };
 
