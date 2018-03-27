@@ -71,13 +71,13 @@ __inline bool	PrepareMinuteFile( enum XDFMarket eMarket, const char* pszCode, un
 
 MinGenerator::MinGenerator()
  : m_nDate( 0 ), m_nMaxLineCount( 241 ), m_pDataCache( NULL ), m_dPriceRate( 0 )
- , m_nWriteSize( -1 ), m_nDataSize( 0 )
+ , m_nWriteSize( -1 ), m_nDataSize( 0 ), m_dAmountBefore930( 0. ), m_nVolumeBefore930( 0 ), m_nNumTradesBefore930( 0 )
 {
 	::memset( m_pszCode, 0, sizeof(m_pszCode) );
 }
 
 MinGenerator::MinGenerator( enum XDFMarket eMkID, unsigned int nDate, const std::string& sCode, double dPriceRate, T_DATA& objData, T_DATA* pBufPtr )
-: m_nMaxLineCount( 241 ), m_nWriteSize( -1 ), m_nDataSize( 0 )
+: m_nMaxLineCount( 241 ), m_nWriteSize( -1 ), m_nDataSize( 0 ), m_dAmountBefore930( 0. ), m_nVolumeBefore930( 0 ), m_nNumTradesBefore930( 0 )
 {
 	m_eMarket = eMkID;
 	m_nDate = nDate;
@@ -92,7 +92,12 @@ MinGenerator& MinGenerator::operator=( const MinGenerator& obj )
 	m_eMarket = obj.m_eMarket;
 	m_nDate = obj.m_nDate;
 	::strcpy( m_pszCode, obj.m_pszCode );
+
 	m_dPriceRate = obj.m_dPriceRate;
+	m_dAmountBefore930 = obj.m_dAmountBefore930;
+	m_nVolumeBefore930 = obj.m_nVolumeBefore930;
+	m_nNumTradesBefore930 = obj.m_nNumTradesBefore930;
+
 	m_pDataCache = obj.m_pDataCache;
 	m_nWriteSize = obj.m_nWriteSize;
 	m_nDataSize = obj.m_nDataSize;
@@ -119,23 +124,27 @@ int MinGenerator::Update( T_DATA& objData )
 	unsigned int		nMM = nMKTime % 10000 / 100;
 	int					nDataIndex = -1;
 
-	if( nMKTime >= 93000 && nMKTime < 113000 ) {
-		nDataIndex = 0;							///< 需要包含9:30这根线
+	if( nMKTime < 93000 ) {
+		m_dAmountBefore930 = objData.Amount;		///< 9:30前的金额
+		m_nVolumeBefore930 = objData.Volume;		///< 9:30前的量
+		m_nNumTradesBefore930 = objData.NumTrades;	///< 9:30前的笔数
+	} else if( nMKTime >= 93000 && nMKTime < 113000 ) {
+		nDataIndex = 0;								///< 需要包含9:30这根线
 		if( 9 == nHH ) {
-			nDataIndex += (nMM - 30);			///< 9:30~9:59 = 30根
+			nDataIndex += (nMM - 30);				///< 9:30~9:59 = 30根
 		} else if( 10 == nHH ) {
-			nDataIndex += (30 + nMM);			///< 10:00~10:59 = 60根
+			nDataIndex += (30 + nMM);				///< 10:00~10:59 = 60根
 		} else if( 11 == nHH ) {
-			nDataIndex += (90 + nMM);			///< 11:00~11:30 = 31根
+			nDataIndex += (90 + nMM);				///< 11:00~11:30 = 31根
 		}
 	} else if( nMKTime >= 130000 && nMKTime <= 150000 ) {
-		nDataIndex = 121;						///< 上午共121根
+		nDataIndex = 121;							///< 上午共121根
 		if( 13 == nHH ) {
-			nDataIndex += (59 + nMM);			///< 13:01~13:59 = 59根
+			nDataIndex += (59 + nMM);				///< 13:01~13:59 = 59根
 		} else if( 14 == nHH ) {
-			nDataIndex += (60 + nMM);			///< 14:00~14:59 = 60根
+			nDataIndex += (60 + nMM);				///< 14:00~14:59 = 60根
 		} else if( 15 == nHH ) {
-			nDataIndex += (1 + nMM);			///< 15:00~15:00 = 1根
+			nDataIndex += (1 + nMM);				///< 15:00~15:00 = 1根
 		}
 	}
 
@@ -152,6 +161,7 @@ int MinGenerator::Update( T_DATA& objData )
 
 	pData->Amount = objData.Amount;
 	pData->Volume = objData.Volume;
+	pData->NumTrades = objData.NumTrades;
 	pData->Voip = objData.Voip;
 	pData->ClosePx = objData.ClosePx;
 	if( pData->Time == 0 ) {
@@ -159,8 +169,7 @@ int MinGenerator::Update( T_DATA& objData )
 		pData->OpenPx = objData.ClosePx;
 		pData->HighPx = objData.ClosePx;
 		pData->LowPx = objData.ClosePx;
-if( ::strncmp( m_pszCode, "600000", 6 ) == 0 )
-	::printf( "First, 600000, Time=%u, Open=%u, Hight=%u, Low=%u, %u, %I64d\n", pData->Time, pData->OpenPx, pData->HighPx, pData->LowPx, pData->ClosePx, pData->Volume );
+//if( ::strncmp( m_pszCode, "600000", 6 ) == 0 )::printf( "First, 600000, Time=%u, Open=%u, Hight=%u, Low=%u, %u, %I64d\n", pData->Time, pData->OpenPx, pData->HighPx, pData->LowPx, pData->ClosePx, pData->Volume );
 	} else {
 		pData->Time = objData.Time;
 		if( objData.ClosePx > pData->HighPx ) {
@@ -169,8 +178,7 @@ if( ::strncmp( m_pszCode, "600000", 6 ) == 0 )
 		if( objData.ClosePx < pData->LowPx ) {
 			pData->LowPx = objData.ClosePx;
 		}
-if( ::strncmp( m_pszCode, "600000", 6 ) == 0 )
-	::printf( "Then, 600000, Time=%u, Open=%u, Hight=%u, Low=%u, %u, %I64d\n", pData->Time, pData->OpenPx, pData->HighPx, pData->LowPx, pData->ClosePx, pData->Volume );
+//if( ::strncmp( m_pszCode, "600000", 6 ) == 0 )::printf( "Then, 600000, Time=%u, Open=%u, Hight=%u, Low=%u, %u, %I64d\n", pData->Time, pData->OpenPx, pData->HighPx, pData->LowPx, pData->ClosePx, pData->Volume );
 	}
 
 	if( nDataIndex > m_nDataSize ) {
@@ -231,8 +239,7 @@ void MinGenerator::DumpMinutes()
 				oDumper.write( pszLine, nLen );
 				m_pDataCache[i].Time = 0;								///< 把时间清零，即，标记为已经落盘
 				m_nWriteSize = i;										///< 更新最新的写盘数据位置
-if( ::strncmp( m_pszCode, "600000", 6 ) == 0 )
-::printf( "[WRITE], 600000, Time=%u, Open=%f, High=%f, Low=%f, %f, %I64d\n", tagMinuteLine.Time, tagMinuteLine.OpenPx, tagMinuteLine.HighPx, tagMinuteLine.LowPx, tagMinuteLine.ClosePx, tagMinuteLine.Volume );
+//if( ::strncmp( m_pszCode, "600000", 6 ) == 0 )::printf( "[WRITE], 600000, Time=%u, Open=%f, High=%f, Low=%f, %f, %I64d\n", tagMinuteLine.Time, tagMinuteLine.OpenPx, tagMinuteLine.HighPx, tagMinuteLine.LowPx, tagMinuteLine.ClosePx, tagMinuteLine.Volume );
 			} else {
 				if( m_pDataCache[i].Volume > 0 ) {
 					if( i - nLastLineIndex > 1 ) {	///< 如果前面n分钟内无成交，则开盘最高最低等于ClosePx
@@ -257,8 +264,7 @@ if( ::strncmp( m_pszCode, "600000", 6 ) == 0 )
 					oDumper.write( pszLine, nLen );
 					m_pDataCache[i].Time = 0;								///< 把时间清零，即，标记为已经落盘
 					m_nWriteSize = i;										///< 更新最新的写盘数据位置
-if( ::strncmp( m_pszCode, "600000", 6 ) == 0 )
-::printf( "[WRITE], 600000, Time=%u, Open=%f, High=%f, Low=%f, %f, %I64d\n", tagMinuteLine.Time, tagMinuteLine.OpenPx, tagMinuteLine.HighPx, tagMinuteLine.LowPx, tagMinuteLine.ClosePx, tagMinuteLine.Volume );
+//if( ::strncmp( m_pszCode, "600000", 6 ) == 0 )::printf( "[WRITE], 600000, Time=%u, Open=%f, High=%f, Low=%f, %f, %I64d\n", tagMinuteLine.Time, tagMinuteLine.OpenPx, tagMinuteLine.HighPx, tagMinuteLine.LowPx, tagMinuteLine.ClosePx, tagMinuteLine.Volume );
 				} else {
 					tagMinuteLine.OpenPx = tagLastLine.ClosePx;
 					tagMinuteLine.HighPx = tagLastLine.ClosePx;
@@ -271,9 +277,9 @@ if( ::strncmp( m_pszCode, "600000", 6 ) == 0 )
 		///< 记录： 本次的金额，量等信息，供用于后一笔的差值计算
 		if( m_pDataCache[i].Volume > 0 ) {
 			if( i == 0 ) {
-				tagLastLastLine.Amount = 0.;
-				tagLastLastLine.Volume = 0;
-				tagLastLastLine.NumTrades = 0;
+				tagLastLastLine.Amount = m_dAmountBefore930;
+				tagLastLastLine.Volume = m_nVolumeBefore930;
+				tagLastLastLine.NumTrades = m_nNumTradesBefore930;
 			} else {
 				::memcpy( &tagLastLastLine, &tagLastLine, sizeof tagLastLine );
 			}

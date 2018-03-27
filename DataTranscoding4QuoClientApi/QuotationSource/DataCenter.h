@@ -172,9 +172,14 @@ public:
 	 */
 	void						DumpMinutes();
 protected:
+	double						m_dAmountBefore930;		///< 9:30前的金额
+	unsigned __int64			m_nVolumeBefore930;		///< 9:30前的量
+	unsigned __int64			m_nNumTradesBefore930;	///< 9:30前的笔数
+protected:
 	enum XDFMarket				m_eMarket;				///< 市场编号
 	unsigned int				m_nDate;				///< YYYYMMDD（如20170705）
 	char						m_pszCode[16];			///< 商品代码
+protected:
 	T_DATA*						m_pDataCache;			///< 241根1分钟缓存
 	double						m_dPriceRate;			///< 放大倍数
 	int							m_nWriteSize;			///< 写入分钟线的长度
