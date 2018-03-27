@@ -130,7 +130,7 @@ int MinGenerator::Update( T_DATA& objData )
 		m_dAmountBefore930 = objData.Amount;		///< 9:30前的金额
 		m_nVolumeBefore930 = objData.Volume;		///< 9:30前的量
 		m_nNumTradesBefore930 = objData.NumTrades;	///< 9:30前的笔数
-	} else if( nMKTime >= 93000 && nMKTime <= 113000 ) {
+	} else if( nMKTime >= 93000 && nMKTime <= 130000 ) {
 		nDataIndex = 0;								///< 需要包含9:30这根线
 		if( 9 == nHH ) {
 			nDataIndex += (nMM - 30);				///< 9:30~9:59 = 30根
@@ -138,15 +138,17 @@ int MinGenerator::Update( T_DATA& objData )
 			nDataIndex += (30 + nMM);				///< 10:00~10:59 = 60根
 		} else if( 11 == nHH ) {
 			nDataIndex += (90 + nMM);				///< 11:00~11:30 = 31根
+		} else if( 13 == nHH ) {
+			nDataIndex += 120;						///< 13:01(即13:00)的数据存放到11:30的位置
 		}
-	} else if( nMKTime >= 130000 && nMKTime <= 150000 ) {
-		nDataIndex = 121;							///< 上午共121根
+	} else if( nMKTime > 130000 && nMKTime <= 150000 ) {
+		nDataIndex = 120;							///< 上午共121根
 		if( 13 == nHH ) {
 			nDataIndex += nMM;						///< 13:01~13:59 = 59根
 		} else if( 14 == nHH ) {
-			nDataIndex += (59 + nMM);				///< 14:00~14:59 = 60根
+			nDataIndex += (60 + nMM);				///< 14:00~14:59 = 60根
 		} else if( 15 == nHH ) {
-			nDataIndex += (59 + 1 + 60);			///< 15:00~15:00 = 1根
+			nDataIndex += 120;						///< 15:00~15:00 = 1根
 		}
 	}
 
@@ -171,7 +173,7 @@ int MinGenerator::Update( T_DATA& objData )
 		pData->OpenPx = objData.ClosePx;
 		pData->HighPx = objData.ClosePx;
 		pData->LowPx = objData.ClosePx;
-if( ::strncmp( m_pszCode, "600000", 6 ) == 0 )::printf( "First, 600000, Time=%u, Open=%u, Hight=%u, Low=%u, %u, %I64d\n", pData->Time, pData->OpenPx, pData->HighPx, pData->LowPx, pData->ClosePx, pData->Volume );
+//if( ::strncmp( m_pszCode, "600000", 6 ) == 0 )::printf( "First, 600000, Time=%u, Open=%u, Hight=%u, Low=%u, %u, %I64d\n", pData->Time, pData->OpenPx, pData->HighPx, pData->LowPx, pData->ClosePx, pData->Volume );
 	} else {
 		pData->Time = objData.Time;
 		if( objData.ClosePx > pData->HighPx ) {
@@ -180,7 +182,7 @@ if( ::strncmp( m_pszCode, "600000", 6 ) == 0 )::printf( "First, 600000, Time=%u,
 		if( objData.ClosePx < pData->LowPx ) {
 			pData->LowPx = objData.ClosePx;
 		}
-if( ::strncmp( m_pszCode, "600000", 6 ) == 0 )::printf( "Then, 600000, Time=%u, Open=%u, Hight=%u, Low=%u, %u, %I64d\n", pData->Time, pData->OpenPx, pData->HighPx, pData->LowPx, pData->ClosePx, pData->Volume );
+//if( ::strncmp( m_pszCode, "600000", 6 ) == 0 )::printf( "Then, 600000, Time=%u, Open=%u, Hight=%u, Low=%u, %u, %I64d\n", pData->Time, pData->OpenPx, pData->HighPx, pData->LowPx, pData->ClosePx, pData->Volume );
 	}
 
 	if( nDataIndex > m_nDataSize ) {
@@ -205,13 +207,14 @@ void MinGenerator::DumpMinutes()
 		QuoCollector::GetCollector()->OnLog( TLV_ERROR, "MinGenerator::DumpMinutes() : cannot open file 4 security:%s", m_pszCode );
 		return;
 	}
+
+	if( true == s_bCloseMarket ) {						///< 收市，需要生成所有分钟线
+		m_nDataSize = m_nMaxLineCount;
+	}
+
 	///< 从头遍历，直到最后一个收到的时间节点上
 	for( int i = 0; i < m_nDataSize; i++ )
 	{
-		if( true == s_bCloseMarket ) {						///< 收市，需要生成所有分钟线
-			m_nDataSize = m_nMaxLineCount;
-		}
-
 		///< 跳过已经落盘过的时间节点，以m_pDataCache[i].Time大于零为标识，进行"后续写入"
 		if( i > m_nWriteSize ) {
 			char			pszLine[1024] = { 0 };
@@ -226,9 +229,9 @@ void MinGenerator::DumpMinutes()
 				tagMinuteLine.Time = (1000 + (i-30)) * 100;			///< 10:00~10:59 = 60根 (i:30--89)
 			} else if( i >= 90 && i <= 120 ) {
 				tagMinuteLine.Time = (1100 + (i-90)) * 100;			///< 11:00~11:30 = 31根 (i:90--120)
-			} else if( i >= 121 && i <= 179 ) {
-				tagMinuteLine.Time = (1300 + (i-121)) * 100;		///< 13:01~13:59 = 59根 (i:121--179)
-			} else if( i >= 180 && i <= 239 ) {
+			} else if( i > 120 && i <= 179 ) {
+				tagMinuteLine.Time = (1300 + (i-120)) * 100;		///< 13:01~13:59 = 59根 (i:121--179)
+			} else if( i > 179 && i <= 239 ) {
 				tagMinuteLine.Time = (1400 + (i-180)) * 100;		///< 14:00~14:59 = 60根 (i:180--239)
 			} else if( i == 240 ) {
 				tagMinuteLine.Time = 150000;						///< 15:00~15:00 = 1根 (i:240)
@@ -249,7 +252,7 @@ void MinGenerator::DumpMinutes()
 				oDumper.write( pszLine, nLen );
 				m_pDataCache[i].Time = 0;								///< 把时间清零，即，标记为已经落盘
 				m_nWriteSize = i;										///< 更新最新的写盘数据位置
-if( ::strncmp( m_pszCode, "600000", 6 ) == 0 )::printf( "[WRITE], 600000, Time=%u, Open=%f, High=%f, Low=%f, %f, %I64d\n", tagMinuteLine.Time, tagMinuteLine.OpenPx, tagMinuteLine.HighPx, tagMinuteLine.LowPx, tagMinuteLine.ClosePx, tagMinuteLine.Volume );
+//if( ::strncmp( m_pszCode, "600000", 6 ) == 0 )::printf( "[WRITE], 600000, Time=%u, Open=%f, High=%f, Low=%f, %f, %I64d\n", tagMinuteLine.Time, tagMinuteLine.OpenPx, tagMinuteLine.HighPx, tagMinuteLine.LowPx, tagMinuteLine.ClosePx, tagMinuteLine.Volume );
 			} else {		////////////////////////< 处理9:30后的分钟线计算与落盘的情况 [1. 前面无成交的情况 2.前面是连续成交的情况]
 				if( i - nLastLineIndex > 1 ) {	///< 如果前面n分钟内无成交，则开盘最高最低等于ClosePx
 					tagMinuteLine.OpenPx = tagLastLine.ClosePx;
@@ -272,9 +275,8 @@ if( ::strncmp( m_pszCode, "600000", 6 ) == 0 )::printf( "[WRITE], 600000, Time=%
 										, tagMinuteLine.Date, tagMinuteLine.Time, tagMinuteLine.OpenPx, tagMinuteLine.HighPx, tagMinuteLine.LowPx, tagMinuteLine.ClosePx
 										, tagMinuteLine.SettlePx, tagMinuteLine.Amount, tagMinuteLine.Volume, tagMinuteLine.OpenInterest, tagMinuteLine.NumTrades, tagMinuteLine.Voip );
 				oDumper.write( pszLine, nLen );
-				m_pDataCache[i].Time = 0;								///< 把时间清零，即，标记为已经落盘
 				m_nWriteSize = i;										///< 更新最新的写盘数据位置
-if( ::strncmp( m_pszCode, "600000", 6 ) == 0 )::printf( "[WRITE], 600000, Time=%u, Open=%f, High=%f, Low=%f, %f, %I64d\n", tagMinuteLine.Time, tagMinuteLine.OpenPx, tagMinuteLine.HighPx, tagMinuteLine.LowPx, tagMinuteLine.ClosePx, tagMinuteLine.Volume );
+//if( ::strncmp( m_pszCode, "600000", 6 ) == 0 )::printf( "[WRITE], 600000, Time=%u, Open=%f, High=%f, Low=%f, %f, %I64d\n", tagMinuteLine.Time, tagMinuteLine.OpenPx, tagMinuteLine.HighPx, tagMinuteLine.LowPx, tagMinuteLine.ClosePx, tagMinuteLine.Volume );
 			}
 		}
 
