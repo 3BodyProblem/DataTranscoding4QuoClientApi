@@ -150,20 +150,19 @@ int MinGenerator::Update( T_DATA& objData )
 
 	T_DATA*		pData = m_pDataCache + nDataIndex;
 
+	pData->Amount = objData.Amount;
+	pData->Volume = objData.Volume;
+	pData->Voip = objData.Voip;
+	pData->ClosePx = objData.ClosePx;
 	if( pData->Time == 0 ) {
 		pData->Time = objData.Time;
-		pData->Amount = objData.Amount;
-		pData->Volume = objData.Volume;
-		pData->NumTrades = objData.NumTrades;
 		pData->OpenPx = objData.ClosePx;
 		pData->HighPx = objData.ClosePx;
 		pData->LowPx = objData.ClosePx;
-		pData->ClosePx = objData.ClosePx;
-		pData->Voip = objData.Voip;
 if( ::strncmp( m_pszCode, "600000", 6 ) == 0 )
-	::printf( "First, 600000, Time=%u, Now=%u, Vol=%I64d\n", pData->Time, pData->ClosePx, pData->Volume );
+	::printf( "First, 600000, Time=%u, Open=%u, Hight=%u, Low=%u, %u, %I64d\n", pData->Time, pData->OpenPx, pData->HighPx, pData->LowPx, pData->ClosePx, pData->Volume );
 	} else {
-		pData->ClosePx = objData.ClosePx;
+		pData->Time = objData.Time;
 		if( objData.ClosePx > pData->HighPx ) {
 			pData->HighPx = objData.ClosePx;
 		}
@@ -171,7 +170,7 @@ if( ::strncmp( m_pszCode, "600000", 6 ) == 0 )
 			pData->LowPx = objData.ClosePx;
 		}
 if( ::strncmp( m_pszCode, "600000", 6 ) == 0 )
-	::printf( "After, 600000, Time=%u, Now=%u, Vol=%I64d, Hight=%u, Low=%u\n", pData->Time, pData->ClosePx, pData->Volume, pData->HighPx, pData->LowPx );
+	::printf( "Then, 600000, Time=%u, Open=%u, Hight=%u, Low=%u, %u, %I64d\n", pData->Time, pData->OpenPx, pData->HighPx, pData->LowPx, pData->ClosePx, pData->Volume );
 	}
 
 	if( nDataIndex > m_nDataSize ) {
@@ -186,6 +185,7 @@ void MinGenerator::DumpMinutes()
 	std::ofstream			oDumper;
 	unsigned int			nLastLineIndex = 0;
 	T_MIN_LINE				tagLastLine = { 0 };
+	T_MIN_LINE				tagLastLastLine = { 0 };
 
 	if( false == PrepareMinuteFile( m_eMarket, m_pszCode, m_nDate, oDumper ) )
 	{
@@ -225,6 +225,14 @@ void MinGenerator::DumpMinutes()
 				tagMinuteLine.LowPx = m_pDataCache[i].LowPx / m_dPriceRate;
 				tagMinuteLine.ClosePx = m_pDataCache[i].ClosePx / m_dPriceRate;
 				tagMinuteLine.Voip = m_pDataCache[i].Voip / m_dPriceRate;
+				int		nLen = ::sprintf( pszLine, "%d,%d,%.4f,%.4f,%.4f,%.4f,%.4f,%.4f,%I64d,%I64d,%I64d,%.4f\n"
+										, tagMinuteLine.Date, tagMinuteLine.Time, tagMinuteLine.OpenPx, tagMinuteLine.HighPx, tagMinuteLine.LowPx, tagMinuteLine.ClosePx
+										, tagMinuteLine.SettlePx, tagMinuteLine.Amount, tagMinuteLine.Volume, tagMinuteLine.OpenInterest, tagMinuteLine.NumTrades, tagMinuteLine.Voip );
+				oDumper.write( pszLine, nLen );
+				m_pDataCache[i].Time = 0;								///< 把时间清零，即，标记为已经落盘
+				m_nWriteSize = i;										///< 更新最新的写盘数据位置
+if( ::strncmp( m_pszCode, "600000", 6 ) == 0 )
+::printf( "[WRITE], 600000, Time=%u, Open=%f, High=%f, Low=%f, %f, %I64d\n", tagMinuteLine.Time, tagMinuteLine.OpenPx, tagMinuteLine.HighPx, tagMinuteLine.LowPx, tagMinuteLine.ClosePx, tagMinuteLine.Volume );
 			} else {
 				if( m_pDataCache[i].Volume > 0 ) {
 					if( i - nLastLineIndex > 1 ) {	///< 如果前面n分钟内无成交，则开盘最高最低等于ClosePx
@@ -238,19 +246,19 @@ void MinGenerator::DumpMinutes()
 						tagMinuteLine.LowPx = tagLastLine.LowPx;
 						tagMinuteLine.ClosePx = tagLastLine.ClosePx;
 						tagMinuteLine.Voip = tagLastLine.Voip;
-						tagMinuteLine.Amount = m_pDataCache[i].Amount - tagLastLine.Amount;
-						tagMinuteLine.Volume = m_pDataCache[i].Volume - tagLastLine.Volume;
-						tagMinuteLine.NumTrades = m_pDataCache[i].NumTrades - tagLastLine.NumTrades;
+						tagMinuteLine.Amount = tagLastLine.Amount - tagLastLastLine.Amount;
+						tagMinuteLine.Volume = tagLastLine.Volume - tagLastLastLine.Volume;
+						tagMinuteLine.NumTrades = tagLastLine.NumTrades - tagLastLastLine.NumTrades;
 					}
 
 					int		nLen = ::sprintf( pszLine, "%d,%d,%.4f,%.4f,%.4f,%.4f,%.4f,%.4f,%I64d,%I64d,%I64d,%.4f\n"
-						, tagMinuteLine.Date, tagMinuteLine.Time, tagMinuteLine.OpenPx, tagMinuteLine.HighPx, tagMinuteLine.LowPx, tagMinuteLine.ClosePx
-						, tagMinuteLine.SettlePx, tagMinuteLine.Amount, tagMinuteLine.Volume, tagMinuteLine.OpenInterest, tagMinuteLine.NumTrades, tagMinuteLine.Voip );
-if( ::strncmp( m_pszCode, "600000", 6 ) == 0 )
-	::printf( "[WRITE], 600000, Time=%u, Now=%f, Vol=%I64d, High=%f, Low=%f\n", tagMinuteLine.Time, tagMinuteLine.ClosePx, tagMinuteLine.Volume, tagMinuteLine.HighPx, tagMinuteLine.LowPx );
+											, tagMinuteLine.Date, tagMinuteLine.Time, tagMinuteLine.OpenPx, tagMinuteLine.HighPx, tagMinuteLine.LowPx, tagMinuteLine.ClosePx
+											, tagMinuteLine.SettlePx, tagMinuteLine.Amount, tagMinuteLine.Volume, tagMinuteLine.OpenInterest, tagMinuteLine.NumTrades, tagMinuteLine.Voip );
 					oDumper.write( pszLine, nLen );
 					m_pDataCache[i].Time = 0;								///< 把时间清零，即，标记为已经落盘
 					m_nWriteSize = i;										///< 更新最新的写盘数据位置
+if( ::strncmp( m_pszCode, "600000", 6 ) == 0 )
+::printf( "[WRITE], 600000, Time=%u, Open=%f, High=%f, Low=%f, %f, %I64d\n", tagMinuteLine.Time, tagMinuteLine.OpenPx, tagMinuteLine.HighPx, tagMinuteLine.LowPx, tagMinuteLine.ClosePx, tagMinuteLine.Volume );
 				} else {
 					tagMinuteLine.OpenPx = tagLastLine.ClosePx;
 					tagMinuteLine.HighPx = tagLastLine.ClosePx;
@@ -262,6 +270,14 @@ if( ::strncmp( m_pszCode, "600000", 6 ) == 0 )
 
 		///< 记录： 本次的金额，量等信息，供用于后一笔的差值计算
 		if( m_pDataCache[i].Volume > 0 ) {
+			if( i == 0 ) {
+				tagLastLastLine.Amount = 0.;
+				tagLastLastLine.Volume = 0;
+				tagLastLastLine.NumTrades = 0;
+			} else {
+				::memcpy( &tagLastLastLine, &tagLastLine, sizeof tagLastLine );
+			}
+
 			nLastLineIndex = i;
 			tagLastLine.Amount = m_pDataCache[i].Amount;
 			tagLastLine.Volume = m_pDataCache[i].Volume;
@@ -1301,8 +1317,7 @@ int QuotationData::UpdateTickLine( enum XDFMarket eMarket, char* pSnapData, unsi
 						refTickLine.Voip = pStock->Voip / refParam.dPriceRate;
 						nErrorCode = m_arrayTickLine.PutData( &refTickLine );
 						///< ------------ Minute Lines -----------------------
-if( strncmp( pStock->Code, "600000", 6 ) == 0 )
-	::printf( "Snap: ---> 600000\n" );
+///<if( strncmp( pStock->Code, "600000", 6 ) == 0 )::printf( "Snap, 600000, Time=%u, Open=%u, Hight=%u, Low=%u, %u, %I64d\n", refTickLine.Time/1000, pStock->Open, pStock->High, pStock->Low, pStock->Now, pStock->Volume );
 						m_objMinCache4SHL1.UpdateSecurity( *pStock, refTickLine.Date, refTickLine.Time );
 				}
 				}
