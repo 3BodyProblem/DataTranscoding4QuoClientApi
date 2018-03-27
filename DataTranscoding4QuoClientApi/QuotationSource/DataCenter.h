@@ -14,6 +14,7 @@
 #include "../Infrastructure/LoopBuffer.h"
 
 
+///< Êı¾İ½á¹¹¶¨Òå //////////////////////////////////////////////////////////////////////////////////////////////
 #pragma pack(1)
 /**
  * @class			T_MIN_LINE
@@ -134,6 +135,8 @@ typedef struct
 } T_LINE_PARAM;
 #pragma pack()
 
+
+///< 1·ÖÖÓÏß¼ÆËã²¢ÂäÅÌÀà ///////////////////////////////////////////////////////////////////////////////////////////
 /**
  * @class						MinGenerator
  * @brief						ÉÌÆ·1·ÖÖÓÏßÉú²úÕß
@@ -176,29 +179,29 @@ protected:
 	unsigned __int64			m_nVolumeBefore930;		///< 9:30Ç°µÄÁ¿
 	unsigned __int64			m_nNumTradesBefore930;	///< 9:30Ç°µÄ±ÊÊı
 protected:
+	double						m_dPriceRate;			///< ·Å´ó±¶Êı
 	enum XDFMarket				m_eMarket;				///< ÊĞ³¡±àºÅ
 	unsigned int				m_nDate;				///< YYYYMMDD£¨Èç20170705£©
-	char						m_pszCode[16];			///< ÉÌÆ·´úÂë
+	char						m_pszCode[9];			///< ÉÌÆ·´úÂë
 protected:
 	T_DATA*						m_pDataCache;			///< 241¸ù1·ÖÖÓ»º´æ
-	double						m_dPriceRate;			///< ·Å´ó±¶Êı
 	int							m_nWriteSize;			///< Ğ´Èë·ÖÖÓÏßµÄ³¤¶È
 	int							m_nDataSize;			///< Êı¾İ³¤¶È
 };
 
 
 /**
- * @class						SecurityCache
+ * @class						SecurityMinCache
  * @brief						ËùÓĞÉÌÆ··ÖÖÓÏßµÄ»º´æ
  * @author						barry
  */
-class SecurityCache
+class SecurityMinCache
 {
 public:
 	typedef std::map<std::string,MinGenerator>	T_MAP_MINUTES;
 public:
-	SecurityCache();
-	~SecurityCache();
+	SecurityMinCache();
+	~SecurityMinCache();
 
 	/**
 	 * @brief					·ÖÖÓÏß»º´æ³õÊ¼»¯
@@ -258,62 +261,169 @@ typedef std::map<std::string,T_LINE_PARAM>				T_MAP_GEN_MLINES;			///< ·ÖÖÓÏßÉú³
 extern unsigned int										s_nNumberInSection;			///< Ò»¸öÊĞ³¡ÓĞ¿ÉÒÔ»º´æ¶àÉÙ¸öÊı¾İ¿é(¿ÉÅä)
 
 
+///< TICKÏß¼ÆËã²¢ÂäÅÌÀà ///////////////////////////////////////////////////////////////////////////////////////////
 /**
- * @class						CacheAlloc
- * @brief						ÈÕÏß»º´æ
+ * @class						TickGenerator
+ * @brief						TICKÏßÉú²úÕß
+ * @author						barry
  */
-class CacheAlloc
+class TickGenerator
 {
-private:
-	/**
-	 * @brief					¹¹Ôìº¯Êı
-	 * @param[in]				eMkID			ÊĞ³¡ID
-	 */
-	CacheAlloc();
-
 public:
-	~CacheAlloc();
+	typedef struct
+	{
+		unsigned int			Time;					///< HHMMSSmmm£¨Èç093005000)
+		unsigned int			HighPx;					///< ×î¸ß¼Û
+		unsigned int			LowPx;					///< ×îµÍ¼Û
+		unsigned int			ClosePx;				///< ÊÕÅÌ¼Û
+		unsigned int			NowPx;					///< ÏÖ¼Û
+		unsigned int			UpperPx;				///< ÕÇÍ£¼Û
+		unsigned int			LowerPx;				///< µøÍ£¼Û
+		double					Amount;					///< ³É½»¶î
+		unsigned __int64		Volume;					///< ³É½»Á¿(¹É/ÕÅ/·İ)
+		unsigned __int64		NumTrades;				///< ³É½»±ÊÊı
+		unsigned int			BidPx1;					///< Î¯ÍĞÂòÅÌÒ»¼Û¸ñ
+		unsigned __int64		BidVol1;				///< Î¯ÍĞÂòÅÌÒ»Á¿(¹É/ÕÅ/·İ)
+		unsigned int			BidPx2;					///< Î¯ÍĞÂòÅÌ¶ş¼Û¸ñ
+		unsigned __int64		BidVol2;				///< Î¯ÍĞÂòÅÌ¶şÁ¿(¹É/ÕÅ/·İ)
+		unsigned int			AskPx1;					///< Î¯ÍĞÂôÅÌÒ»¼Û¸ñ
+		unsigned __int64		AskVol1;				///< Î¯ÍĞÂôÅÌÒ»Á¿(¹É/ÕÅ/·İ)
+		unsigned int			AskPx2;					///< Î¯ÍĞÂôÅÌ¶ş¼Û¸ñ
+		unsigned __int64		AskVol2;				///< Î¯ÍĞÂôÅÌ¶şÁ¿(¹É/ÕÅ/·İ)
+		unsigned int			Voip;					///< »ù½ğÄ£¾»¡¢È¨Ö¤Òç¼Û
+	} T_DATA;											///< ÉÌÆ·¿ìÕÕ
+	typedef MLoopBufferSt<T_DATA>	T_TICK_QUEUE;
+	static const unsigned int		s_nMaxLineCount;	///< ×î¶àÖ§³ÖµÄTICKÏßÊıÁ¿,Ô¤Áô¿ÉÒÔ±£´æ10·ÖÖÓTICKµÄ»º´æ(Ò»·ÖÖÓ20±Ê¿ìÕÕ * 10·ÖÖÓ)
+public:
+	TickGenerator();
+	TickGenerator( enum XDFMarket eMkID, unsigned int nDate, const std::string& sCode, double dPriceRate, T_DATA& objData, T_DATA* pBufPtr );
+	TickGenerator&				operator=( const TickGenerator& obj );
 
 	/**
-	 * @brief					»ñÈ¡µ¥¼ü
+	 * @brief					³õÊ¼»¯
+	 * @return					0						³É¹¦
 	 */
-	static CacheAlloc&			GetObj();
+	int							Initialize();
 
 	/**
-	 * @brief					»ñÈ¡»º´æµØÖ·
+	 * @brief					¸üĞÂ¿ìÕÕ
+	 * @param[in]				objData					ĞĞÇé¿ìÕÕ
+	 * @param[in]				nPreClosePx				×òÊÕ
+	 * @param[in]				nOpenPx					¿ªÅÌ¼Û
+	 * @return					0						³É¹¦
 	 */
-	char*						GetBufferPtr();
+	int							Update( T_DATA& objData, unsigned int nPreClosePx, unsigned int nOpenPx );
+
+	/** 
+	 * @brief					¸üĞÂÇ°×º
+	 */
+	void						SetPreName( const char* pszPreName, unsigned int nPreNameLen );
 
 	/**
-	 * @brief					»ñÈ¡»º´æÖĞÓĞĞ§Êı¾İµÄ³¤¶È
+	 * @brief					»ñÈ¡·Å´ó±¶Êı
 	 */
-	unsigned int				GetDataLength();
+	double						GetPriceRate();
 
 	/**
-	 * @brief					»ñÈ¡»º´æ×î´ó³¤¶È
+	 * @brief					Éú³ÉTICKÏß²¢´æÅÌ
 	 */
-	unsigned int				GetMaxBufLength();
+	void						DumpTicks();
 
-	/**
-	 * @brief					ÎªÒ»¸öÉÌÆ·´úÂë·ÖÅä»º´æ¶ÔÓ¦µÄ×¨ÓÃ»º´æ
-	 * @param[in]				eMkID			ÊĞ³¡ID
-	 * @param[out]				nOutSize		Êä³öÎªÕâÒ»¸öÉÌÆ··ÖÅäµÄ»º´æµÄ´óĞ¡
-	 */
-	char*						GrabCache( enum XDFMarket eMkID, unsigned int& nOutSize );
-
-	/**
-	 * @brief					ÊÍ·Å»º´æ
-	 */
-	void						FreeCaches();
-
-private:
-	CriticalObject				m_oLock;					///< ÁÙ½çÇø¶ÔÏó
-	unsigned int				m_nMaxCacheSize;			///< ĞĞÇé»º´æ×Ü´óĞ¡
-	unsigned int				m_nAllocateSize;			///< µ±Ç°Ê¹ÓÃµÄ»º´æ´óĞ¡
-	char*						m_pDataCache;				///< ĞĞÇéÊı¾İ»º´æµØÖ·
+protected:
+	double						m_dPriceRate;			///< ·Å´ó±¶Êı
+	enum XDFMarket				m_eMarket;				///< ÊĞ³¡±àºÅ
+	unsigned int				m_nDate;				///< YYYYMMDD£¨Èç20170705£©
+	unsigned int				m_nMkTime;				///< ÊĞ³¡Ê±¼ä
+	char						m_pszCode[9];			///< ÉÌÆ·´úÂë
+	unsigned int				m_nPreClosePx;			///< ×òÊÕ¼Û
+	unsigned int				m_nOpenPx;				///< ¿ªÅÌ¼Û
+	char						m_pszPreName[8];		///< Ö¤È¯Ç°×º
+protected:
+	T_TICK_QUEUE				m_objTickQueue;			///< TICK¶ÓÁĞ
+	T_DATA*						m_pDataCache;			///< TICK»º´æBuffer
+protected:
+	FILE*						m_pDumpFile;			///< ÂäÅÌÎÄ¼ş
+	bool						m_bHasTitle;			///< ÓĞÎÄ¼şÍ·
+	bool						m_bCloseFile;			///< ÊÇ·ñĞèÒª¹Ø±ÕÎÄ¼ş
 };
 
 
+/**
+ * @class						SecurityTickCache
+ * @brief						ËùÓĞÉÌÆ··ÖÖÓÏßµÄ»º´æ
+ * @author						barry
+ */
+class SecurityTickCache
+{
+public:
+	typedef std::map<std::string,TickGenerator>	T_MAP_TICKS;
+public:
+	SecurityTickCache();
+	~SecurityTickCache();
+
+	/**
+	 * @brief					·ÖÖÓÏß»º´æ³õÊ¼»¯
+	 * @param[in]				nSecurityCount			ÊĞ³¡ÖĞµÄÉÌÆ·ÊıÁ¿
+	 * @return					0						³É¹¦
+	 */
+	int							Initialize( unsigned int nSecurityCount );
+
+	/**
+	 * @brief					ÊÍ·Å×ÊÔ´
+	 */
+	void						Release();
+
+public:
+	/**
+	 * @brief					¼¤»î·ÖÖÓÏßÂäÅÌÏß³Ì
+	 */
+	void						ActivateDumper();
+
+	/**
+	 * @brief					¸üĞÂÉÌÆ·µÄ²ÎÊıĞÅÏ¢
+	 * @param[in]				eMarket			ÊĞ³¡ID
+	 * @param[in]				sCode			ÉÌÆ·´úÂë
+	 * @param[in]				nDate			ĞĞÇéÈÕÆÚ
+	 * @param[in]				dPriceRate		·Å´ó±¶ÂÊ
+	 * @param[in]				objData			ĞĞÇé¼Û¸ñ
+	 * @return					==0				³É¹¦
+	 */
+	int							NewSecurity( enum XDFMarket eMarket, const std::string& sCode, unsigned int nDate, double dPriceRate, TickGenerator::T_DATA& objData, const char* pszPreName, unsigned int nPreNamLen );
+
+	/**
+	 * @brief					¸üĞÂÉÌÆ·ĞÅÏ¢
+	 * @param[in]				objData			ĞĞÇé¼Û¸ñ
+	 * @return					==0				³É¹¦
+	 */
+	int							UpdateSecurity( const XDFAPI_IndexData& refObj, unsigned int nDate, unsigned int nTime );
+	int							UpdateSecurity( const XDFAPI_StockData5& refObj, unsigned int nDate, unsigned int nTime );
+
+	/**
+	 * @brief					¸üĞÂÇ°×º
+	 * @param[in]				pszPreName		Ç°×ºÄÚÈİ
+	 * @param[in]				nSize			ÄÚÈİ³¤¶È
+	 */
+	int							UpdatePreName( std::string& sCode, char* pszPreName, unsigned int nSize );
+
+	/**
+	 * @brief					»ñÈ¡·Å´ó±¶Êı
+	 */
+	double						GetPriceRate( std::string& sCode );
+
+protected:
+	static void*	__stdcall	DumpThread( void* pSelf );
+
+protected:
+	SimpleThread				m_oDumpThread;			///< TICKÏßÂäÅÌÊı¾İ
+	unsigned int				m_nAlloPos;				///< »º´æÒÑ¾­·ÖÅäµÄÎ»ÖÃ
+	unsigned int				m_nSecurityCount;		///< ÉÌÆ·ÊıÁ¿
+	TickGenerator::T_DATA*		m_pTickDataTable;		///< TICKÏß»º´æ
+	T_MAP_TICKS					m_objMapTicks;			///< TICKÏßMap
+	CriticalObject				m_oLockData;			///< TICKÏßÊı¾İËø
+};
+
+
+///< Ö÷Àà ////////////////////////////////////////////////////////////////////////////////////////////////////
 /**
  * @class						QuotationData
  * @brief						ĞĞÇéÊı¾İ´æ´¢Àà
@@ -386,7 +496,7 @@ public:
 	 * @param[in]				sCode			ÉÌÆ·´úÂë
 	 * @return					==0				³É¹¦
 	 */
-	int							BuildSecurity( enum XDFMarket eMarket, std::string& sCode, T_LINE_PARAM& refParam );
+	int							BuildSecurity( enum XDFMarket eMarket, std::string& sCode, unsigned int nDate, double dPriceRate, TickGenerator::T_DATA& objData, const char* pszPreName, unsigned int nPreNamLen );
 
 	/**
 	 * @brief					¸üĞÂÉÌÆ·µÄ²ÎÊıĞÅÏ¢
@@ -395,19 +505,6 @@ public:
 	 * @return					==0				³É¹¦
 	 */
 	int							BuildSecurity4Min( enum XDFMarket eMarket, std::string& sCode, unsigned int nDate, double dPriceRate, MinGenerator::T_DATA& objData );
-
-	/**
-	 * @brief					¸üĞÂÇ°×º
-	 * @param[in]				eMarket			ÊĞ³¡ID
-	 * @param[in]				pszPreName		Ç°×ºÄÚÈİ
-	 * @param[in]				nSize			ÄÚÈİ³¤¶È
-	 */
-	int							UpdatePreName( enum XDFMarket eMarket, std::string& sCode, char* pszPreName, unsigned int nSize );
-
-	/**
-	 * @brief					»ñÈ¡·ÖÖÓÏßĞ´ÎÄ¼ş»º´æ¶ÓÁĞ
-	 */
-	static T_MINLINE_CACHE&		GetMinuteCacheObj();
 
 	/**
 	 * @brief					¸üĞÂÈÕÏßĞÅÏ¢
@@ -426,38 +523,25 @@ public:
 	 */
 	int							DumpDayLine( enum XDFMarket eMarket, char* pSnapData, unsigned int nSnapSize, unsigned int nTradeDate = 0 );
 
-	SecurityCache&				GetSHL1Cache();
-	SecurityCache&				GetSZL1Cache();
+	SecurityMinCache&			GetSHL1Cache();
+	SecurityMinCache&			GetSZL1Cache();
+	SecurityTickCache&			GetSHL1TickCache();
+	SecurityTickCache&			GetSZL1TickCache();
 
 protected:
-	static void*	__stdcall	ThreadDumpTickLine( void* pSelf );			///< ÈÕÏßÂäÅÌÏß³Ì
 	static void*	__stdcall	ThreadOnIdle( void* pSelf );				///< ¿ÕÏĞÏß³Ì
 
 protected:
+	SimpleThread				m_oThdIdle;						///< ¿ÕÏĞÏß³Ì
 	TMAP_MKID2STATUS			m_mapModuleStatus;				///< Ä£¿é×´Ì¬±í
 	CriticalObject				m_oLock;						///< ÁÙ½çÇø¶ÔÏó
 	void*						m_pQuotation;					///< ĞĞÇé¶ÔÏó
 protected:
-	CriticalObject				m_oLockSHL1;					///< ÉÏÖ¤L1Ëø
-	SecurityCache				m_objMinCache4SHL1;				///< ÉÏÖ¤L1·ÖÖÓÏß»º´æ
-	SecurityCache				m_objMinCache4SZL1;				///< ÉîÖ¤L1·ÖÖÓÏß»º´æ
-	T_MAP_GEN_MLINES			m_mapSHL1;						///< ÉÏÖ¤L1
-	T_MAP_GEN_MLINES			m_mapSZL1;						///< ÉîÖ¤L1
-	T_MAP_GEN_MLINES			m_mapSHOPT;						///< ÉÏÖ¤ÆÚÈ¨
-	CriticalObject				m_oLockSZL1;					///< ÉîÖ¤L1Ëø
-	T_MAP_GEN_MLINES			m_mapSZOPT;						///< ÉîÖ¤ÆÚÈ¨
-	T_MAP_GEN_MLINES			m_mapCFF;						///< ÖĞ½ğÆÚ»õ
-	T_MAP_GEN_MLINES			m_mapCFFOPT;					///< ÖĞ½ğÆÚÈ¨
-	T_MAP_GEN_MLINES			m_mapCNF;						///< ÉÌÆ·ÆÚ»õ(ÉÏº£/Ö£Öİ/´óÁ¬)
-	T_MAP_GEN_MLINES			m_mapCNFOPT;					///< ÉÌÆ·ÆÚÈ¨(ÉÏº£/Ö£Öİ/´óÁ¬)
-	T_TICKLINE_CACHE			m_arrayTickLine;				///< È«ÊĞ³¡tick»º´æ
+	SecurityMinCache			m_objMinCache4SHL1;				///< ÉÏÖ¤L1·ÖÖÓÏß»º´æ
+	SecurityMinCache			m_objMinCache4SZL1;				///< ÉîÖ¤L1·ÖÖÓÏß»º´æ
+	SecurityTickCache			m_objTickCache4SHL1;			///< ÉÏÖ¤L1TICKÏß»º´æ
+	SecurityTickCache			m_objTickCache4SZL1;			///< ÉîÖ¤L1TICKÏß»º´æ
 	unsigned int				m_lstMkTime[64];				///< ¸÷ÊĞ³¡µÄÊĞ³¡Ê±¼ä
-protected:
-	unsigned int				m_nMaxMLineBufSize;				///< ·ÖÖÓÏß»º´æ³¤¶È
-	char*						m_pBuf4MinuteLine;				///< ·ÖÖÓÏß»º´æµØÖ·
-protected:
-	SimpleThread				m_oThdTickDump;					///< TickÂäÅÌÊı¾İ
-	SimpleThread				m_oThdIdle;						///< ¿ÕÏĞÏß³Ì
 };
 
 
