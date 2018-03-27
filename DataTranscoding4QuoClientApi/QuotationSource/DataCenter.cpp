@@ -531,7 +531,8 @@ TickGenerator::TickGenerator()
 	::memset( m_pszPreName, 0, sizeof(m_pszPreName) );
 }
 
-unsigned int nCnt = 0;
+static unsigned int nCnt = 0;
+
 TickGenerator::TickGenerator( enum XDFMarket eMkID, unsigned int nDate, const std::string& sCode, double dPriceRate, T_DATA& objData, T_DATA* pBufPtr )
 : m_nPreClosePx( 0 ), m_nOpenPx( 0 ), m_eMarket( eMkID ), m_pDumpFile( NULL ), m_bHasTitle( false )
 , m_nDate( nDate ), m_dPriceRate( dPriceRate ), m_pDataCache( pBufPtr ), m_bCloseFile( true )
@@ -543,7 +544,9 @@ TickGenerator::TickGenerator( enum XDFMarket eMkID, unsigned int nDate, const st
 	///< 设置，是否需要长时间打开TICK落盘文件
 	unsigned int	nCode = ::atoi( m_pszCode );
 
+#ifdef _DEBUG
 	if( nCnt >= 500 ) return;
+#endif
 
 	if( XDF_SH == eMkID )
 	{
