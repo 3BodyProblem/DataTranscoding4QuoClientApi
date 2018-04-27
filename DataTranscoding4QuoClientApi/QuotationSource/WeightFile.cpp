@@ -163,8 +163,8 @@ void WeightFile::ScanWeightFiles()
 	std::vector<std::string>	vctFilesPath4SHL1;																///< 所有SHL1权重源文件路径
 	std::vector<std::string>	vctFilesPath4SZL1;																///< 所有SZL1权重源文件路径
 	std::string&				sFolder = Configuration::GetConfig().GetWeightFileFolder();						///< 权息文件所在的根目录
-	std::string					sSHL1WeightFolder = JoinPath( sFolder, "SSE/" );								///< 上海L1Weight所在子目录
-	std::string					sSZL1WeightFolder = JoinPath( sFolder, "SZSE/" );								///< 深圳L1Weight所在子目录
+	std::string					sSHL1WeightFolder = JoinPath( sFolder, "shase/weight/" );						///< 上海L1Weight所在子目录
+	std::string					sSZL1WeightFolder = JoinPath( sFolder, "sznse/weight/" );						///< 深圳L1Weight所在子目录
 	int							nFileCount4SHL1 = EnumAllFiles( sSHL1WeightFolder.c_str(), vctFilesPath4SHL1 );	///< 列出所有SHL1权重源文件
 	int							nFileCount4SZL1 = EnumAllFiles( sSZL1WeightFolder.c_str(), vctFilesPath4SZL1 );	///< 列出所有SZL1权重源文件
 

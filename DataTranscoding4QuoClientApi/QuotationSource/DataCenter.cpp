@@ -569,6 +569,7 @@ void* QuotationData::ThreadDumpTickLine( void* pSelf )
 					, tagTickData.UpperPx, tagTickData.LowerPx, tagTickData.Amount, tagTickData.Volume, tagTickData.OpenInterest, tagTickData.NumTrades
 					, tagTickData.BidPx1, tagTickData.BidVol1, tagTickData.BidPx2, tagTickData.BidVol2, tagTickData.AskPx1, tagTickData.AskVol1, tagTickData.AskPx2, tagTickData.AskVol2
 					, tagTickData.Voip, tagTickData.TradingPhaseCode, tagTickData.PreName );
+
 				oDumper.write( pszLine, nLen );
 				nDumpNumber++;
 			}
@@ -700,7 +701,7 @@ int QuotationData::BuildSecurity( enum XDFMarket eMarket, std::string& sCode, T_
 	return nErrorCode;
 }
 
-bool PreDayFile( std::ofstream& oDumper, enum XDFMarket eMarket, std::string sCode, char cType, unsigned int nTradeDate )
+bool PreDayFile( std::ifstream& oLoader, std::ofstream& oDumper, enum XDFMarket eMarket, std::string sCode, char cType, unsigned int nTradeDate )
 {
 	char		pszFilePath[512] = { 0 };
 
@@ -772,11 +773,38 @@ bool PreDayFile( std::ofstream& oDumper, enum XDFMarket eMarket, std::string sCo
 		oDumper << sTitle;
 	}
 
+	if( oLoader.is_open() )	oLoader.close();
+	oLoader.open( sFilePath.c_str() );
+
 	return true;
+}
+
+bool CheckDateInDayFile( std::ifstream& oLoader, unsigned int nDate )
+{
+	if( !oLoader.is_open() )
+	{
+		return false;		///< 不存在该日期的日线的情况
+	}
+
+	char		pszDate[32] = { 0 };
+	char		pszTail[1024*2] = { 0 };
+
+	::sprintf( pszDate, "%u,", nDate );
+	oLoader.seekg( -1024, std::ios::end );
+	oLoader.read( pszTail, sizeof(pszTail) );
+
+	char*		pPos = ::strstr( pszTail, pszDate );
+	if( NULL != pPos )
+	{
+		return true;		///< 已经存在该日期的日线的情况
+	}
+
+	return false;			///< 不存在该日期的日线的情况
 }
 
 int QuotationData::DumpDayLine( enum XDFMarket eMarket, char* pSnapData, unsigned int nSnapSize, unsigned int nTradeDate )
 {
+	std::ifstream	oLoader;
 	std::ofstream	oDumper;
 	int				nErrorCode = 0;
 	char			pszDayLine[1024] = { 0 };
@@ -799,12 +827,15 @@ int QuotationData::DumpDayLine( enum XDFMarket eMarket, char* pSnapData, unsigne
 					{
 						T_LINE_PARAM&		refParam = it->second;
 
-						if( true == PreDayFile( oDumper, eMarket, std::string( pStock->Code, 6 ), 0, nMachineDate ) )
+						if( true == PreDayFile( oLoader, oDumper, eMarket, std::string( pStock->Code, 6 ), 0, nMachineDate ) )
 						{
-							int	nLen = ::sprintf( pszDayLine, "%u,%.4f,%.4f,%.4f,%.4f,%.4f,%.4f,%I64d,%I64d,%u,%f\n", nMachineDate
-								, pStock->Open/refParam.dPriceRate, pStock->High/refParam.dPriceRate, pStock->Low/refParam.dPriceRate, pStock->Now/refParam.dPriceRate
-								, 0.0, pStock->Amount, pStock->Volume, 0, pStock->Records, pStock->Voip/refParam.dPriceRate );
-							oDumper.write( pszDayLine, nLen );
+							if( false == CheckDateInDayFile( oLoader, nMachineDate ) ) // 未在日线文件中查找出今天的日线数据，所以需要写入一条
+							{
+								int	nLen = ::sprintf( pszDayLine, "%u,%.4f,%.4f,%.4f,%.4f,%.4f,%.4f,%I64d,%u,%u,%f\n", nMachineDate
+									, pStock->Open/refParam.dPriceRate, pStock->High/refParam.dPriceRate, pStock->Low/refParam.dPriceRate, pStock->Now/refParam.dPriceRate
+									, 0.0, pStock->Amount, pStock->Volume, 0, pStock->Records, pStock->Voip/refParam.dPriceRate );
+								oDumper.write( pszDayLine, nLen );
+							}
 						}
 					}
 				}
@@ -818,12 +849,15 @@ int QuotationData::DumpDayLine( enum XDFMarket eMarket, char* pSnapData, unsigne
 					{
 						T_LINE_PARAM&		refParam = it->second;
 
-						if( true == PreDayFile( oDumper, eMarket, std::string( pStock->Code, 6 ), 0, nMachineDate ) )
+						if( true == PreDayFile( oLoader, oDumper, eMarket, std::string( pStock->Code, 6 ), 0, nMachineDate ) )
 						{
-							int	nLen = ::sprintf( pszDayLine, "%u,%.4f,%.4f,%.4f,%.4f,%.4f,%.4f,%I64d,%I64d,%u,%f\n", nMachineDate
-								, pStock->Open/refParam.dPriceRate, pStock->High/refParam.dPriceRate, pStock->Low/refParam.dPriceRate, pStock->Now/refParam.dPriceRate
-								, 0.0, pStock->Amount, pStock->Volume, 0, 0, 0 );
-							oDumper.write( pszDayLine, nLen );
+							if( false == CheckDateInDayFile( oLoader, nMachineDate ) ) // 未在日线文件中查找出今天的日线数据，所以需要写入一条
+							{
+								int	nLen = ::sprintf( pszDayLine, "%u,%.4f,%.4f,%.4f,%.4f,%.4f,%.4f,%I64d,%u,%u,%f\n", nMachineDate
+									, pStock->Open/refParam.dPriceRate, pStock->High/refParam.dPriceRate, pStock->Low/refParam.dPriceRate, pStock->Now/refParam.dPriceRate
+									, 0.0, pStock->Amount, pStock->Volume, 0, 0, 0 );
+								oDumper.write( pszDayLine, nLen );
+							}
 						}
 					}
 				}
@@ -840,12 +874,15 @@ int QuotationData::DumpDayLine( enum XDFMarket eMarket, char* pSnapData, unsigne
 			{
 				T_LINE_PARAM&		refParam = it->second;
 
-				if( true == PreDayFile( oDumper, eMarket, std::string( pStock->Code, 8 ), 0, nMachineDate ) )
+				if( true == PreDayFile( oLoader, oDumper, eMarket, std::string( pStock->Code, 8 ), 0, nMachineDate ) )
 				{
-					int	nLen = ::sprintf( pszDayLine, "%u,%.4f,%.4f,%.4f,%.4f,%.4f,%.4f,%I64d,%I64d,%u,%f\n", nMachineDate
-						, pStock->OpenPx/refParam.dPriceRate, pStock->HighPx/refParam.dPriceRate, pStock->LowPx/refParam.dPriceRate, pStock->Now/refParam.dPriceRate
-						, pStock->SettlePrice/refParam.dPriceRate, pStock->Amount*1.0, pStock->Volume, pStock->Position, 0, 0 );
-					oDumper.write( pszDayLine, nLen );
+					if( false == CheckDateInDayFile( oLoader, nMachineDate ) ) // 未在日线文件中查找出今天的日线数据，所以需要写入一条
+					{
+						int	nLen = ::sprintf( pszDayLine, "%u,%.4f,%.4f,%.4f,%.4f,%.4f,%.4f,%I64d,%I64d,%u,%f\n", nMachineDate
+							, pStock->OpenPx/refParam.dPriceRate, pStock->HighPx/refParam.dPriceRate, pStock->LowPx/refParam.dPriceRate, pStock->Now/refParam.dPriceRate
+							, pStock->SettlePrice/refParam.dPriceRate, pStock->Amount*1.0, pStock->Volume, pStock->Position, 0, 0 );
+						oDumper.write( pszDayLine, nLen );
+					}
 				}
 			}
 		}
@@ -863,12 +900,15 @@ int QuotationData::DumpDayLine( enum XDFMarket eMarket, char* pSnapData, unsigne
 					{
 						T_LINE_PARAM&		refParam = it->second;
 
-						if( true == PreDayFile( oDumper, eMarket, std::string( pStock->Code, 6 ), 0, nMachineDate ) )
+						if( true == PreDayFile( oLoader, oDumper, eMarket, std::string( pStock->Code, 6 ), 0, nMachineDate ) )
 						{
-							int	nLen = ::sprintf( pszDayLine, "%u,%.4f,%.4f,%.4f,%.4f,%.4f,%.4f,%I64d,%I64d,%u,%.4f\n", nMachineDate
-								, pStock->Open/refParam.dPriceRate, pStock->High/refParam.dPriceRate, pStock->Low/refParam.dPriceRate, pStock->Now/refParam.dPriceRate
-								, 0.0, pStock->Amount, pStock->Volume, 0, pStock->Records, pStock->Voip/refParam.dPriceRate );
-							oDumper.write( pszDayLine, nLen );
+							if( false == CheckDateInDayFile( oLoader, nMachineDate ) ) // 未在日线文件中查找出今天的日线数据，所以需要写入一条
+							{
+								int	nLen = ::sprintf( pszDayLine, "%u,%.4f,%.4f,%.4f,%.4f,%.4f,%.4f,%I64d,%u,%u,%.4f\n", nMachineDate
+									, pStock->Open/refParam.dPriceRate, pStock->High/refParam.dPriceRate, pStock->Low/refParam.dPriceRate, pStock->Now/refParam.dPriceRate
+									, 0.0, pStock->Amount, pStock->Volume, 0, pStock->Records, pStock->Voip/refParam.dPriceRate );
+								oDumper.write( pszDayLine, nLen );
+							}
 						}
 					}
 				}
@@ -882,12 +922,15 @@ int QuotationData::DumpDayLine( enum XDFMarket eMarket, char* pSnapData, unsigne
 					{
 						T_LINE_PARAM&		refParam = it->second;
 
-						if( true == PreDayFile( oDumper, eMarket, std::string( pStock->Code, 6 ), 0, nMachineDate ) )
+						if( true == PreDayFile( oLoader, oDumper, eMarket, std::string( pStock->Code, 6 ), 0, nMachineDate ) )
 						{
-							int	nLen = ::sprintf( pszDayLine, "%u,%.4f,%.4f,%.4f,%.4f,%.4f,%.4f,%I64d,%I64d,%u,%.4f\n", nMachineDate
-								, pStock->Open/refParam.dPriceRate, pStock->High/refParam.dPriceRate, pStock->Low/refParam.dPriceRate, pStock->Now/refParam.dPriceRate
-								, 0.0, pStock->Amount, pStock->Volume, 0, 0, 0 );
-							oDumper.write( pszDayLine, nLen );
+							if( false == CheckDateInDayFile( oLoader, nMachineDate ) ) // 未在日线文件中查找出今天的日线数据，所以需要写入一条
+							{
+								int	nLen = ::sprintf( pszDayLine, "%u,%.4f,%.4f,%.4f,%.4f,%.4f,%.4f,%I64d,%u,%u,%.4f\n", nMachineDate
+									, pStock->Open/refParam.dPriceRate, pStock->High/refParam.dPriceRate, pStock->Low/refParam.dPriceRate, pStock->Now/refParam.dPriceRate
+									, 0.0, pStock->Amount, pStock->Volume, 0, 0, 0 );
+								oDumper.write( pszDayLine, nLen );
+							}
 						}
 					}
 				}
@@ -904,12 +947,15 @@ int QuotationData::DumpDayLine( enum XDFMarket eMarket, char* pSnapData, unsigne
 			{
 				T_LINE_PARAM&		refParam = it->second;
 
-				if( true == PreDayFile( oDumper, eMarket, std::string( pStock->Code, 8 ), 0, nMachineDate ) )
+				if( true == PreDayFile( oLoader, oDumper, eMarket, std::string( pStock->Code, 8 ), 0, nMachineDate ) )
 				{
-					int	nLen = ::sprintf( pszDayLine, "%u,%.4f,%.4f,%.4f,%.4f,%.4f,%.4f,%I64d,%I64d,%u,%.4f\n", nMachineDate
-						, pStock->OpenPx/refParam.dPriceRate, pStock->HighPx/refParam.dPriceRate, pStock->LowPx/refParam.dPriceRate, pStock->Now/refParam.dPriceRate
-						, pStock->SettlePrice/refParam.dPriceRate, pStock->Amount*1.0, pStock->Volume, pStock->Position, 0, 0 );
-					oDumper.write( pszDayLine, nLen );
+					if( false == CheckDateInDayFile( oLoader, nMachineDate ) ) // 未在日线文件中查找出今天的日线数据，所以需要写入一条
+					{
+						int	nLen = ::sprintf( pszDayLine, "%u,%.4f,%.4f,%.4f,%.4f,%.4f,%.4f,%I64d,%I64d,%u,%.4f\n", nMachineDate
+							, pStock->OpenPx/refParam.dPriceRate, pStock->HighPx/refParam.dPriceRate, pStock->LowPx/refParam.dPriceRate, pStock->Now/refParam.dPriceRate
+							, pStock->SettlePrice/refParam.dPriceRate, pStock->Amount*1.0, pStock->Volume, pStock->Position, 0, 0 );
+						oDumper.write( pszDayLine, nLen );
+					}
 				}
 			}
 		}
@@ -923,12 +969,15 @@ int QuotationData::DumpDayLine( enum XDFMarket eMarket, char* pSnapData, unsigne
 			{
 				T_LINE_PARAM&		refParam = it->second;
 
-				if( true == PreDayFile( oDumper, eMarket, std::string( pStock->Code, 6 ), 0, nMachineDate ) )
+				if( true == PreDayFile( oLoader, oDumper, eMarket, std::string( pStock->Code, 6 ), 0, nMachineDate ) )
 				{
-					int	nLen = ::sprintf( pszDayLine, "%u,%.4f,%.4f,%.4f,%.4f,%.4f,%.4f,%I64d,%I64d,%u,%.4f\n", nMachineDate
-						, pStock->Open/refParam.dPriceRate, pStock->High/refParam.dPriceRate, pStock->Low/refParam.dPriceRate, pStock->Now/refParam.dPriceRate
-						, pStock->SettlePrice/refParam.dPriceRate, pStock->Amount, pStock->Volume, pStock->OpenInterest, 0, 0 );
-					oDumper.write( pszDayLine, nLen );
+					if( false == CheckDateInDayFile( oLoader, nMachineDate ) ) // 未在日线文件中查找出今天的日线数据，所以需要写入一条
+					{
+						int	nLen = ::sprintf( pszDayLine, "%u,%.4f,%.4f,%.4f,%.4f,%.4f,%.4f,%I64d,%I64d,%u,%.4f\n", nMachineDate
+							, pStock->Open/refParam.dPriceRate, pStock->High/refParam.dPriceRate, pStock->Low/refParam.dPriceRate, pStock->Now/refParam.dPriceRate
+							, pStock->SettlePrice/refParam.dPriceRate, pStock->Amount, pStock->Volume, pStock->OpenInterest, 0, 0 );
+						oDumper.write( pszDayLine, nLen );
+					}
 				}
 			}
 		}
@@ -942,12 +991,15 @@ int QuotationData::DumpDayLine( enum XDFMarket eMarket, char* pSnapData, unsigne
 			{
 				T_LINE_PARAM&		refParam = it->second;
 
-				if( true == PreDayFile( oDumper, eMarket, std::string( pStock->Code ), 0, nMachineDate ) )
+				if( true == PreDayFile( oLoader, oDumper, eMarket, std::string( pStock->Code ), 0, nMachineDate ) )
 				{
-					int	nLen = ::sprintf( pszDayLine, "%u,%.4f,%.4f,%.4f,%.4f,%.4f,%.4f,%I64d,%I64d,%u,%.4f\n", nMachineDate
-						, pStock->Open/refParam.dPriceRate, pStock->High/refParam.dPriceRate, pStock->Low/refParam.dPriceRate, pStock->Now/refParam.dPriceRate
-						, pStock->SettlePrice/refParam.dPriceRate, pStock->Amount, pStock->Volume, pStock->OpenInterest, 0, 0 );
-					oDumper.write( pszDayLine, nLen );
+					if( false == CheckDateInDayFile( oLoader, nMachineDate ) ) // 未在日线文件中查找出今天的日线数据，所以需要写入一条
+					{
+						int	nLen = ::sprintf( pszDayLine, "%u,%.4f,%.4f,%.4f,%.4f,%.4f,%.4f,%I64d,%I64d,%u,%.4f\n", nMachineDate
+							, pStock->Open/refParam.dPriceRate, pStock->High/refParam.dPriceRate, pStock->Low/refParam.dPriceRate, pStock->Now/refParam.dPriceRate
+							, pStock->SettlePrice/refParam.dPriceRate, pStock->Amount, pStock->Volume, pStock->OpenInterest, 0, 0 );
+						oDumper.write( pszDayLine, nLen );
+					}
 				}
 			}
 		}
@@ -961,12 +1013,15 @@ int QuotationData::DumpDayLine( enum XDFMarket eMarket, char* pSnapData, unsigne
 			{
 				T_LINE_PARAM&			refParam = it->second;
 
-				if( true == PreDayFile( oDumper, eMarket, std::string( pStock->Code, 6 ), refParam.Type, s_nCNFTradingDate ) )
+				if( true == PreDayFile( oLoader, oDumper, eMarket, std::string( pStock->Code, 6 ), refParam.Type, s_nCNFTradingDate ) )
 				{
-					int	nLen = ::sprintf( pszDayLine, "%u,%.4f,%.4f,%.4f,%.4f,%.4f,%.4f,%I64d,%I64d,%u,%.4f\n", s_nCNFTradingDate
-						, pStock->Open/refParam.dPriceRate, pStock->High/refParam.dPriceRate, pStock->Low/refParam.dPriceRate, pStock->Now/refParam.dPriceRate
-						, pStock->SettlePrice/refParam.dPriceRate, pStock->Amount, pStock->Volume, pStock->OpenInterest, 0, 0 );
-					oDumper.write( pszDayLine, nLen );
+					if( false == CheckDateInDayFile( oLoader, nMachineDate ) ) // 未在日线文件中查找出今天的日线数据，所以需要写入一条
+					{
+						int	nLen = ::sprintf( pszDayLine, "%u,%.4f,%.4f,%.4f,%.4f,%.4f,%.4f,%I64d,%I64d,%u,%.4f\n", s_nCNFTradingDate
+							, pStock->Open/refParam.dPriceRate, pStock->High/refParam.dPriceRate, pStock->Low/refParam.dPriceRate, pStock->Now/refParam.dPriceRate
+							, pStock->SettlePrice/refParam.dPriceRate, pStock->Amount, pStock->Volume, pStock->OpenInterest, 0, 0 );
+						oDumper.write( pszDayLine, nLen );
+					}
 				}
 			}
 		}
@@ -980,12 +1035,15 @@ int QuotationData::DumpDayLine( enum XDFMarket eMarket, char* pSnapData, unsigne
 			{
 				T_LINE_PARAM&			refParam = it->second;
 
-				if( true == PreDayFile( oDumper, eMarket, std::string( pStock->Code ), refParam.Type, s_nCNFOPTTradingDate ) )
+				if( true == PreDayFile( oLoader, oDumper, eMarket, std::string( pStock->Code ), refParam.Type, s_nCNFOPTTradingDate ) )
 				{
-					int	nLen = ::sprintf( pszDayLine, "%u,%.4f,%.4f,%.4f,%.4f,%.4f,%.4f,%I64d,%I64d,%u,%.4f\n", s_nCNFOPTTradingDate
-						, pStock->Open/refParam.dPriceRate, pStock->High/refParam.dPriceRate, pStock->Low/refParam.dPriceRate, pStock->Now/refParam.dPriceRate
-						, pStock->SettlePrice/refParam.dPriceRate, pStock->Amount, pStock->Volume, pStock->OpenInterest, 0, 0 );
-					oDumper.write( pszDayLine, nLen );
+					if( false == CheckDateInDayFile( oLoader, nMachineDate ) ) // 未在日线文件中查找出今天的日线数据，所以需要写入一条
+					{
+						int	nLen = ::sprintf( pszDayLine, "%u,%.4f,%.4f,%.4f,%.4f,%.4f,%.4f,%I64d,%I64d,%u,%.4f\n", s_nCNFOPTTradingDate
+							, pStock->Open/refParam.dPriceRate, pStock->High/refParam.dPriceRate, pStock->Low/refParam.dPriceRate, pStock->Now/refParam.dPriceRate
+							, pStock->SettlePrice/refParam.dPriceRate, pStock->Amount, pStock->Volume, pStock->OpenInterest, 0, 0 );
+						oDumper.write( pszDayLine, nLen );
+					}
 				}
 			}
 		}
