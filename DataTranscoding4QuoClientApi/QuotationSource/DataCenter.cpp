@@ -1073,7 +1073,7 @@ void QuotationData::DispatchMinuteLine( enum XDFMarket eMarket, std::string& sCo
 
 	if( 0 != refParam.Valid && refParam.MkMinute != nMinuteTime )
 	{
-		T_MIN_LINE		tagMinuteLine = { 0 };
+		T_MIN_LINE			tagMinuteLine = { 0 };
 
 		tagMinuteLine.Date = nMkDate;
 		tagMinuteLine.Time = nMkTime;
@@ -1095,7 +1095,7 @@ void QuotationData::DispatchMinuteLine( enum XDFMarket eMarket, std::string& sCo
 		CriticalLock		section( m_oMinuteLock );
 		if( m_arrayMinuteLine.PutData( &tagMinuteLine ) < 0 )
 		{
-			ServerStatus::GetStatusObj().AddMinuteLostRef();
+			ServerStatus::GetStatusObj ().AddMinuteLostRef();
 		}
 		}
 
