@@ -1092,11 +1092,11 @@ int QuotationData::DumpDayLine( enum XDFMarket eMarket, char* pSnapData, unsigne
 
 void QuotationData::DispatchMinuteLine( enum XDFMarket eMarket, std::string& sCode, T_LINE_PARAM& refParam, unsigned int nMkDate, unsigned int nMkTime )
 {
-	unsigned int		nMinuteTime = nMkTime / 100;
+	unsigned int		nMinuteTime = nMkTime / (100 * 1000);
 
 	if( 0 != refParam.Valid && refParam.MkMinute != nMinuteTime )
 	{
-		T_MIN_LINE			tagMinuteLine = { 0 };
+		T_MIN_LINE		tagMinuteLine = { 0 };
 
 		tagMinuteLine.Date = nMkDate;
 		tagMinuteLine.Time = nMkTime;
