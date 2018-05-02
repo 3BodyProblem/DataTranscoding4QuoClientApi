@@ -1130,17 +1130,15 @@ int QuotationData::UpdateTickLine( enum XDFMarket eMarket, char* pSnapData, unsi
 {
 	int				nErrorCode = 0;
 	T_TICK_LINE		refTickLine = { 0 };
-	unsigned int	nMachineDate = DateTime::Now().DateToLong();
-	unsigned int	nMachineTime = DateTime::Now().TimeToLong() * 1000;
 
 	refTickLine.eMarketID = eMarket;
-	refTickLine.Date = nMachineDate;
-	refTickLine.Time = nMachineTime;
+	refTickLine.Date = DateTime::Now().DateToLong();
+	refTickLine.Time = DateTime::Now().TimeToLong() * 1000;
 	switch( eMarket )
 	{
 	case XDF_SH:	///< 上证L1
 		{
-			refTickLine.Time = GetMarketTime( eMarket );
+			refTickLine.Time = GetMarketTime( eMarket ) * 1000;
 
 			switch( nSnapSize )
 			{
@@ -1344,7 +1342,7 @@ int QuotationData::UpdateTickLine( enum XDFMarket eMarket, char* pSnapData, unsi
 		break;
 	case XDF_SZ:	///< 深证L1
 		{
-			refTickLine.Time = GetMarketTime( eMarket );
+			refTickLine.Time = GetMarketTime( eMarket ) * 1000;
 
 			switch( nSnapSize )
 			{
