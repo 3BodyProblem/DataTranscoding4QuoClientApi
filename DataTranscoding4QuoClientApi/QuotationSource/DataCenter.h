@@ -244,6 +244,20 @@ public:
 
 public:
 	/**
+	 * @brief					更新市场时间
+	 * @param[in]				eMarket			市场ID
+	 * @param[in]				nMkTime			市场时间
+	 */
+	void						UpdateMarketTime( enum XDFMarket eMarket, unsigned int nMkTime );
+
+	/**
+	 * @brief					获取市场时间
+	 * @param[in]				eMarket			市场ID
+	 * @return					返回市场时间
+	 */
+	unsigned int				GetMarketTime( enum XDFMarket eMarket );
+
+	/**
 	 * @brief					更新商品的参数信息
 	 * @param[in]				eMarket			市场ID
 	 * @param[in]				sCode			商品代码
@@ -306,6 +320,7 @@ protected:
 	T_MAP_QUO					m_mapCNF;						///< 商品期货(上海/郑州/大连)
 	T_MAP_QUO					m_mapCNFOPT;					///< 商品期权(上海/郑州/大连)
 	T_TICKLINE_CACHE			m_arrayTickLine;				///< 全市场tick缓存
+	unsigned int				m_lstMkTime[64];				///< 各市场的市场时间
 protected:
 	unsigned int				m_nMaxMLineBufSize;				///< 分钟线缓存长度
 	char*						m_pBuf4MinuteLine;				///< 分钟线缓存地址

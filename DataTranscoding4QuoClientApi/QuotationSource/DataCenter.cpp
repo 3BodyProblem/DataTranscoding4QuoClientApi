@@ -255,6 +255,8 @@ void QuotationData::Release()
 		m_pBuf4MinuteLine = NULL;
 		m_nMaxMLineBufSize = 0;
 	}
+
+	::memset( m_lstMkTime, 0, sizeof(m_lstMkTime) );
 }
 
 short QuotationData::GetModuleStatus( enum XDFMarket eMarket )
@@ -434,6 +436,27 @@ void* QuotationData::ThreadOnIdle( void* pSelf )
 	QuoCollector::GetCollector()->OnLog( TLV_INFO, "QuotationData::ThreadOnIdle() : misson complete!" );
 
 	return NULL;
+}
+
+void QuotationData::UpdateMarketTime( enum XDFMarket eMarket, unsigned int nMkTime )
+{
+	if( (unsigned int)eMarket < 64 )
+	{
+		unsigned int	&refMkTime = m_lstMkTime[(short)eMarket];
+
+		if( nMkTime > refMkTime )
+		{
+			refMkTime = nMkTime;
+		}
+	}
+}
+
+unsigned int QuotationData::GetMarketTime( enum XDFMarket eMarket )
+{
+	if( (unsigned int)eMarket < 64 )
+	{
+		return m_lstMkTime[(short)eMarket];
+	}
 }
 
 __inline bool	PrepareTickFile( T_TICK_LINE* pTickLine, std::string& sCode, std::ofstream& oDumper )
@@ -1117,6 +1140,8 @@ int QuotationData::UpdateTickLine( enum XDFMarket eMarket, char* pSnapData, unsi
 	{
 	case XDF_SH:	///< 上证L1
 		{
+			refTickLine.Time = GetMarketTime( eMarket );
+
 			switch( nSnapSize )
 			{
 			case sizeof(XDFAPI_StockData5):
@@ -1319,6 +1344,8 @@ int QuotationData::UpdateTickLine( enum XDFMarket eMarket, char* pSnapData, unsi
 		break;
 	case XDF_SZ:	///< 深证L1
 		{
+			refTickLine.Time = GetMarketTime( eMarket );
+
 			switch( nSnapSize )
 			{
 			case sizeof(XDFAPI_StockData5):

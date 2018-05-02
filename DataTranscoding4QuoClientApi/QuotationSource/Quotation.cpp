@@ -1867,6 +1867,8 @@ void __stdcall	Quotation::XDF_OnRspRecvData( XDFAPI_PkgHead * pHead, const char 
 					{
 					case 1:///< 市场状态信息
 						{
+							m_oQuoDataCenter.UpdateMarketTime( XDF_SH, ((XDFAPI_MarketStatusInfo*)pbuf)->MarketTime );
+
 							pbuf += sizeof(XDFAPI_MarketStatusInfo);
 							nLen -= pMsgHead->MsgLen;
 						}
@@ -1985,10 +1987,12 @@ void __stdcall	Quotation::XDF_OnRspRecvData( XDFAPI_PkgHead * pHead, const char 
 					pbuf += sizeof(XDFAPI_MsgHead);
 					nLen -= sizeof(XDFAPI_MsgHead);
 
-					switch ( pMsgHead->MsgType )
+					switch( pMsgHead->MsgType )
 					{
 					case 1:///< 市场状态信息
 						{
+							m_oQuoDataCenter.UpdateMarketTime( XDF_SZ, ((XDFAPI_MarketStatusInfo*)pbuf)->MarketTime );
+
 							pbuf += sizeof(XDFAPI_MarketStatusInfo);
 							nLen -= pMsgHead->MsgLen;
 						}
