@@ -1092,14 +1092,12 @@ int QuotationData::DumpDayLine( enum XDFMarket eMarket, char* pSnapData, unsigne
 
 void QuotationData::DispatchMinuteLine( enum XDFMarket eMarket, std::string& sCode, T_LINE_PARAM& refParam, unsigned int nMkDate, unsigned int nMkTime )
 {
-	unsigned int		nMinuteTime = nMkTime / (100 * 1000);
-
-	if( 0 != refParam.Valid && refParam.MkMinute != nMinuteTime )
+	if( 1 == refParam.Valid && (refParam.MkMinute/100) <= (nMkTime / (1000*100)) )
 	{
 		T_MIN_LINE		tagMinuteLine = { 0 };
 
 		tagMinuteLine.Date = nMkDate;
-		tagMinuteLine.Time = nMkTime;
+		tagMinuteLine.Time = refParam.MkMinute;
 		tagMinuteLine.eMarketID = eMarket;
 		tagMinuteLine.Type = refParam.Type;
 		::strcpy( tagMinuteLine.Code, sCode.c_str() );
@@ -1113,7 +1111,14 @@ void QuotationData::DispatchMinuteLine( enum XDFMarket eMarket, std::string& sCo
 		tagMinuteLine.OpenInterest = refParam.MinOpenInterest;						///< 持仓量(股/张/份)一分钟最后一笔
 		tagMinuteLine.NumTrades = refParam.MinNumTrades2 - refParam.MinNumTrades1;	///< 成交笔数一分钟最后笔减去第一笔的numtrades
 		tagMinuteLine.Voip = refParam.MinVoip / refParam.dPriceRate;				///< 基金模净、权证溢价一分钟的最后一笔voip
-
+/*
+		if( strncmp( tagMinuteLine.Code, "600000", 6 ) == 0 ) {
+			char pszLine[1024] = { 0 };
+			::printf( "Date=%d,Time=%d,Open=%.4f,High=%.4f,Low=%.4f,Close=%.4f,Settle=%.4f,Amt=%.4f,Vol=%I64d,OI=%I64d,TrdNum=%I64d,IOPV=%.4f\n"
+				, tagMinuteLine.Date, tagMinuteLine.Time, tagMinuteLine.OpenPx, tagMinuteLine.HighPx, tagMinuteLine.LowPx, tagMinuteLine.ClosePx
+				, tagMinuteLine.SettlePx, tagMinuteLine.Amount, tagMinuteLine.Volume, tagMinuteLine.OpenInterest, tagMinuteLine.NumTrades, tagMinuteLine.Voip );
+		}
+*/
 		{
 		CriticalLock		section( m_oMinuteLock );
 		if( m_arrayMinuteLine.PutData( &tagMinuteLine ) < 0 )
@@ -1129,16 +1134,18 @@ void QuotationData::DispatchMinuteLine( enum XDFMarket eMarket, std::string& sCo
 int QuotationData::UpdateTickLine( enum XDFMarket eMarket, char* pSnapData, unsigned int nSnapSize, unsigned int nTradeDate )
 {
 	int				nErrorCode = 0;
+	unsigned int	nMkTime = GetMarketTime( eMarket );
 	T_TICK_LINE		refTickLine = { 0 };
 
 	refTickLine.eMarketID = eMarket;
 	refTickLine.Date = DateTime::Now().DateToLong();
 	refTickLine.Time = DateTime::Now().TimeToLong() * 1000;
+
 	switch( eMarket )
 	{
 	case XDF_SH:	///< 上证L1
 		{
-			refTickLine.Time = GetMarketTime( eMarket ) * 1000;
+			refTickLine.Time =  nMkTime * 1000;
 
 			switch( nSnapSize )
 			{
@@ -1177,36 +1184,37 @@ int QuotationData::UpdateTickLine( enum XDFMarket eMarket, char* pSnapData, unsi
 						refTickLine.Voip = pStock->Voip / refParam.dPriceRate;
 						nErrorCode = m_arrayTickLine.PutData( &refTickLine );
 						///< ------------ Minute Lines -----------------------
-						DispatchMinuteLine( eMarket, std::string( pStock->Code, 6 ), refParam, refTickLine.Date, refTickLine.Time );
-						if( 0 == refParam.Valid )							///< 取第一笔数据的部分
-						{
-							refParam.Valid = 1;								///< 有效数据标识
-							refParam.MkMinute = refTickLine.Time / 100;		///< 取分钟内第一笔时间
-							refParam.MinOpenPx1 = pStock->Now;				///< 取分钟内第一笔现价
-							refParam.MinHighPx = pStock->High;
-							refParam.MinLowPx = pStock->Low;
-							refParam.MinAmount1 = pStock->Amount;			///< 分钟内第一笔金额
-							refParam.MinVolume1 = pStock->Volume;			///< 分钟内第一笔成交量
-							//refParam.MinNumTrades1 = pStock->NumTrades;	///< 分钟内第一笔成交笔数
+/*						if( strncmp( pStock->Code, "600000", 6 ) == 0 ) {
+							::printf( "600000, (%u)Time=%u + 1, Now=%u, Amt=%f, Vol=%I64d\n", nMkTime, refTickLine.Time/1000/100, pStock->Now, pStock->Amount, pStock->Volume );
 						}
-
-						refParam.MinAmount2 = pStock->Amount;				///< 分钟内第末笔金额
-						refParam.MinVolume2 = pStock->Volume;				///< 分钟内第末笔成交量
-						refParam.MinClosePx = pStock->Now;					///< 分钟内最新价
-						refParam.MinVoip = pStock->Voip;					///< 分钟内第末笔Voip
-						//refParam.MinSettlePx = pStock->SettlePx;			///< 分钟内最新结算价
-						//refParam.MinOpenInterest = pStock->OpenInterest;	///< 分钟内第末笔持仓量
-						//refParam.MinNumTrades2 = pStock->NumTrades;		///< 分钟内第末笔成交笔数
-						if( pStock->High > refParam.MinHighPx )
-						{
-							refParam.MinHighPx = pStock->High;				///< 分钟内最高价
+*/
+						if( nMkTime > 0 ) {
+							DispatchMinuteLine( eMarket, std::string( pStock->Code, 6 ), refParam, refTickLine.Date, refTickLine.Time );
+							if( 0 == refParam.Valid )							///< 取第一笔数据的部分
+							{
+								refParam.Valid = 1;								///< 有效数据标识
+								refParam.MkMinute = (refTickLine.Time/1000/100+1) * 100;///< 取分钟内第一笔时间
+								refParam.MinOpenPx1 = pStock->Now;				///< 取分钟内第一笔现价
+								refParam.MinHighPx = pStock->Now;				///< 分钟线第一笔最高价为第一笔现价
+								refParam.MinLowPx = pStock->Now;				///< 分钟线第一笔最低价为第一笔现价
+								refParam.MinAmount1 = pStock->Amount;			///< 分钟内第一笔金额
+								refParam.MinVolume1 = pStock->Volume;			///< 分钟内第一笔成交量
+								//refParam.MinNumTrades1 = pStock->NumTrades;	///< 分钟内第一笔成交笔数
+							}
+							if( pStock->Now > refParam.MinHighPx )	{
+								refParam.MinHighPx = pStock->Now;				///< 分钟内最高Now价
+							}
+							if( pStock->Now < refParam.MinLowPx )	{
+								refParam.MinLowPx = pStock->Now;				///< 分钟内最低Now价
+							}
+							refParam.MinAmount2 = pStock->Amount;				///< 分钟内第末笔金额
+							refParam.MinVolume2 = pStock->Volume;				///< 分钟内第末笔成交量
+							refParam.MinClosePx = pStock->Now;					///< 分钟内最新价
+							refParam.MinVoip = pStock->Voip;					///< 分钟内第末笔Voip
+							//refParam.MinSettlePx = pStock->SettlePx;			///< 分钟内最新结算价
+							//refParam.MinOpenInterest = pStock->OpenInterest;	///< 分钟内第末笔持仓量
+							//refParam.MinNumTrades2 = pStock->NumTrades;		///< 分钟内第末笔成交笔数
 						}
-
-						if( pStock->Low < refParam.MinLowPx )
-						{
-							refParam.MinLowPx = pStock->Low;				///< 分钟内最低价
-						}
-
 				}
 				}
 				break;
@@ -1237,34 +1245,32 @@ int QuotationData::UpdateTickLine( enum XDFMarket eMarket, char* pSnapData, unsi
 						//refTickLine.Voip = pStock->Voip / refParam.dPriceRate;
 						nErrorCode = m_arrayTickLine.PutData( &refTickLine );
 						///< ------------ Minute Lines -----------------------
-						DispatchMinuteLine( eMarket, std::string( pStock->Code, 6 ), refParam, refTickLine.Date, refTickLine.Time );
-						if( 0 == refParam.Valid )							///< 取第一笔数据的部分
-						{
-							refParam.Valid = 1;								///< 有效数据标识
-							refParam.MkMinute = refTickLine.Time / 100;		///< 取分钟内第一笔时间
-							refParam.MinOpenPx1 = pStock->Now;				///< 取分钟内第一笔现价
-							refParam.MinHighPx = pStock->High;
-							refParam.MinLowPx = pStock->Low;
-							refParam.MinAmount1 = pStock->Amount;			///< 分钟内第一笔金额
-							refParam.MinVolume1 = pStock->Volume;			///< 分钟内第一笔成交量
-							//refParam.MinNumTrades1 = pStock->NumTrades;	///< 分钟内第一笔成交笔数
-						}
-
-						refParam.MinAmount2 = pStock->Amount;				///< 分钟内第末笔金额
-						refParam.MinVolume2 = pStock->Volume;				///< 分钟内第末笔成交量
-						refParam.MinClosePx = pStock->Now;					///< 分钟内最新价
-						//refParam.MinVoip = pStock->Voip;					///< 分钟内第末笔Voip
-						//refParam.MinSettlePx = pStock->SettlePx;			///< 分钟内最新结算价
-						//refParam.MinOpenInterest = pStock->OpenInterest;	///< 分钟内第末笔持仓量
-						//refParam.MinNumTrades2 = pStock->NumTrades;		///< 分钟内第末笔成交笔数
-						if( pStock->High > refParam.MinHighPx )
-						{
-							refParam.MinHighPx = pStock->High;				///< 分钟内最高价
-						}
-
-						if( pStock->Low < refParam.MinLowPx )
-						{
-							refParam.MinLowPx = pStock->Low;				///< 分钟内最低价
+						if( nMkTime > 0 ) {
+							DispatchMinuteLine( eMarket, std::string( pStock->Code, 6 ), refParam, refTickLine.Date, refTickLine.Time );
+							if( 0 == refParam.Valid )							///< 取第一笔数据的部分
+							{
+								refParam.Valid = 1;								///< 有效数据标识
+								refParam.MkMinute = (refTickLine.Time/1000/100+1) * 100;///< 取分钟内第一笔时间
+								refParam.MinOpenPx1 = pStock->Now;				///< 取分钟内第一笔现价
+								refParam.MinHighPx = pStock->Now;				///< 分钟线第一笔最高价为第一笔现价
+								refParam.MinLowPx = pStock->Now;				///< 分钟线第一笔最低价为第一笔现价
+								refParam.MinAmount1 = pStock->Amount;			///< 分钟内第一笔金额
+								refParam.MinVolume1 = pStock->Volume;			///< 分钟内第一笔成交量
+								//refParam.MinNumTrades1 = pStock->NumTrades;	///< 分钟内第一笔成交笔数
+							}
+							if( pStock->Now > refParam.MinHighPx )	{
+								refParam.MinHighPx = pStock->Now;				///< 分钟内最高Now价
+							}
+							if( pStock->Now < refParam.MinLowPx )	{
+								refParam.MinLowPx = pStock->Now;				///< 分钟内最低Now价
+							}
+							refParam.MinAmount2 = pStock->Amount;				///< 分钟内第末笔金额
+							refParam.MinVolume2 = pStock->Volume;				///< 分钟内第末笔成交量
+							refParam.MinClosePx = pStock->Now;					///< 分钟内最新价
+							//refParam.MinVoip = pStock->Voip;					///< 分钟内第末笔Voip
+							//refParam.MinSettlePx = pStock->SettlePx;			///< 分钟内最新结算价
+							//refParam.MinOpenInterest = pStock->OpenInterest;	///< 分钟内第末笔持仓量
+							//refParam.MinNumTrades2 = pStock->NumTrades;		///< 分钟内第末笔成交笔数
 						}
 					}
 				}
@@ -1312,7 +1318,7 @@ int QuotationData::UpdateTickLine( enum XDFMarket eMarket, char* pSnapData, unsi
 				if( 0 == refParam.Valid )							///< 取第一笔数据的部分
 				{
 					refParam.Valid = 1;								///< 有效数据标识
-					refParam.MkMinute = refTickLine.Time / 100;		///< 取分钟内第一笔时间
+					refParam.MkMinute = (refTickLine.Time/1000/100+1) * 100;///< 取分钟内第一笔时间
 					refParam.MinOpenPx1 = pStock->Now;				///< 取分钟内第一笔现价
 					refParam.MinHighPx = pStock->HighPx;
 					refParam.MinLowPx = pStock->LowPx;
@@ -1320,7 +1326,12 @@ int QuotationData::UpdateTickLine( enum XDFMarket eMarket, char* pSnapData, unsi
 					refParam.MinVolume1 = pStock->Volume;			///< 分钟内第一笔成交量
 					//refParam.MinNumTrades1 = pStock->NumTrades;	///< 分钟内第一笔成交笔数
 				}
-
+				if( pStock->HighPx > refParam.MinHighPx )	{
+					refParam.MinHighPx = pStock->HighPx;			///< 分钟内最高价
+				}
+				if( pStock->LowPx < refParam.MinLowPx )	{
+					refParam.MinLowPx = pStock->LowPx;				///< 分钟内最低价
+				}
 				refParam.MinAmount2 = pStock->Amount;				///< 分钟内第末笔金额
 				refParam.MinVolume2 = pStock->Volume;				///< 分钟内第末笔成交量
 				refParam.MinClosePx = pStock->Now;					///< 分钟内最新价
@@ -1328,15 +1339,6 @@ int QuotationData::UpdateTickLine( enum XDFMarket eMarket, char* pSnapData, unsi
 				refParam.MinSettlePx = pStock->SettlePrice;			///< 分钟内最新结算价
 				refParam.MinOpenInterest = pStock->Position;		///< 分钟内第末笔持仓量
 				//refParam.MinNumTrades2 = pStock->NumTrades;		///< 分钟内第末笔成交笔数
-				if( pStock->HighPx > refParam.MinHighPx )
-				{
-					refParam.MinHighPx = pStock->HighPx;			///< 分钟内最高价
-				}
-
-				if( pStock->LowPx < refParam.MinLowPx )
-				{
-					refParam.MinLowPx = pStock->LowPx;				///< 分钟内最低价
-				}
 			}
 		}
 		break;
@@ -1382,34 +1384,32 @@ int QuotationData::UpdateTickLine( enum XDFMarket eMarket, char* pSnapData, unsi
 						::memcpy( refTickLine.PreName, refParam.PreName, 4 );
 						nErrorCode = m_arrayTickLine.PutData( &refTickLine );
 						///< ------------ Minute Lines -----------------------
-						DispatchMinuteLine( eMarket, std::string( pStock->Code, 6 ), refParam, refTickLine.Date, refTickLine.Time );
-						if( 0 == refParam.Valid )							///< 取第一笔数据的部分
-						{
-							refParam.Valid = 1;								///< 有效数据标识
-							refParam.MkMinute = refTickLine.Time / 100;		///< 取分钟内第一笔时间
-							refParam.MinOpenPx1 = pStock->Now;				///< 取分钟内第一笔现价
-							refParam.MinHighPx = pStock->High;
-							refParam.MinLowPx = pStock->Low;
-							refParam.MinAmount1 = pStock->Amount;			///< 分钟内第一笔金额
-							refParam.MinVolume1 = pStock->Volume;			///< 分钟内第一笔成交量
-							//refParam.MinNumTrades1 = pStock->NumTrades;	///< 分钟内第一笔成交笔数
-						}
-
-						refParam.MinAmount2 = pStock->Amount;				///< 分钟内第末笔金额
-						refParam.MinVolume2 = pStock->Volume;				///< 分钟内第末笔成交量
-						refParam.MinClosePx = pStock->Now;					///< 分钟内最新价
-						refParam.MinVoip = pStock->Voip;					///< 分钟内第末笔Voip
-						//refParam.MinSettlePx = pStock->SettlePx;			///< 分钟内最新结算价
-						//refParam.MinOpenInterest = pStock->OpenInterest;	///< 分钟内第末笔持仓量
-						//refParam.MinNumTrades2 = pStock->NumTrades;		///< 分钟内第末笔成交笔数
-						if( pStock->High > refParam.MinHighPx )
-						{
-							refParam.MinHighPx = pStock->High;				///< 分钟内最高价
-						}
-
-						if( pStock->Low < refParam.MinLowPx )
-						{
-							refParam.MinLowPx = pStock->Low;				///< 分钟内最低价
+						if( nMkTime > 0 ) {
+							DispatchMinuteLine( eMarket, std::string( pStock->Code, 6 ), refParam, refTickLine.Date, refTickLine.Time );
+							if( 0 == refParam.Valid )							///< 取第一笔数据的部分
+							{
+								refParam.Valid = 1;								///< 有效数据标识
+								refParam.MkMinute = (refTickLine.Time/1000/100+1) * 100;///< 取分钟内第一笔时间
+								refParam.MinOpenPx1 = pStock->Now;				///< 取分钟内第一笔现价
+								refParam.MinHighPx = pStock->High;
+								refParam.MinLowPx = pStock->Low;
+								refParam.MinAmount1 = pStock->Amount;			///< 分钟内第一笔金额
+								refParam.MinVolume1 = pStock->Volume;			///< 分钟内第一笔成交量
+								//refParam.MinNumTrades1 = pStock->NumTrades;	///< 分钟内第一笔成交笔数
+							}
+							if( pStock->High > refParam.MinHighPx )	{
+								refParam.MinHighPx = pStock->High;				///< 分钟内最高价
+							}
+							if( pStock->Low < refParam.MinLowPx )	{
+								refParam.MinLowPx = pStock->Low;				///< 分钟内最低价
+							}
+							refParam.MinAmount2 = pStock->Amount;				///< 分钟内第末笔金额
+							refParam.MinVolume2 = pStock->Volume;				///< 分钟内第末笔成交量
+							refParam.MinClosePx = pStock->Now;					///< 分钟内最新价
+							refParam.MinVoip = pStock->Voip;					///< 分钟内第末笔Voip
+							//refParam.MinSettlePx = pStock->SettlePx;			///< 分钟内最新结算价
+							//refParam.MinOpenInterest = pStock->OpenInterest;	///< 分钟内第末笔持仓量
+							//refParam.MinNumTrades2 = pStock->NumTrades;		///< 分钟内第末笔成交笔数
 						}
 					}
 				}
@@ -1441,34 +1441,32 @@ int QuotationData::UpdateTickLine( enum XDFMarket eMarket, char* pSnapData, unsi
 						//refTickLine.Voip = pStock->Voip / refParam.dPriceRate;
 						nErrorCode = m_arrayTickLine.PutData( &refTickLine );
 						///< ------------ Minute Lines -----------------------
-						DispatchMinuteLine( eMarket, std::string( pStock->Code, 6 ), refParam, refTickLine.Date, refTickLine.Time );
-						if( 0 == refParam.Valid )							///< 取第一笔数据的部分
-						{
-							refParam.Valid = 1;								///< 有效数据标识
-							refParam.MkMinute = refTickLine.Time / 100;		///< 取分钟内第一笔时间
-							refParam.MinOpenPx1 = pStock->Now;				///< 取分钟内第一笔现价
-							refParam.MinHighPx = pStock->High;
-							refParam.MinLowPx = pStock->Low;
-							refParam.MinAmount1 = pStock->Amount;			///< 分钟内第一笔金额
-							refParam.MinVolume1 = pStock->Volume;			///< 分钟内第一笔成交量
-							//refParam.MinNumTrades1 = pStock->NumTrades;	///< 分钟内第一笔成交笔数
-						}
-
-						refParam.MinAmount2 = pStock->Amount;				///< 分钟内第末笔金额
-						refParam.MinVolume2 = pStock->Volume;				///< 分钟内第末笔成交量
-						refParam.MinClosePx = pStock->Now;					///< 分钟内最新价
-						//refParam.MinVoip = pStock->Voip;					///< 分钟内第末笔Voip
-						//refParam.MinSettlePx = pStock->SettlePx;			///< 分钟内最新结算价
-						//refParam.MinOpenInterest = pStock->OpenInterest;	///< 分钟内第末笔持仓量
-						//refParam.MinNumTrades2 = pStock->NumTrades;		///< 分钟内第末笔成交笔数
-						if( pStock->High > refParam.MinHighPx )
-						{
-							refParam.MinHighPx = pStock->High;				///< 分钟内最高价
-						}
-
-						if( pStock->Low < refParam.MinLowPx )
-						{
-							refParam.MinLowPx = pStock->Low;				///< 分钟内最低价
+						if( nMkTime > 0 ) {
+							DispatchMinuteLine( eMarket, std::string( pStock->Code, 6 ), refParam, refTickLine.Date, refTickLine.Time );
+							if( 0 == refParam.Valid )							///< 取第一笔数据的部分
+							{
+								refParam.Valid = 1;								///< 有效数据标识
+								refParam.MkMinute = (refTickLine.Time/1000/100+1) * 100;///< 取分钟内第一笔时间
+								refParam.MinOpenPx1 = pStock->Now;				///< 取分钟内第一笔现价
+								refParam.MinHighPx = pStock->High;
+								refParam.MinLowPx = pStock->Low;
+								refParam.MinAmount1 = pStock->Amount;			///< 分钟内第一笔金额
+								refParam.MinVolume1 = pStock->Volume;			///< 分钟内第一笔成交量
+								//refParam.MinNumTrades1 = pStock->NumTrades;	///< 分钟内第一笔成交笔数
+							}
+							if( pStock->High > refParam.MinHighPx )	{
+								refParam.MinHighPx = pStock->High;				///< 分钟内最高价
+							}
+							if( pStock->Low < refParam.MinLowPx )	{
+								refParam.MinLowPx = pStock->Low;				///< 分钟内最低价
+							}
+							refParam.MinAmount2 = pStock->Amount;				///< 分钟内第末笔金额
+							refParam.MinVolume2 = pStock->Volume;				///< 分钟内第末笔成交量
+							refParam.MinClosePx = pStock->Now;					///< 分钟内最新价
+							//refParam.MinVoip = pStock->Voip;					///< 分钟内第末笔Voip
+							//refParam.MinSettlePx = pStock->SettlePx;			///< 分钟内最新结算价
+							//refParam.MinOpenInterest = pStock->OpenInterest;	///< 分钟内第末笔持仓量
+							//refParam.MinNumTrades2 = pStock->NumTrades;		///< 分钟内第末笔成交笔数
 						}
 					}
 				}
@@ -1512,34 +1510,32 @@ int QuotationData::UpdateTickLine( enum XDFMarket eMarket, char* pSnapData, unsi
 				::memcpy( refTickLine.TradingPhaseCode, pStock->TradingPhaseCode, sizeof(pStock->TradingPhaseCode) );
 				nErrorCode = m_arrayTickLine.PutData( &refTickLine );
 				///< ------------ Minute Lines -----------------------
-				DispatchMinuteLine( eMarket, std::string( pStock->Code, 8 ), refParam, refTickLine.Date, refTickLine.Time );
-				if( 0 == refParam.Valid )							///< 取第一笔数据的部分
-				{
-					refParam.Valid = 1;								///< 有效数据标识
-					refParam.MkMinute = refTickLine.Time / 100;		///< 取分钟内第一笔时间
-					refParam.MinOpenPx1 = pStock->Now;				///< 取分钟内第一笔现价
-					refParam.MinHighPx = pStock->HighPx;
-					refParam.MinLowPx = pStock->LowPx;
-					refParam.MinAmount1 = pStock->Amount;			///< 分钟内第一笔金额
-					refParam.MinVolume1 = pStock->Volume;			///< 分钟内第一笔成交量
-					//refParam.MinNumTrades1 = pStock->NumTrades;	///< 分钟内第一笔成交笔数
-				}
-
-				refParam.MinAmount2 = pStock->Amount;				///< 分钟内第末笔金额
-				refParam.MinVolume2 = pStock->Volume;				///< 分钟内第末笔成交量
-				refParam.MinClosePx = pStock->Now;					///< 分钟内最新价
-				//refParam.MinVoip = pStock->Voip;					///< 分钟内第末笔Voip
-				refParam.MinSettlePx = pStock->SettlePrice;			///< 分钟内最新结算价
-				refParam.MinOpenInterest = pStock->Position;		///< 分钟内第末笔持仓量
-				//refParam.MinNumTrades2 = pStock->NumTrades;		///< 分钟内第末笔成交笔数
-				if( pStock->HighPx > refParam.MinHighPx )
-				{
-					refParam.MinHighPx = pStock->HighPx;			///< 分钟内最高价
-				}
-
-				if( pStock->LowPx < refParam.MinLowPx )
-				{
-					refParam.MinLowPx = pStock->LowPx;				///< 分钟内最低价
+				if( nMkTime > 0 ) {
+					DispatchMinuteLine( eMarket, std::string( pStock->Code, 8 ), refParam, refTickLine.Date, refTickLine.Time );
+					if( 0 == refParam.Valid )							///< 取第一笔数据的部分
+					{
+						refParam.Valid = 1;								///< 有效数据标识
+						refParam.MkMinute = (refTickLine.Time/1000/100+1) * 100;///< 取分钟内第一笔时间
+						refParam.MinOpenPx1 = pStock->Now;				///< 取分钟内第一笔现价
+						refParam.MinHighPx = pStock->HighPx;
+						refParam.MinLowPx = pStock->LowPx;
+						refParam.MinAmount1 = pStock->Amount;			///< 分钟内第一笔金额
+						refParam.MinVolume1 = pStock->Volume;			///< 分钟内第一笔成交量
+						//refParam.MinNumTrades1 = pStock->NumTrades;	///< 分钟内第一笔成交笔数
+					}
+					if( pStock->HighPx > refParam.MinHighPx )	{
+						refParam.MinHighPx = pStock->HighPx;			///< 分钟内最高价
+					}
+					if( pStock->LowPx < refParam.MinLowPx )	{
+						refParam.MinLowPx = pStock->LowPx;				///< 分钟内最低价
+					}
+					refParam.MinAmount2 = pStock->Amount;				///< 分钟内第末笔金额
+					refParam.MinVolume2 = pStock->Volume;				///< 分钟内第末笔成交量
+					refParam.MinClosePx = pStock->Now;					///< 分钟内最新价
+					//refParam.MinVoip = pStock->Voip;					///< 分钟内第末笔Voip
+					refParam.MinSettlePx = pStock->SettlePrice;			///< 分钟内最新结算价
+					refParam.MinOpenInterest = pStock->Position;		///< 分钟内第末笔持仓量
+					//refParam.MinNumTrades2 = pStock->NumTrades;		///< 分钟内第末笔成交笔数
 				}
 			}
 		}
@@ -1580,34 +1576,32 @@ int QuotationData::UpdateTickLine( enum XDFMarket eMarket, char* pSnapData, unsi
 				//refTickLine.Voip = pStock->Voip / refParam.dPriceRate;
 				nErrorCode = m_arrayTickLine.PutData( &refTickLine );
 				///< ------------ Minute Lines -----------------------
-				DispatchMinuteLine( eMarket, std::string( pStock->Code, 6 ), refParam, refTickLine.Date, refTickLine.Time );
-				if( 0 == refParam.Valid )							///< 取第一笔数据的部分
-				{
-					refParam.Valid = 1;								///< 有效数据标识
-					refParam.MkMinute = refTickLine.Time / 100;		///< 取分钟内第一笔时间
-					refParam.MinOpenPx1 = pStock->Now;				///< 取分钟内第一笔现价
-					refParam.MinHighPx = pStock->High;
-					refParam.MinLowPx = pStock->Low;
-					refParam.MinAmount1 = pStock->Amount;			///< 分钟内第一笔金额
-					refParam.MinVolume1 = pStock->Volume;			///< 分钟内第一笔成交量
-					//refParam.MinNumTrades1 = pStock->NumTrades;	///< 分钟内第一笔成交笔数
-				}
-
-				refParam.MinAmount2 = pStock->Amount;				///< 分钟内第末笔金额
-				refParam.MinVolume2 = pStock->Volume;				///< 分钟内第末笔成交量
-				refParam.MinClosePx = pStock->Now;					///< 分钟内最新价
-				//refParam.MinVoip = pStock->Voip;					///< 分钟内第末笔Voip
-				refParam.MinSettlePx = pStock->SettlePrice;			///< 分钟内最新结算价
-				refParam.MinOpenInterest = pStock->OpenInterest;	///< 分钟内第末笔持仓量
-				//refParam.MinNumTrades2 = pStock->NumTrades;		///< 分钟内第末笔成交笔数
-				if( pStock->High > refParam.MinHighPx )
-				{
-					refParam.MinHighPx = pStock->High;			///< 分钟内最高价
-				}
-
-				if( pStock->Low < refParam.MinLowPx )
-				{
-					refParam.MinLowPx = pStock->Low;				///< 分钟内最低价
+				if( nMkTime > 0 ) {
+					DispatchMinuteLine( eMarket, std::string( pStock->Code, 6 ), refParam, refTickLine.Date, refTickLine.Time );
+					if( 0 == refParam.Valid )							///< 取第一笔数据的部分
+					{
+						refParam.Valid = 1;								///< 有效数据标识
+						refParam.MkMinute = (refTickLine.Time/1000/100+1) * 100;///< 取分钟内第一笔时间
+						refParam.MinOpenPx1 = pStock->Now;				///< 取分钟内第一笔现价
+						refParam.MinHighPx = pStock->High;
+						refParam.MinLowPx = pStock->Low;
+						refParam.MinAmount1 = pStock->Amount;			///< 分钟内第一笔金额
+						refParam.MinVolume1 = pStock->Volume;			///< 分钟内第一笔成交量
+						//refParam.MinNumTrades1 = pStock->NumTrades;	///< 分钟内第一笔成交笔数
+					}
+					if( pStock->High > refParam.MinHighPx )	{
+						refParam.MinHighPx = pStock->High;			///< 分钟内最高价
+					}
+					if( pStock->Low < refParam.MinLowPx )	{
+						refParam.MinLowPx = pStock->Low;				///< 分钟内最低价
+					}
+					refParam.MinAmount2 = pStock->Amount;				///< 分钟内第末笔金额
+					refParam.MinVolume2 = pStock->Volume;				///< 分钟内第末笔成交量
+					refParam.MinClosePx = pStock->Now;					///< 分钟内最新价
+					//refParam.MinVoip = pStock->Voip;					///< 分钟内第末笔Voip
+					refParam.MinSettlePx = pStock->SettlePrice;			///< 分钟内最新结算价
+					refParam.MinOpenInterest = pStock->OpenInterest;	///< 分钟内第末笔持仓量
+					//refParam.MinNumTrades2 = pStock->NumTrades;		///< 分钟内第末笔成交笔数
 				}
 			}
 		}
@@ -1648,34 +1642,32 @@ int QuotationData::UpdateTickLine( enum XDFMarket eMarket, char* pSnapData, unsi
 				//refTickLine.Voip = pStock->Voip / refParam.dPriceRate;
 				nErrorCode = m_arrayTickLine.PutData( &refTickLine );
 				///< ------------ Minute Lines -----------------------
-				DispatchMinuteLine( eMarket, std::string( pStock->Code ), refParam, refTickLine.Date, refTickLine.Time );
-				if( 0 == refParam.Valid )							///< 取第一笔数据的部分
-				{
-					refParam.Valid = 1;								///< 有效数据标识
-					refParam.MkMinute = refTickLine.Time / 100;		///< 取分钟内第一笔时间
-					refParam.MinOpenPx1 = pStock->Now;				///< 取分钟内第一笔现价
-					refParam.MinHighPx = pStock->High;
-					refParam.MinLowPx = pStock->Low;
-					refParam.MinAmount1 = pStock->Amount;			///< 分钟内第一笔金额
-					refParam.MinVolume1 = pStock->Volume;			///< 分钟内第一笔成交量
-					//refParam.MinNumTrades1 = pStock->NumTrades;	///< 分钟内第一笔成交笔数
-				}
-
-				refParam.MinAmount2 = pStock->Amount;				///< 分钟内第末笔金额
-				refParam.MinVolume2 = pStock->Volume;				///< 分钟内第末笔成交量
-				refParam.MinClosePx = pStock->Now;					///< 分钟内最新价
-				//refParam.MinVoip = pStock->Voip;					///< 分钟内第末笔Voip
-				refParam.MinSettlePx = pStock->SettlePrice;			///< 分钟内最新结算价
-				refParam.MinOpenInterest = pStock->OpenInterest;	///< 分钟内第末笔持仓量
-				//refParam.MinNumTrades2 = pStock->NumTrades;		///< 分钟内第末笔成交笔数
-				if( pStock->High > refParam.MinHighPx )
-				{
-					refParam.MinHighPx = pStock->High;			///< 分钟内最高价
-				}
-
-				if( pStock->Low < refParam.MinLowPx )
-				{
-					refParam.MinLowPx = pStock->Low;				///< 分钟内最低价
+				if( nMkTime > 0 ) {
+					DispatchMinuteLine( eMarket, std::string( pStock->Code ), refParam, refTickLine.Date, refTickLine.Time );
+					if( 0 == refParam.Valid )							///< 取第一笔数据的部分
+					{
+						refParam.Valid = 1;								///< 有效数据标识
+						refParam.MkMinute = (refTickLine.Time/1000/100+1) * 100;///< 取分钟内第一笔时间
+						refParam.MinOpenPx1 = pStock->Now;				///< 取分钟内第一笔现价
+						refParam.MinHighPx = pStock->High;
+						refParam.MinLowPx = pStock->Low;
+						refParam.MinAmount1 = pStock->Amount;			///< 分钟内第一笔金额
+						refParam.MinVolume1 = pStock->Volume;			///< 分钟内第一笔成交量
+						//refParam.MinNumTrades1 = pStock->NumTrades;	///< 分钟内第一笔成交笔数
+					}
+					if( pStock->High > refParam.MinHighPx )	{
+						refParam.MinHighPx = pStock->High;			///< 分钟内最高价
+					}
+					if( pStock->Low < refParam.MinLowPx )	{
+						refParam.MinLowPx = pStock->Low;				///< 分钟内最低价
+					}
+					refParam.MinAmount2 = pStock->Amount;				///< 分钟内第末笔金额
+					refParam.MinVolume2 = pStock->Volume;				///< 分钟内第末笔成交量
+					refParam.MinClosePx = pStock->Now;					///< 分钟内最新价
+					//refParam.MinVoip = pStock->Voip;					///< 分钟内第末笔Voip
+					refParam.MinSettlePx = pStock->SettlePrice;			///< 分钟内最新结算价
+					refParam.MinOpenInterest = pStock->OpenInterest;	///< 分钟内第末笔持仓量
+					//refParam.MinNumTrades2 = pStock->NumTrades;		///< 分钟内第末笔成交笔数
 				}
 			}
 		}
@@ -1723,34 +1715,32 @@ int QuotationData::UpdateTickLine( enum XDFMarket eMarket, char* pSnapData, unsi
 				//refTickLine.Voip = pStock->Voip / refParam.dPriceRate;
 				nErrorCode = m_arrayTickLine.PutData( &refTickLine );
 				///< ------------ Minute Lines -----------------------
-				DispatchMinuteLine( eMarket, std::string( pStock->Code, 6 ), refParam, refTickLine.Date, refTickLine.Time );
-				if( 0 == refParam.Valid )							///< 取第一笔数据的部分
-				{
-					refParam.Valid = 1;								///< 有效数据标识
-					refParam.MkMinute = refTickLine.Time / 100;		///< 取分钟内第一笔时间
-					refParam.MinOpenPx1 = pStock->Now;				///< 取分钟内第一笔现价
-					refParam.MinHighPx = pStock->High;
-					refParam.MinLowPx = pStock->Low;
-					refParam.MinAmount1 = pStock->Amount;			///< 分钟内第一笔金额
-					refParam.MinVolume1 = pStock->Volume;			///< 分钟内第一笔成交量
-					//refParam.MinNumTrades1 = pStock->NumTrades;	///< 分钟内第一笔成交笔数
-				}
-
-				refParam.MinAmount2 = pStock->Amount;				///< 分钟内第末笔金额
-				refParam.MinVolume2 = pStock->Volume;				///< 分钟内第末笔成交量
-				refParam.MinClosePx = pStock->Now;					///< 分钟内最新价
-				//refParam.MinVoip = pStock->Voip;					///< 分钟内第末笔Voip
-				refParam.MinSettlePx = pStock->SettlePrice;			///< 分钟内最新结算价
-				refParam.MinOpenInterest = pStock->OpenInterest;	///< 分钟内第末笔持仓量
-				//refParam.MinNumTrades2 = pStock->NumTrades;		///< 分钟内第末笔成交笔数
-				if( pStock->High > refParam.MinHighPx )
-				{
-					refParam.MinHighPx = pStock->High;			///< 分钟内最高价
-				}
-
-				if( pStock->Low < refParam.MinLowPx )
-				{
-					refParam.MinLowPx = pStock->Low;				///< 分钟内最低价
+				if( nMkTime > 0 ) {
+					DispatchMinuteLine( eMarket, std::string( pStock->Code, 6 ), refParam, refTickLine.Date, refTickLine.Time );
+					if( 0 == refParam.Valid )							///< 取第一笔数据的部分
+					{
+						refParam.Valid = 1;								///< 有效数据标识
+						refParam.MkMinute = (refTickLine.Time/1000/100+1) * 100;///< 取分钟内第一笔时间
+						refParam.MinOpenPx1 = pStock->Now;				///< 取分钟内第一笔现价
+						refParam.MinHighPx = pStock->High;
+						refParam.MinLowPx = pStock->Low;
+						refParam.MinAmount1 = pStock->Amount;			///< 分钟内第一笔金额
+						refParam.MinVolume1 = pStock->Volume;			///< 分钟内第一笔成交量
+						//refParam.MinNumTrades1 = pStock->NumTrades;	///< 分钟内第一笔成交笔数
+					}
+					if( pStock->High > refParam.MinHighPx )	{
+						refParam.MinHighPx = pStock->High;			///< 分钟内最高价
+					}
+					if( pStock->Low < refParam.MinLowPx )	{
+						refParam.MinLowPx = pStock->Low;				///< 分钟内最低价
+					}
+					refParam.MinAmount2 = pStock->Amount;				///< 分钟内第末笔金额
+					refParam.MinVolume2 = pStock->Volume;				///< 分钟内第末笔成交量
+					refParam.MinClosePx = pStock->Now;					///< 分钟内最新价
+					//refParam.MinVoip = pStock->Voip;					///< 分钟内第末笔Voip
+					refParam.MinSettlePx = pStock->SettlePrice;			///< 分钟内最新结算价
+					refParam.MinOpenInterest = pStock->OpenInterest;	///< 分钟内第末笔持仓量
+					//refParam.MinNumTrades2 = pStock->NumTrades;		///< 分钟内第末笔成交笔数
 				}
 			}
 		}
@@ -1798,34 +1788,32 @@ int QuotationData::UpdateTickLine( enum XDFMarket eMarket, char* pSnapData, unsi
 				//refTickLine.Voip = pStock->Voip / refParam.dPriceRate;
 				nErrorCode = m_arrayTickLine.PutData( &refTickLine );
 				///< ------------ Minute Lines -----------------------
-				DispatchMinuteLine( eMarket, std::string( pStock->Code ), refParam, refTickLine.Date, refTickLine.Time );
-				if( 0 == refParam.Valid )							///< 取第一笔数据的部分
-				{
-					refParam.Valid = 1;								///< 有效数据标识
-					refParam.MkMinute = refTickLine.Time / 100;		///< 取分钟内第一笔时间
-					refParam.MinOpenPx1 = pStock->Now;				///< 取分钟内第一笔现价
-					refParam.MinHighPx = pStock->High;
-					refParam.MinLowPx = pStock->Low;
-					refParam.MinAmount1 = pStock->Amount;			///< 分钟内第一笔金额
-					refParam.MinVolume1 = pStock->Volume;			///< 分钟内第一笔成交量
-					//refParam.MinNumTrades1 = pStock->NumTrades;	///< 分钟内第一笔成交笔数
-				}
-
-				refParam.MinAmount2 = pStock->Amount;				///< 分钟内第末笔金额
-				refParam.MinVolume2 = pStock->Volume;				///< 分钟内第末笔成交量
-				refParam.MinClosePx = pStock->Now;					///< 分钟内最新价
-				//refParam.MinVoip = pStock->Voip;					///< 分钟内第末笔Voip
-				refParam.MinSettlePx = pStock->SettlePrice;			///< 分钟内最新结算价
-				refParam.MinOpenInterest = pStock->OpenInterest;	///< 分钟内第末笔持仓量
-				//refParam.MinNumTrades2 = pStock->NumTrades;		///< 分钟内第末笔成交笔数
-				if( pStock->High > refParam.MinHighPx )
-				{
-					refParam.MinHighPx = pStock->High;				///< 分钟内最高价
-				}
-
-				if( pStock->Low < refParam.MinLowPx )
-				{
-					refParam.MinLowPx = pStock->Low;				///< 分钟内最低价
+				if( nMkTime > 0 ) {
+					DispatchMinuteLine( eMarket, std::string( pStock->Code ), refParam, refTickLine.Date, refTickLine.Time );
+					if( 0 == refParam.Valid )							///< 取第一笔数据的部分
+					{
+						refParam.Valid = 1;								///< 有效数据标识
+						refParam.MkMinute = (refTickLine.Time/1000/100+1) * 100;///< 取分钟内第一笔时间
+						refParam.MinOpenPx1 = pStock->Now;				///< 取分钟内第一笔现价
+						refParam.MinHighPx = pStock->High;
+						refParam.MinLowPx = pStock->Low;
+						refParam.MinAmount1 = pStock->Amount;			///< 分钟内第一笔金额
+						refParam.MinVolume1 = pStock->Volume;			///< 分钟内第一笔成交量
+						//refParam.MinNumTrades1 = pStock->NumTrades;	///< 分钟内第一笔成交笔数
+					}
+					if( pStock->High > refParam.MinHighPx )	{
+						refParam.MinHighPx = pStock->High;				///< 分钟内最高价
+					}
+					if( pStock->Low < refParam.MinLowPx )	{
+						refParam.MinLowPx = pStock->Low;				///< 分钟内最低价
+					}
+					refParam.MinAmount2 = pStock->Amount;				///< 分钟内第末笔金额
+					refParam.MinVolume2 = pStock->Volume;				///< 分钟内第末笔成交量
+					refParam.MinClosePx = pStock->Now;					///< 分钟内最新价
+					//refParam.MinVoip = pStock->Voip;					///< 分钟内第末笔Voip
+					refParam.MinSettlePx = pStock->SettlePrice;			///< 分钟内最新结算价
+					refParam.MinOpenInterest = pStock->OpenInterest;	///< 分钟内第末笔持仓量
+					//refParam.MinNumTrades2 = pStock->NumTrades;		///< 分钟内第末笔成交笔数
 				}
 			}
 		}

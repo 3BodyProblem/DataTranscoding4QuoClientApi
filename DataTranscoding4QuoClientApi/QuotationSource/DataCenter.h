@@ -134,7 +134,6 @@ typedef struct
 	unsigned __int64			MinNumTrades1;			///< 分钟内第一笔成交笔数
 	unsigned __int64			MinNumTrades2;			///< 分钟内第末笔成交笔数
 	unsigned int				MinVoip;				///< 分钟内第末笔Voip
-
 } T_LINE_PARAM;
 #pragma pack()
 
