@@ -24,6 +24,7 @@ unsigned int	s_nNumberInSection = 50;				///< 一个市场有可以缓存多少个数据块
 ///< -----------------------------------------------------------------------------------
 
 
+///< 累加一分钟线的时间 (HH:mm)
 unsigned int IncM1Time( unsigned int nM1Time )
 {
 	unsigned int	nHour = nM1Time / 100;
