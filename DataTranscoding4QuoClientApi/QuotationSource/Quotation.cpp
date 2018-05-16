@@ -278,6 +278,18 @@ int Quotation::SaveShLv1_Static_Tick_Day( enum XDFRunStat eStatus, bool bBuild )
 		m += sizeof(XDFAPI_MsgHead) + pMsgHead->MsgLen;
 	}
 
+	char						nMkID = XDF_SH;
+	XDFAPI_MarketStatusInfo		tagStatus = { 0 };
+	nErrorCode = m_oQuotPlugin.GetPrimeApi()->ReqFuncData( 101, &nMkID, &tagStatus );
+	if( 1 == nErrorCode )
+	{
+		m_oQuoDataCenter.UpdateMarketTime( XDF_SH, tagStatus.MarketTime );
+	}
+	else
+	{
+		m_oQuoDataCenter.UpdateMarketTime( XDF_SH, DateTime::Now().TimeToLong() );
+	}
+
 	///< ---------------- 获取上海市场码表数据 ----------------------------------------
 	nErrorCode = m_oQuotPlugin->GetCodeTable( XDF_SH, NULL, NULL, nCodeCount );					///< 先获取一下商品数量
 	if( nErrorCode > 0 && nCodeCount > 0 )
@@ -619,6 +631,18 @@ int Quotation::SaveSzLv1_Static_Tick_Day( enum XDFRunStat eStatus, bool bBuild )
 		}
 
 		m += sizeof(XDFAPI_MsgHead) + pMsgHead->MsgLen;
+	}
+
+	char						nMkID = XDF_SZ;
+	XDFAPI_MarketStatusInfo		tagStatus = { 0 };
+	nErrorCode = m_oQuotPlugin.GetPrimeApi()->ReqFuncData( 101, &nMkID, &tagStatus );
+	if( 1 == nErrorCode )
+	{
+		m_oQuoDataCenter.UpdateMarketTime( XDF_SZ, tagStatus.MarketTime );
+	}
+	else
+	{
+		m_oQuoDataCenter.UpdateMarketTime( XDF_SZ, DateTime::Now().TimeToLong() );
 	}
 
 	///< ---------------- 获取深圳市场码表数据 ----------------------------------------

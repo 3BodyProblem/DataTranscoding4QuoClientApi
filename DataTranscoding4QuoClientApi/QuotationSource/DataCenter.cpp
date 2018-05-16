@@ -297,6 +297,7 @@ void QuotationData::UpdateModuleStatus( enum XDFMarket eMarket, int nStatus )
 {
 	CriticalLock	section( m_oLock );
 
+	m_lstMkTime[eMarket] = 0;
 	m_mapModuleStatus[eMarket] = nStatus;
 }
 

@@ -256,8 +256,11 @@ int WeightFile::Redirect2File( std::string sSourceFile, std::string sDestFile )
 		}
 
 		oWeightReader.read( (char*)&tagSrcWeight, sizeof(tagSrcWeight) );///<oWeightReader.gcount();
-		nLen = ::sprintf( pszRecords, "%d%02d%02d,%d,%d,%.4f,%.4f,%d,%.4f,%.4f\n"
-			, tagSrcWeight.Date.Year, tagSrcWeight.Date.Month, tagSrcWeight.Date.Day, tagSrcWeight.A, tagSrcWeight.B, tagSrcWeight.C, tagSrcWeight.D, tagSrcWeight.E, tagSrcWeight.BASE, tagSrcWeight.FLOWBASE );
+		nLen = ::sprintf( pszRecords, "%d%02d%02d,%.4f,%.4f,%.4f,%.4f,%.4f,%u,%u\n"
+						, tagSrcWeight.Date.Year, tagSrcWeight.Date.Month, tagSrcWeight.Date.Day
+						, ((double)tagSrcWeight.A)/10000, ((double)tagSrcWeight.B)/10000, ((double)tagSrcWeight.C)/1000
+						, ((double)tagSrcWeight.D)/1000, ((double)tagSrcWeight.E)/10000
+						, tagSrcWeight.BASE, tagSrcWeight.FLOWBASE );
 
 		oCSVDumper.write( pszRecords, nLen );
 	}
