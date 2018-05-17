@@ -460,6 +460,14 @@ void* QuotationData::ThreadOnIdle( void* pSelf )
 	return NULL;
 }
 
+void QuotationData::SetMarketTime( enum XDFMarket eMarket, unsigned int nMkTime )
+{
+	if( (unsigned int)eMarket < 64 )
+	{
+		m_lstMkTime[(short)eMarket] = nMkTime;
+	}
+}
+
 void QuotationData::UpdateMarketTime( enum XDFMarket eMarket, unsigned int nMkTime )
 {
 	if( (unsigned int)eMarket < 64 )
@@ -900,9 +908,10 @@ int QuotationData::DumpDayLine( enum XDFMarket eMarket, char* pSnapData, unsigne
 						{
 							if( false == CheckDateInDayFile( oLoader, nMachineDate ) ) // 未在日线文件中查找出今天的日线数据，所以需要写入一条
 							{
-								int	nLen = ::sprintf( pszDayLine, "%u,%.4f,%.4f,%.4f,%.4f,%.4f,%.4f,%I64d,%u,%u,%f\n", nMachineDate
+								int	nLen = ::sprintf( pszDayLine, "%u,%.4f,%.4f,%.4f,%.4f,0.0000,%.4f,%I64d,0,0,0.0000\n"
+									, nMachineDate
 									, pStock->Open/refParam.dPriceRate, pStock->High/refParam.dPriceRate, pStock->Low/refParam.dPriceRate, pStock->Now/refParam.dPriceRate
-									, 0.0, pStock->Amount, pStock->Volume, 0, 0, 0 );
+									, pStock->Amount, pStock->Volume );
 								oDumper.write( pszDayLine, nLen );
 							}
 						}
@@ -973,9 +982,10 @@ int QuotationData::DumpDayLine( enum XDFMarket eMarket, char* pSnapData, unsigne
 						{
 							if( false == CheckDateInDayFile( oLoader, nMachineDate ) ) // 未在日线文件中查找出今天的日线数据，所以需要写入一条
 							{
-								int	nLen = ::sprintf( pszDayLine, "%u,%.4f,%.4f,%.4f,%.4f,%.4f,%.4f,%I64d,%u,%u,%.4f\n", nMachineDate
+								int	nLen = ::sprintf( pszDayLine, "%u,%.4f,%.4f,%.4f,%.4f,0.0000,%.4f,%I64d,0,0,0.0000\n"
+									, nMachineDate
 									, pStock->Open/refParam.dPriceRate, pStock->High/refParam.dPriceRate, pStock->Low/refParam.dPriceRate, pStock->Now/refParam.dPriceRate
-									, 0.0, pStock->Amount, pStock->Volume, 0, 0, 0 );
+									, pStock->Amount, pStock->Volume );
 								oDumper.write( pszDayLine, nLen );
 							}
 						}

@@ -243,6 +243,13 @@ public:
 
 public:
 	/**
+	 * @brief					设置新市场时间
+	 * @param[in]				eMarket			市场ID
+	 * @param[in]				nMkTime			市场时间
+	 */
+	void						SetMarketTime( enum XDFMarket eMarket, unsigned int nMkTime );
+
+	/**
 	 * @brief					更新市场时间
 	 * @param[in]				eMarket			市场ID
 	 * @param[in]				nMkTime			市场时间

@@ -283,11 +283,11 @@ int Quotation::SaveShLv1_Static_Tick_Day( enum XDFRunStat eStatus, bool bBuild )
 	nErrorCode = m_oQuotPlugin.GetPrimeApi()->ReqFuncData( 101, &nMkID, &tagStatus );
 	if( 1 == nErrorCode )
 	{
-		m_oQuoDataCenter.UpdateMarketTime( XDF_SH, tagStatus.MarketTime );
+		m_oQuoDataCenter.SetMarketTime( XDF_SH, tagStatus.MarketTime );
 	}
 	else
 	{
-		m_oQuoDataCenter.UpdateMarketTime( XDF_SH, DateTime::Now().TimeToLong() );
+		m_oQuoDataCenter.SetMarketTime( XDF_SH, DateTime::Now().TimeToLong() );
 	}
 
 	///< ---------------- 获取上海市场码表数据 ----------------------------------------
@@ -638,11 +638,11 @@ int Quotation::SaveSzLv1_Static_Tick_Day( enum XDFRunStat eStatus, bool bBuild )
 	nErrorCode = m_oQuotPlugin.GetPrimeApi()->ReqFuncData( 101, &nMkID, &tagStatus );
 	if( 1 == nErrorCode )
 	{
-		m_oQuoDataCenter.UpdateMarketTime( XDF_SZ, tagStatus.MarketTime );
+		m_oQuoDataCenter.SetMarketTime( XDF_SZ, tagStatus.MarketTime );
 	}
 	else
 	{
-		m_oQuoDataCenter.UpdateMarketTime( XDF_SZ, DateTime::Now().TimeToLong() );
+		m_oQuoDataCenter.SetMarketTime( XDF_SZ, DateTime::Now().TimeToLong() );
 	}
 
 	///< ---------------- 获取深圳市场码表数据 ----------------------------------------
@@ -1685,6 +1685,7 @@ bool __stdcall	Quotation::XDF_OnRspStatusChanged( unsigned char cMarket, int nSt
 	if( true == bNormalStatus )
 	{
 		m_vctMkSvrStatus[cMarket] = ET_SS_INITIALIZING;			///< 设置“初始中”状态标识
+		m_oQuoDataCenter.SetMarketTime( XDF_SH, 0 );
 
 		switch( (enum XDFMarket)cMarket )
 		{
