@@ -191,6 +191,8 @@ QuotationData::~QuotationData()
 
 int QuotationData::Initialize( void* pQuotation )
 {
+	QuoCollector::GetCollector()->OnLog( TLV_INFO, "QuotationData::Initialize() : enter ......................" );
+
 	int					nErrorCode = 0;
 	CriticalLock		section( m_oMinuteLock );
 
@@ -258,8 +260,15 @@ bool QuotationData::StopThreads()
 	return true;
 }
 
+void QuotationData::ClearAllMkTime()
+{
+	::memset( m_lstMkTime, 0, sizeof(m_lstMkTime) );
+}
+
 void QuotationData::Release()
 {
+	QuoCollector::GetCollector()->OnLog( TLV_INFO, "QuotationData::Release() : enter ......................" );
+
 	m_mapModuleStatus.clear();
 	m_mapSHL1.clear();
 	m_mapSHOPT.clear();

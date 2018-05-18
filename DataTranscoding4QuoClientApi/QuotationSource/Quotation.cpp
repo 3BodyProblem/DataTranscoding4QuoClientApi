@@ -91,12 +91,15 @@ WorkStatus& Quotation::GetWorkStatus()
 
 int Quotation::Initialize()
 {
+	QuoCollector::GetCollector()->OnLog( TLV_INFO, "Quotation::Initialize() : Enter .................." );
+	m_oQuoDataCenter.ClearAllMkTime();
+
 	if( GetWorkStatus() == ET_SS_UNACTIVE )
 	{
 		unsigned int				nSec = 0;
 		int							nErrCode = 0;
 
-		QuoCollector::GetCollector()->OnLog( TLV_INFO, "Quotation::Initialize() : ............ [%s] Quotation Is Activating............" );
+		QuoCollector::GetCollector()->OnLog( TLV_INFO, "Quotation::Initialize() : ............ Quotation Is Activating............" );
 
 		if( (nErrCode = m_oQuoDataCenter.Initialize( this )) < 0 )
 		{
@@ -278,14 +281,14 @@ int Quotation::SaveShLv1_Static_Tick_Day( enum XDFRunStat eStatus, bool bBuild )
 		m += sizeof(XDFAPI_MsgHead) + pMsgHead->MsgLen;
 	}
 
-	char						nMkID = XDF_SH;
+/*	char						nMkID = XDF_SH;
 	XDFAPI_MarketStatusInfo		tagStatus = { 0 };
 	nErrorCode = m_oQuotPlugin.GetPrimeApi()->ReqFuncData( 101, &nMkID, &tagStatus );
 	if( 1 == nErrorCode )
 	{
 		m_oQuoDataCenter.SetMarketTime( XDF_SH, tagStatus.MarketTime );
 	}
-	else
+	else*/
 	{
 		m_oQuoDataCenter.SetMarketTime( XDF_SH, DateTime::Now().TimeToLong() );
 	}
@@ -632,7 +635,7 @@ int Quotation::SaveSzLv1_Static_Tick_Day( enum XDFRunStat eStatus, bool bBuild )
 
 		m += sizeof(XDFAPI_MsgHead) + pMsgHead->MsgLen;
 	}
-
+/*
 	char						nMkID = XDF_SZ;
 	XDFAPI_MarketStatusInfo		tagStatus = { 0 };
 	nErrorCode = m_oQuotPlugin.GetPrimeApi()->ReqFuncData( 101, &nMkID, &tagStatus );
@@ -640,7 +643,7 @@ int Quotation::SaveSzLv1_Static_Tick_Day( enum XDFRunStat eStatus, bool bBuild )
 	{
 		m_oQuoDataCenter.SetMarketTime( XDF_SZ, tagStatus.MarketTime );
 	}
-	else
+	else*/
 	{
 		m_oQuoDataCenter.SetMarketTime( XDF_SZ, DateTime::Now().TimeToLong() );
 	}
@@ -1685,7 +1688,7 @@ bool __stdcall	Quotation::XDF_OnRspStatusChanged( unsigned char cMarket, int nSt
 	if( true == bNormalStatus )
 	{
 		m_vctMkSvrStatus[cMarket] = ET_SS_INITIALIZING;			///< 设置“初始中”状态标识
-		m_oQuoDataCenter.SetMarketTime( XDF_SH, 0 );
+		m_oQuoDataCenter.SetMarketTime( (enum XDFMarket)cMarket, 0 );
 
 		switch( (enum XDFMarket)cMarket )
 		{

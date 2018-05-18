@@ -241,6 +241,11 @@ public:
 	 */
 	bool						StopThreads();
 
+	/**
+	 * @brief					清理所有市场时间
+	 */
+	void						ClearAllMkTime();
+
 public:
 	/**
 	 * @brief					设置新市场时间
