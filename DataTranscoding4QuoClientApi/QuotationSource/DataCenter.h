@@ -138,11 +138,36 @@ typedef struct
 #pragma pack()
 
 
+/**
+ * @class						MinuteGenerator
+ * @brief						分钟线生产器
+ * @author						barry
+ */
+class MinuteGenerator
+{
+public:
+	MinuteGenerator();
+
+	operator T_LINE_PARAM&();
+	void						SetCode( enum XDFMarket eMarket, const char* pszCode );
+	MinuteGenerator&			operator=( T_LINE_PARAM& refBasicParam );
+	void						Dispatch( enum XDFMarket eMarket, std::string& sCode, unsigned int nMkDate, unsigned int nMkTime );
+
+	void						Update( const XDFAPI_StockData5& refObj, unsigned int nDate, unsigned int nTime );
+	void						Update( const XDFAPI_IndexData& refObj, unsigned int nDate, unsigned int nTime );
+
+protected:
+	enum XDFMarket				m_eMarket;				///< 市场编号
+	char						m_pszCode[20];			///< 商品代码
+	T_LINE_PARAM				m_tagBasicParam;		///< 基础分钟线生成的基础信息
+};
+
+
 typedef MLoopBufferSt<T_TICK_LINE>						T_TICKLINE_CACHE;			///< Tick线循环队列缓存
 typedef MLoopBufferSt<T_MIN_LINE>						T_MINLINE_CACHE;			///< 分钟线循环队列缓存
 typedef	std::map<enum XDFMarket,int>					TMAP_MKID2STATUS;			///< 各市场模块状态
 const	unsigned int									MAX_WRITER_NUM = 128;		///< 最大落盘文件句柄
-typedef std::map<std::string,T_LINE_PARAM>				T_MAP_QUO;					///< 行情数据缓存
+typedef std::map<std::string,MinuteGenerator>			T_MAP_GEN_MLINES;			///< 分钟线生成器Map
 extern unsigned int										s_nNumberInSection;			///< 一个市场有可以缓存多少个数据块(可配)
 
 
@@ -286,14 +311,9 @@ public:
 	int							UpdatePreName( enum XDFMarket eMarket, std::string& sCode, char* pszPreName, unsigned int nSize );
 
 	/**
-	 * @brief					更新前缀
-	 * @param[in]				eMarket			市场ID
-	 * @param[in]				sCode			商品代码
-	 * @param[in]				refParam		分钟线计算参数
-	 * @param[in]				nMkDate			市场日期
-	 * @param[in]				nMkTime			市场时间
+	 * @brief					获取分钟线写文件缓存队列
 	 */
-	void						DispatchMinuteLine( enum XDFMarket eMarket, std::string& sCode, T_LINE_PARAM& refParam, unsigned int nMkDate, unsigned int nMkTime );
+	static T_MINLINE_CACHE&		GetMinuteCacheObj();
 
 	/**
 	 * @brief					更新日线信息
@@ -322,21 +342,21 @@ protected:
 	CriticalObject				m_oLock;						///< 临界区对象
 	void*						m_pQuotation;					///< 行情对象
 protected:
-	T_MAP_QUO					m_mapSHL1;						///< 上证L1
-	T_MAP_QUO					m_mapSHOPT;						///< 上证期权
-	T_MAP_QUO					m_mapSZL1;						///< 深证L1
-	T_MAP_QUO					m_mapSZOPT;						///< 深证期权
-	T_MAP_QUO					m_mapCFF;						///< 中金期货
-	T_MAP_QUO					m_mapCFFOPT;					///< 中金期权
-	T_MAP_QUO					m_mapCNF;						///< 商品期货(上海/郑州/大连)
-	T_MAP_QUO					m_mapCNFOPT;					///< 商品期权(上海/郑州/大连)
+	CriticalObject				m_oLockSHL1;					///< 上证L1锁
+	T_MAP_GEN_MLINES			m_mapSHL1;						///< 上证L1
+	T_MAP_GEN_MLINES			m_mapSHOPT;						///< 上证期权
+	CriticalObject				m_oLockSZL1;					///< 深证L1锁
+	T_MAP_GEN_MLINES			m_mapSZL1;						///< 深证L1
+	T_MAP_GEN_MLINES			m_mapSZOPT;						///< 深证期权
+	T_MAP_GEN_MLINES			m_mapCFF;						///< 中金期货
+	T_MAP_GEN_MLINES			m_mapCFFOPT;					///< 中金期权
+	T_MAP_GEN_MLINES			m_mapCNF;						///< 商品期货(上海/郑州/大连)
+	T_MAP_GEN_MLINES			m_mapCNFOPT;					///< 商品期权(上海/郑州/大连)
 	T_TICKLINE_CACHE			m_arrayTickLine;				///< 全市场tick缓存
 	unsigned int				m_lstMkTime[64];				///< 各市场的市场时间
 protected:
 	unsigned int				m_nMaxMLineBufSize;				///< 分钟线缓存长度
 	char*						m_pBuf4MinuteLine;				///< 分钟线缓存地址
-	T_MINLINE_CACHE				m_arrayMinuteLine;				///< 分钟线缓存管理对象
-	CriticalObject				m_oMinuteLock;					///< 临界区对象
 protected:
 	SimpleThread				m_oThdTickDump;					///< Tick落盘数据
 	SimpleThread				m_oThdMinuteDump;				///< 分钟线落盘数据
