@@ -311,14 +311,13 @@ void MinGenerator::DumpMinutes()
 }
 
 SecurityMinCache::SecurityMinCache()
- : m_nSecurityCount( 0 ), m_pMinDataTable( NULL ), m_nAlloPos( 0 )
+ : m_nSecurityCount( 0 ), m_pMinDataTable( NULL ), m_nAlloPos( 0 ), m_eMarketID( XDF_SZOPT )
 {
 	m_objMapMinutes.clear();
 }
 
 SecurityMinCache::~SecurityMinCache()
 {
-	Release();
 }
 
 int SecurityMinCache::Initialize( unsigned int nSecurityCount )
@@ -343,6 +342,8 @@ void SecurityMinCache::Release()
 {
 	if( NULL != m_pMinDataTable )
 	{
+		CriticalLock			section( m_oLockData );
+
 		delete [] m_pMinDataTable;
 		m_pMinDataTable = NULL;
 		m_objMapMinutes.clear();
@@ -369,6 +370,7 @@ int SecurityMinCache::NewSecurity( enum XDFMarket eMarket, const std::string& sC
 {
 	CriticalLock			section( m_oLockData );
 
+	m_eMarketID = eMarket;
 	if( (m_nAlloPos+1) >= m_nSecurityCount )
 	{
 		QuoCollector::GetCollector()->OnLog( TLV_ERROR, "SecurityMinCache::NewSecurity() : cannot grap any section from buffer ( %u:%u )", m_nAlloPos, m_nSecurityCount );
@@ -440,11 +442,11 @@ int SecurityMinCache::UpdateSecurity( const XDFAPI_StockData5& refObj, unsigned 
 void* SecurityMinCache::DumpThread( void* pSelf )
 {
 	SecurityMinCache&		refData = *(SecurityMinCache*)pSelf;
-	QuoCollector::GetCollector()->OnLog( TLV_INFO, "SecurityMinCache::DumpThread() : enter..................." );
+	QuoCollector::GetCollector()->OnLog( TLV_INFO, "SecurityMinCache::DumpThread() : MarketID = %d, enter...................", (int)(refData.m_eMarketID) );
 
 	while( false == SimpleThread::GetGlobalStopFlag() )
 	{
-		SimpleThread::Sleep( 1000 * 30 );
+		SimpleThread::Sleep( 1000 * 60 * 3 );
 
 		try
 		{
@@ -465,7 +467,7 @@ void* SecurityMinCache::DumpThread( void* pSelf )
 		}
 	}
 
-	QuoCollector::GetCollector()->OnLog( TLV_INFO, "SecurityMinCache::DumpThread() : misson complete!............" );
+	QuoCollector::GetCollector()->OnLog( TLV_INFO, "SecurityMinCache::DumpThread() : MarketID = %d, misson complete!............", (int)(refData.m_eMarketID) );
 
 	return NULL;
 }
@@ -522,7 +524,7 @@ __inline FILE*	PrepareTickFile( char cMkID, const char* pszCode, unsigned int nD
 	return pDumpFile;
 }
 
-const unsigned int		TickGenerator::s_nMaxLineCount = 20 * 10;
+const unsigned int		TickGenerator::s_nMaxLineCount = 20 * 5;
 TickGenerator::TickGenerator()
  : m_nDate( 0 ), m_pDataCache( NULL ), m_dPriceRate( 0 ), m_bCloseFile( true )
  , m_nPreClosePx( 0 ), m_nOpenPx( 0 ), m_pDumpFile( NULL ), m_bHasTitle( false )
@@ -530,8 +532,6 @@ TickGenerator::TickGenerator()
 	::memset( m_pszCode, 0, sizeof(m_pszCode) );
 	::memset( m_pszPreName, 0, sizeof(m_pszPreName) );
 }
-
-static unsigned int nCnt = 0;
 
 TickGenerator::TickGenerator( enum XDFMarket eMkID, unsigned int nDate, const std::string& sCode, double dPriceRate, T_DATA& objData, T_DATA* pBufPtr )
 : m_nPreClosePx( 0 ), m_nOpenPx( 0 ), m_eMarket( eMkID ), m_pDumpFile( NULL ), m_bHasTitle( false )
@@ -544,31 +544,26 @@ TickGenerator::TickGenerator( enum XDFMarket eMkID, unsigned int nDate, const st
 	///< 设置，是否需要长时间打开TICK落盘文件
 	unsigned int	nCode = ::atoi( m_pszCode );
 
-#ifdef _DEBUG
-	if( nCnt >= 500 ) return;
-#endif
-
 	if( XDF_SH == eMkID )
 	{
-		/*if( nCode >= 1 && nCode <= 999 ) {
+		if( nCode >= 1 && nCode <= 999 ) {
 			m_bCloseFile = false;
-		} else */if( nCode >= 600000 && nCode <= 609999 ) {
+		} else if( nCode >= 600000 && nCode <= 609999 ) {
 			m_bCloseFile = false;
-			nCnt++;
+		} else if( nCode >= 510000 && nCode <= 519999 ) {
+			m_bCloseFile = false;
 		}
 	}
 	else if( XDF_SZ == eMkID ) {
-		/*if( nCode >= 399000 && nCode <= 399999 ) {
+		if( nCode >= 399000 && nCode <= 399999 ) {
 			m_bCloseFile = false;
-		} else */if( nCode >= 1 && nCode <= 9999 ) {
+		} else if( nCode >= 1 && nCode <= 9999 ) {
 			m_bCloseFile = false;
-			nCnt++;
 		} else if( nCode >= 300000 && nCode <= 300999 ) {
 			m_bCloseFile = false;
-			nCnt++;
-		}/* else if( nCode >= 159000 && nCode <= 159999 ) {
+		} else if( nCode >= 159000 && nCode <= 159999 ) {
 			m_bCloseFile = false;
-		}*/
+		}
 	}
 
 }
@@ -716,20 +711,22 @@ void TickGenerator::DumpTicks()
 	}
 
 	if( true == m_bCloseFile || DateTime::Now().TimeToLong() > 160000 ) {
-		::fclose( m_pDumpFile );
-		m_pDumpFile = NULL;
+		if( NULL != m_pDumpFile ) {
+			::fclose( m_pDumpFile );
+			m_pDumpFile = NULL;
+		}
 	}
 }
 
 SecurityTickCache::SecurityTickCache()
- : m_nSecurityCount( 0 ), m_pTickDataTable( NULL ), m_nAlloPos( 0 )
+ : m_nSecurityCount( 0 ), m_pTickDataTable( NULL ), m_nAlloPos( 0 ), m_eMarketID( XDF_SZOPT )
 {
+	m_vctCode.clear();
 	m_objMapTicks.clear();
 }
 
 SecurityTickCache::~SecurityTickCache()
 {
-	Release();
 }
 
 int SecurityTickCache::Initialize( unsigned int nSecurityCount )
@@ -746,6 +743,7 @@ int SecurityTickCache::Initialize( unsigned int nSecurityCount )
 	m_nAlloPos = 0;
 	m_nSecurityCount = nTotalCount;
 	::memset( m_pTickDataTable, 0, sizeof(TickGenerator::T_DATA) * nTotalCount );
+	m_vctCode.reserve( nSecurityCount + 32 );
 
 	return 0;
 }
@@ -754,9 +752,12 @@ void SecurityTickCache::Release()
 {
 	if( NULL != m_pTickDataTable )
 	{
+		CriticalLock			section( m_oLockData );
+
 		delete [] m_pTickDataTable;
 		m_pTickDataTable = NULL;
 		m_objMapTicks.clear();
+		m_vctCode.clear();
 		m_oDumpThread.StopThread();
 		m_oDumpThread.Join( 5000 );
 	}
@@ -779,6 +780,7 @@ int SecurityTickCache::NewSecurity( enum XDFMarket eMarket, const std::string& s
 {
 	CriticalLock			section( m_oLockData );
 
+	m_eMarketID = eMarket;
 	if( (m_nAlloPos+1) >= m_nSecurityCount )
 	{
 		QuoCollector::GetCollector()->OnLog( TLV_ERROR, "SecurityTickCache::NewSecurity() : cannot grap any section from buffer ( %u:%u )", m_nAlloPos, m_nSecurityCount );
@@ -799,6 +801,7 @@ int SecurityTickCache::NewSecurity( enum XDFMarket eMarket, const std::string& s
 	}
 
 	m_nAlloPos += TickGenerator::s_nMaxLineCount;
+	m_vctCode.push_back( sCode );
 
 	if( NULL != pszPreName && nPreNamLen > 0 ) {
 		m_objMapTicks[sCode].SetPreName( pszPreName, nPreNamLen );
@@ -898,7 +901,7 @@ int SecurityTickCache::UpdateSecurity( const XDFAPI_StockData5& refObj, unsigned
 void* SecurityTickCache::DumpThread( void* pSelf )
 {
 	SecurityTickCache&		refData = *(SecurityTickCache*)pSelf;
-	QuoCollector::GetCollector()->OnLog( TLV_INFO, "SecurityTickCache::DumpThread() : enter..................." );
+	QuoCollector::GetCollector()->OnLog( TLV_INFO, "SecurityTickCache::DumpThread() : MarketID = %d, enter...................", (int)(refData.m_eMarketID) );
 
 	while( false == SimpleThread::GetGlobalStopFlag() )
 	{
@@ -906,11 +909,16 @@ void* SecurityTickCache::DumpThread( void* pSelf )
 
 		try
 		{
-			for( T_MAP_TICKS::iterator it = refData.m_objMapTicks.begin()
-				; it != refData.m_objMapTicks.end() && false == SimpleThread::GetGlobalStopFlag()
-				; it++ )
+			unsigned int	nCodeNumber = refData.m_vctCode.size();
+
+			for( unsigned int n = 0; n < nCodeNumber && false == SimpleThread::GetGlobalStopFlag(); n++ )
 			{
-				it->second.DumpTicks();
+				CriticalLock			section( refData.m_oLockData );
+				T_MAP_TICKS::iterator	it = refData.m_objMapTicks.find( refData.m_vctCode[n] );
+
+				if( it != refData.m_objMapTicks.end() ) {
+					it->second.DumpTicks();
+				}
 			}
 		}
 		catch( std::exception& err )
@@ -923,7 +931,7 @@ void* SecurityTickCache::DumpThread( void* pSelf )
 		}
 	}
 
-	QuoCollector::GetCollector()->OnLog( TLV_INFO, "SecurityTickCache::DumpThread() : misson complete!............" );
+	QuoCollector::GetCollector()->OnLog( TLV_INFO, "SecurityTickCache::DumpThread() : MarketID = %d, misson complete!............", (int)(refData.m_eMarketID) );
 
 	return NULL;
 }

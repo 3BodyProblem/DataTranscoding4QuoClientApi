@@ -6,6 +6,10 @@ std::string	JoinPath( std::string sPath, std::string sFileName )
 {
 	unsigned int		nSepPos = sPath.length() - 1;
 
+	if( sPath.length() == 0 ) {
+		return sFileName;
+	}
+
 	if( sPath[nSepPos] == '/' || sPath[nSepPos] == '\\' ) {
 		return sPath + sFileName;
 	} else {

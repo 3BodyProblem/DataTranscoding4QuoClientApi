@@ -244,6 +244,7 @@ protected:
 	static void*	__stdcall	DumpThread( void* pSelf );
 
 protected:
+	enum XDFMarket				m_eMarketID;			///< 市场编号
 	SimpleThread				m_oDumpThread;			///< 分钟线落盘数据
 	unsigned int				m_nAlloPos;				///< 缓存已经分配的位置
 	unsigned int				m_nSecurityCount;		///< 商品数量
@@ -414,11 +415,13 @@ protected:
 	static void*	__stdcall	DumpThread( void* pSelf );
 
 protected:
+	enum XDFMarket				m_eMarketID;			///< 市场编号
 	SimpleThread				m_oDumpThread;			///< TICK线落盘数据
 	unsigned int				m_nAlloPos;				///< 缓存已经分配的位置
 	unsigned int				m_nSecurityCount;		///< 商品数量
 	TickGenerator::T_DATA*		m_pTickDataTable;		///< TICK线缓存
 	T_MAP_TICKS					m_objMapTicks;			///< TICK线Map
+	std::vector<std::string>	m_vctCode;				///< CodeInTicks
 	CriticalObject				m_oLockData;			///< TICK线数据锁
 };
 
