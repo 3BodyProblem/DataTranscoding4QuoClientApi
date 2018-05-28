@@ -130,6 +130,9 @@ private:
 	DataCollector				m_oQuotPlugin;			///< 行情插件
 	QuotationData				m_oQuoDataCenter;		///< 行情数据集合
 	WorkStatus					m_oWorkStatus;			///< 工作状态
+private:
+	unsigned int				m_nSHL1MkDate;			///< 上海L1市场日期
+	unsigned int				m_nSZL1MkDate;			///< 上海L1市场日期
 };
 
 

@@ -106,6 +106,14 @@ MinGenerator& MinGenerator::operator=( const MinGenerator& obj )
 	return *this;
 }
 
+int MinGenerator::Initialize()
+{
+	m_nWriteSize = -1;
+	m_nDataSize - 0;
+
+	return 0;
+}
+
 static bool s_bCloseMarket = false;
 
 int MinGenerator::Update( T_DATA& objData )
@@ -350,6 +358,7 @@ void SecurityMinCache::Release()
 	if( NULL != m_pMinDataTable )
 	{
 		m_oDumpThread.StopThread();
+		m_oDumpThread.Join( 6000 );
 
 		CriticalLock			section( m_oLockData );
 
@@ -357,11 +366,11 @@ void SecurityMinCache::Release()
 		m_pMinDataTable = NULL;
 		m_objMapMinutes.clear();
 		m_vctCode.clear();
-		m_oDumpThread.Join( 5000 );
 	}
 
 	m_nAlloPos = 0;
 	m_nSecurityCount = 0;
+	s_bCloseMarket = false;
 }
 
 void SecurityMinCache::ActivateDumper()
@@ -392,6 +401,12 @@ int SecurityMinCache::NewSecurity( enum XDFMarket eMarket, const std::string& sC
 	}
 
 	m_objMapMinutes[sCode] = MinGenerator( eMarket, nDate, sCode, dPriceRate, objData, m_pMinDataTable + m_nAlloPos );
+	if( 0 != m_objMapMinutes[sCode].Initialize() )
+	{
+		QuoCollector::GetCollector()->OnLog( TLV_ERROR, "SecurityMinCache::NewSecurity() : cannot initialize tick generator class 4 code : %s", sCode.c_str() );
+		return -3;
+	}
+
 	m_nAlloPos += 241;
 	m_vctCode.push_back( sCode );
 
@@ -455,7 +470,7 @@ void* SecurityMinCache::DumpThread( void* pSelf )
 
 	while( true == refData.m_oDumpThread.IsAlive() )
 	{
-		SimpleThread::Sleep( 1000 * 60 * 3 );
+		SimpleThread::Sleep( 1000 * 3 );
 
 		try
 		{
@@ -785,14 +800,13 @@ void SecurityTickCache::Release()
 	if( NULL != m_pTickDataTable )
 	{
 		m_oDumpThread.StopThread();
+		m_oDumpThread.Join( 6000 );
 
 		CriticalLock			section( m_oLockData );
-
 		delete [] m_pTickDataTable;
 		m_pTickDataTable = NULL;
 		m_objMapTicks.clear();
 		m_vctCode.clear();
-		m_oDumpThread.Join( 5000 );
 	}
 
 	m_nAlloPos = 0;
@@ -1024,6 +1038,8 @@ void QuotationData::ClearAllMkTime()
 void QuotationData::Release()
 {
 	QuoCollector::GetCollector()->OnLog( TLV_INFO, "QuotationData::Release() : enter ......................" );
+
+	CriticalLock				section( m_oLock );
 
 	m_mapModuleStatus.clear();
 	::memset( m_lstMkTime, 0, sizeof(m_lstMkTime) );

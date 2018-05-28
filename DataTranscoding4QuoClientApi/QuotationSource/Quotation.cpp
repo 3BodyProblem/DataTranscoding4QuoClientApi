@@ -76,6 +76,7 @@ WorkStatus&	WorkStatus::operator= ( enum E_SS_Status eWorkStatus )
 
 
 Quotation::Quotation()
+: m_nSHL1MkDate( 0 ), m_nSZL1MkDate( 0 )
 {
 }
 
@@ -91,13 +92,14 @@ WorkStatus& Quotation::GetWorkStatus()
 
 int Quotation::Initialize()
 {
+	int							nErrCode = 0;
+
 	QuoCollector::GetCollector()->OnLog( TLV_INFO, "Quotation::Initialize() : Enter .................." );
 	m_oQuoDataCenter.ClearAllMkTime();
 
 	if( GetWorkStatus() == ET_SS_UNACTIVE )
 	{
 		unsigned int				nSec = 0;
-		int							nErrCode = 0;
 
 		QuoCollector::GetCollector()->OnLog( TLV_INFO, "Quotation::Initialize() : ............ Quotation Is Activating............" );
 
@@ -114,6 +116,7 @@ int Quotation::Initialize()
 			Release();
 			return -2;
 		}
+	}
 
 		if( (nErrCode = m_oQuotPlugin.RecoverDataCollector()) < 0 )
 		{
@@ -124,20 +127,22 @@ int Quotation::Initialize()
 
 		m_oWorkStatus = ET_SS_WORKING;				///< 更新Quotation会话的状态
 		QuoCollector::GetCollector()->OnLog( TLV_INFO, "Quotation::Initialize() : ............ Quotation Activated!.............." );
-	}
+//	}
 
 	return 0;
 }
 
 void Quotation::Halt()
 {
+	m_oQuotPlugin.HaltDataCollector();
+
 	if( m_oWorkStatus != ET_SS_UNACTIVE )
 	{
 		QuoCollector::GetCollector()->OnLog( TLV_INFO, "Quotation::Halt() : ............ Halting .............." );
 
-///<		m_oWorkStatus = ET_SS_UNACTIVE;			///< 更新Quotation会话的状态
-///<		m_oQuotPlugin.Release();				///< 释放行情源插件
-///<		m_oQuoDataCenter.Release();				///< 释放行情数据资源
+//		m_oWorkStatus = ET_SS_UNACTIVE;			///< 更新Quotation会话的状态
+//		m_oQuotPlugin.Release();				///< 释放行情源插件
+//		m_oQuoDataCenter.Release();				///< 释放行情数据资源
 
 		QuoCollector::GetCollector()->OnLog( TLV_INFO, "Quotation::Halt() : ............ Halted! .............." );
 	}
@@ -153,6 +158,8 @@ int Quotation::Release()
 		m_oWorkStatus = ET_SS_UNACTIVE;			///< 更新Quotation会话的状态
 		m_oQuotPlugin.Release();				///< 释放行情源插件
 		m_oQuoDataCenter.Release();				///< 释放行情数据资源
+		m_nSHL1MkDate = 0;
+		m_nSZL1MkDate = 0;
 
 		QuoCollector::GetCollector()->OnLog( TLV_INFO, "Quotation::Release() : ............ Destroyed! .............." );
 	}
@@ -165,10 +172,16 @@ std::string& Quotation::QuoteApiVersion()
 	return m_oQuotPlugin.GetVersion();
 }
 
+static unsigned int	s_nStaticDate = 0;
 __inline bool	PrepareStaticFile( T_STATIC_LINE& refStaticLine, std::ofstream& oDumper )
 {
-	char	pszFilePath[512] = { 0 };
+	char				pszFilePath[512] = { 0 };
 
+	if( s_nStaticDate == refStaticLine.Date && oDumper.is_open() ) {
+		return true;
+	}
+
+	s_nStaticDate = refStaticLine.Date;
 	switch( refStaticLine.eMarketID )
 	{
 	case XDF_SH:		///< 上海Lv1
@@ -291,16 +304,29 @@ int Quotation::SaveShLv1_Static_Tick_Day( enum XDFRunStat eStatus, bool bBuild )
 		m += sizeof(XDFAPI_MsgHead) + pMsgHead->MsgLen;
 	}
 
+	bool						bNeedSaveStatic = false;
 	char						nMkID = XDF_SH;
 	XDFAPI_MarketStatusInfo		tagStatus = { 0 };
 	nErrorCode = m_oQuotPlugin.GetPrimeApi()->ReqFuncData( 101, &nMkID, &tagStatus );
 	if( 1 == nErrorCode )
 	{
 		m_oQuoDataCenter.SetMarketTime( XDF_SH, tagStatus.MarketTime );
+		ServerStatus::GetStatusObj().UpdateMkTime( XDF_SH, tagStatus.MarketDate, tagStatus.MarketTime );
+
+		if( m_nSHL1MkDate != tagStatus.MarketDate ) {
+			m_nSHL1MkDate = tagStatus.MarketDate;
+			bNeedSaveStatic = true;
+		}
 	}
 	else
 	{
 		m_oQuoDataCenter.SetMarketTime( XDF_SH, DateTime::Now().TimeToLong() );
+		ServerStatus::GetStatusObj().UpdateMkTime( XDF_SH, DateTime::Now().DateToLong(), DateTime::Now().TimeToLong() );
+
+		if( m_nSHL1MkDate != DateTime::Now().DateToLong() ) {
+			m_nSHL1MkDate = DateTime::Now().DateToLong();
+			bNeedSaveStatic = true;
+		}
 	}
 
 	///< ---------------- 获取上海市场码表数据 ----------------------------------------
@@ -309,6 +335,7 @@ int Quotation::SaveShLv1_Static_Tick_Day( enum XDFRunStat eStatus, bool bBuild )
 	{
 		if( true == bBuild )
 		{
+			std::ofstream			oDumper;
 			int		noffset = (sizeof(XDFAPI_NameTableSh) + sizeof(XDFAPI_UniMsgHead)) * nCodeCount;///< 根据商品数量，分配获取快照表需要的缓存
 			char*	pszCodeBuf = new char[noffset];
 
@@ -326,7 +353,6 @@ int Quotation::SaveShLv1_Static_Tick_Day( enum XDFRunStat eStatus, bool bBuild )
 						T_LINE_PARAM			tagParam = { 0 };
 						MinGenerator::T_DATA	tagMinData = { 0 };
 						TickGenerator::T_DATA	tagTickData = { 0 };
-						std::ofstream			oDumper;
 						char					pszLine[1024] = { 0 };
 						T_STATIC_LINE			tagStaticLine = { 0 };
 						XDFAPI_NameTableSh*		pData = (XDFAPI_NameTableSh*)pbuf;
@@ -344,13 +370,15 @@ int Quotation::SaveShLv1_Static_Tick_Day( enum XDFRunStat eStatus, bool bBuild )
 						::memcpy( tagStaticLine.Name, pData->Name, sizeof(pData->Name) );
 						tagStaticLine.LotSize = vctKindInfo[pData->SecKind].LotSize;
 						ServerStatus::GetStatusObj().AnchorSecurity( XDF_SH, tagStaticLine.Code, tagStaticLine.Name );
-						if( true == PrepareStaticFile( tagStaticLine, oDumper ) )
-						{
-							int		nLen = ::sprintf( pszLine, "%u,%s,%s,%d,%d,%d,%d,%d,%d,%d,%d,%s,%s,%c,%c,%.4f\n"
-								, tagStaticLine.Date, tagStaticLine.Code, tagStaticLine.Name, tagStaticLine.LotSize, tagStaticLine.ContractMult, tagStaticLine.ContractUnit
-								, tagStaticLine.StartDate, tagStaticLine.EndDate, tagStaticLine.XqDate, tagStaticLine.DeliveryDate, tagStaticLine.ExpireDate
-								, tagStaticLine.UnderlyingCode, tagStaticLine.UnderlyingName, tagStaticLine.OptionType, tagStaticLine.CallOrPut, tagStaticLine.ExercisePx );
-							oDumper.write( pszLine, nLen );
+						if( true == bNeedSaveStatic ) {
+							if( true == PrepareStaticFile( tagStaticLine, oDumper ) )
+							{
+								int		nLen = ::sprintf( pszLine, "%u,%s,%s,%d,%d,%d,%d,%d,%d,%d,%d,%s,%s,%c,%c,%.4f\n"
+									, tagStaticLine.Date, tagStaticLine.Code, tagStaticLine.Name, tagStaticLine.LotSize, tagStaticLine.ContractMult, tagStaticLine.ContractUnit
+									, tagStaticLine.StartDate, tagStaticLine.EndDate, tagStaticLine.XqDate, tagStaticLine.DeliveryDate, tagStaticLine.ExpireDate
+									, tagStaticLine.UnderlyingCode, tagStaticLine.UnderlyingName, tagStaticLine.OptionType, tagStaticLine.CallOrPut, tagStaticLine.ExercisePx );
+								oDumper.write( pszLine, nLen );
+							}
 						}
 
 						pbuf += sizeof(XDFAPI_NameTableSh);
@@ -486,16 +514,29 @@ int Quotation::SaveSzLv1_Static_Tick_Day( enum XDFRunStat eStatus, bool bBuild )
 		m += sizeof(XDFAPI_MsgHead) + pMsgHead->MsgLen;
 	}
 
+	bool						bNeedSaveStatic = false;
 	char						nMkID = XDF_SZ;
 	XDFAPI_MarketStatusInfo		tagStatus = { 0 };
 	nErrorCode = m_oQuotPlugin.GetPrimeApi()->ReqFuncData( 101, &nMkID, &tagStatus );
 	if( 1 == nErrorCode )
 	{
 		m_oQuoDataCenter.SetMarketTime( XDF_SZ, tagStatus.MarketTime );
+		ServerStatus::GetStatusObj().UpdateMkTime( XDF_SZ, tagStatus.MarketDate, tagStatus.MarketTime );
+
+		if( m_nSHL1MkDate != tagStatus.MarketDate ) {
+			m_nSHL1MkDate = tagStatus.MarketDate;
+			bNeedSaveStatic = true;
+		}
 	}
 	else
 	{
 		m_oQuoDataCenter.SetMarketTime( XDF_SZ, DateTime::Now().TimeToLong() );
+		ServerStatus::GetStatusObj().UpdateMkTime( XDF_SZ, DateTime::Now().DateToLong(), DateTime::Now().TimeToLong() );
+
+		if( m_nSHL1MkDate != DateTime::Now().DateToLong() ) {
+			m_nSHL1MkDate = DateTime::Now().DateToLong();
+			bNeedSaveStatic = true;
+		}
 	}
 
 	///< ---------------- 获取深圳市场码表数据 ----------------------------------------
@@ -504,6 +545,7 @@ int Quotation::SaveSzLv1_Static_Tick_Day( enum XDFRunStat eStatus, bool bBuild )
 	{
 		if( true == bBuild )
 		{
+			std::ofstream			oDumper;
 			int		noffset = (sizeof(XDFAPI_NameTableSz) + sizeof(XDFAPI_UniMsgHead)) * nCodeCount;///< 根据商品数量，分配获取快照表需要的缓存
 			char*	pszCodeBuf = new char[noffset];
 
@@ -518,7 +560,6 @@ int Quotation::SaveSzLv1_Static_Tick_Day( enum XDFRunStat eStatus, bool bBuild )
 				{
 					if( abs(pMsgHead->MsgType) == 6 )
 					{
-						std::ofstream			oDumper;
 						T_LINE_PARAM			tagParam = { 0 };
 						MinGenerator::T_DATA	tagMinData = { 0 };
 						TickGenerator::T_DATA	tagTickData = { 0 };
@@ -539,13 +580,15 @@ int Quotation::SaveSzLv1_Static_Tick_Day( enum XDFRunStat eStatus, bool bBuild )
 						::memcpy( tagStaticLine.Name, pData->Name, sizeof(pData->Name) );
 						tagStaticLine.LotSize = vctKindInfo[pData->SecKind].LotSize;
 						ServerStatus::GetStatusObj().AnchorSecurity( XDF_SZ, tagStaticLine.Code, tagStaticLine.Name );
-						if( true == PrepareStaticFile( tagStaticLine, oDumper ) )
-						{
-							int		nLen = ::sprintf( pszLine, "%u,%s,%s,%d,%d,%d,%d,%d,%d,%d,%d,%s,%s,%c,%c,%.4f\n"
-								, tagStaticLine.Date, tagStaticLine.Code, tagStaticLine.Name, tagStaticLine.LotSize, tagStaticLine.ContractMult, tagStaticLine.ContractUnit
-								, tagStaticLine.StartDate, tagStaticLine.EndDate, tagStaticLine.XqDate, tagStaticLine.DeliveryDate, tagStaticLine.ExpireDate
-								, tagStaticLine.UnderlyingCode, tagStaticLine.UnderlyingName, tagStaticLine.OptionType, tagStaticLine.CallOrPut, tagStaticLine.ExercisePx );
-							oDumper.write( pszLine, nLen );
+						if( true == bNeedSaveStatic ) {
+							if( true == PrepareStaticFile( tagStaticLine, oDumper ) )
+							{
+								int		nLen = ::sprintf( pszLine, "%u,%s,%s,%d,%d,%d,%d,%d,%d,%d,%d,%s,%s,%c,%c,%.4f\n"
+									, tagStaticLine.Date, tagStaticLine.Code, tagStaticLine.Name, tagStaticLine.LotSize, tagStaticLine.ContractMult, tagStaticLine.ContractUnit
+									, tagStaticLine.StartDate, tagStaticLine.EndDate, tagStaticLine.XqDate, tagStaticLine.DeliveryDate, tagStaticLine.ExpireDate
+									, tagStaticLine.UnderlyingCode, tagStaticLine.UnderlyingName, tagStaticLine.OptionType, tagStaticLine.CallOrPut, tagStaticLine.ExercisePx );
+								oDumper.write( pszLine, nLen );
+							}
 						}
 
 						pbuf += sizeof(XDFAPI_NameTableSz);
@@ -688,6 +731,7 @@ bool __stdcall	Quotation::XDF_OnRspStatusChanged( unsigned char cMarket, int nSt
 	///< 加载各市场基础信息
 	if( true == bNormalStatus )
 	{
+		s_nStaticDate = 0;
 		m_vctMkSvrStatus[cMarket] = ET_SS_INITIALIZING;			///< 设置“初始中”状态标识
 		m_oQuoDataCenter.SetMarketTime( (enum XDFMarket)cMarket, 0 );
 

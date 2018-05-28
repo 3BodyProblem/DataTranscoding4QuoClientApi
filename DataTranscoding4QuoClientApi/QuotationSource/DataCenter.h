@@ -164,6 +164,12 @@ public:
 	MinGenerator&				operator=( const MinGenerator& obj );
 
 	/**
+	 * @brief					初始化
+	 * @return					0						成功
+	 */
+	int							Initialize();
+
+	/**
 	 * @brief					将行情中的每分钟的第一笔快照，更新到对应的241条分钟线数据槽中
 	 * @param[in]				objData					行情快照
 	 * @return					0						成功
