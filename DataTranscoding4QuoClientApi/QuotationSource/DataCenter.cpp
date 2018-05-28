@@ -666,7 +666,7 @@ void TickGenerator::DumpTicks()
 	}
 
 	///< 对需要进行closefile的低交易频率的商品，在缓存使用超过30%时,才进行落盘  (注，午盘休息时间段除外)
-	if( true == m_bCloseFile && nPercentage < 20 && (m_nMkTime < 113010||m_nMkTime > 125010) ) {
+	if( true == m_bCloseFile && nPercentage <= 16 && ( (m_nMkTime>=93999&&m_nMkTime<113010)|| m_nMkTime>125010 ) ) {
 		return;
 	}
 
