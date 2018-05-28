@@ -173,10 +173,10 @@ enum E_SS_Status QuoCollector::GetCollectorStatus( char* pszStatusDesc, unsigned
 		///< 各市场行情信息,
 		nStrLen += ::sprintf( pszStatusDesc + nStrLen, ",[行情信息]" );
 		if( refSHL1Snap.LastPx > 0 )	{
-			nStrLen += ::sprintf( pszStatusDesc + nStrLen, ",上海L1代码=%s,1缓存=%d%%,名称=%s,现价=%.2f", refSHL1Snap.Code, refSvrStatus.FetchTickBufShL1OccupancyRate(), refSHL1Snap.Name, refSHL1Snap.LastPx );
+			nStrLen += ::sprintf( pszStatusDesc + nStrLen, ",上海L1代码=%s,TICK缓存=%d%%,名称=%s,现价=%.2f", refSHL1Snap.Code, refSvrStatus.FetchTickBufShL1OccupancyRate(), refSHL1Snap.Name, refSHL1Snap.LastPx );
 		}
 		if( refSZL1Snap.LastPx > 0 )	{
-			nStrLen += ::sprintf( pszStatusDesc + nStrLen, ",深圳L1代码=%s,缓存=%d%%,名称=%s,现价=%.2f", refSZL1Snap.Code, refSvrStatus.FetchTickBufSzL1OccupancyRate(), refSZL1Snap.Name, refSZL1Snap.LastPx );
+			nStrLen += ::sprintf( pszStatusDesc + nStrLen, ",深圳L1代码=%s,TICK缓存=%d%%,名称=%s,现价=%.2f", refSZL1Snap.Code, refSvrStatus.FetchTickBufSzL1OccupancyRate(), refSZL1Snap.Name, refSZL1Snap.LastPx );
 		}
 
 		return refStatus;

@@ -263,13 +263,15 @@ int Quotation::SaveShLv1_Static_Tick_Day( enum XDFRunStat eStatus, bool bBuild )
 
 	XDFAPI_MarketKindHead* pKindHead = (XDFAPI_MarketKindHead*)(tempbuf+ sizeof(XDFAPI_MsgHead));
 	QuoCollector::GetCollector()->OnLog( TLV_INFO, "Quotation::SaveShLv1_Static_Tick_Day() : Loading... SHL1 WareCount = %d", pKindHead->WareCount );
-	if( 0 != m_oQuoDataCenter.GetSHL1Cache().Initialize( pKindHead->WareCount ) ) {
-		QuoCollector::GetCollector()->OnLog( TLV_ERROR, "Quotation::SaveShLv1_Static_Tick_Day() : cannot initialize minute lines cache" );
-		return -2;
-	}
-	if( 0 != m_oQuoDataCenter.GetSHL1TickCache().Initialize( pKindHead->WareCount ) ) {
-		QuoCollector::GetCollector()->OnLog( TLV_ERROR, "Quotation::SaveShLv1_Static_Tick_Day() : cannot initialize tick lines cache" );
-		return -2;
+	if( true == bBuild ) {
+		if( 0 != m_oQuoDataCenter.GetSHL1Cache().Initialize( pKindHead->WareCount ) ) {
+			QuoCollector::GetCollector()->OnLog( TLV_ERROR, "Quotation::SaveShLv1_Static_Tick_Day() : cannot initialize minute lines cache" );
+			return -2;
+		}
+		if( 0 != m_oQuoDataCenter.GetSHL1TickCache().Initialize( pKindHead->WareCount ) ) {
+			QuoCollector::GetCollector()->OnLog( TLV_ERROR, "Quotation::SaveShLv1_Static_Tick_Day() : cannot initialize tick lines cache" );
+			return -2;
+		}
 	}
 
 	int m = sizeof(XDFAPI_MsgHead)+sizeof(XDFAPI_MarketKindHead);
@@ -456,13 +458,15 @@ int Quotation::SaveSzLv1_Static_Tick_Day( enum XDFRunStat eStatus, bool bBuild )
 
 	XDFAPI_MarketKindHead* pKindHead = (XDFAPI_MarketKindHead*)(tempbuf+ sizeof(XDFAPI_MsgHead));
 	QuoCollector::GetCollector()->OnLog( TLV_INFO, "Quotation::SaveSzLv1_Static_Tick_Day() : Loading... SZL1 WareCount = %d", pKindHead->WareCount );
-	if( 0 != m_oQuoDataCenter.GetSZL1Cache().Initialize( pKindHead->WareCount ) ) {
-		QuoCollector::GetCollector()->OnLog( TLV_ERROR, "Quotation::SaveSzLv1_Static_Tick_Day() : cannot initialize minutes lines cache." );
-		return -2;
-	}
-	if( 0 != m_oQuoDataCenter.GetSZL1TickCache().Initialize( pKindHead->WareCount ) ) {
-		QuoCollector::GetCollector()->OnLog( TLV_ERROR, "Quotation::SaveSzLv1_Static_Tick_Day() : cannot initialize tick lines cache" );
-		return -2;
+	if( true == bBuild ) {
+		if( 0 != m_oQuoDataCenter.GetSZL1Cache().Initialize( pKindHead->WareCount ) ) {
+			QuoCollector::GetCollector()->OnLog( TLV_ERROR, "Quotation::SaveSzLv1_Static_Tick_Day() : cannot initialize minutes lines cache." );
+			return -2;
+		}
+		if( 0 != m_oQuoDataCenter.GetSZL1TickCache().Initialize( pKindHead->WareCount ) ) {
+			QuoCollector::GetCollector()->OnLog( TLV_ERROR, "Quotation::SaveSzLv1_Static_Tick_Day() : cannot initialize tick lines cache" );
+			return -2;
+		}
 	}
 
 	int m = sizeof(XDFAPI_MsgHead)+sizeof(XDFAPI_MarketKindHead);

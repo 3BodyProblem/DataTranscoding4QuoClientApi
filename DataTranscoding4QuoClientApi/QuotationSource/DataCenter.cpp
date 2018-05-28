@@ -199,6 +199,11 @@ int MinGenerator::Update( T_DATA& objData )
 
 void MinGenerator::DumpMinutes()
 {
+	if( NULL == m_pDataCache ) {
+		QuoCollector::GetCollector()->OnLog( TLV_ERROR, "MinGenerator::DumpMinutes() : invalid buffer pointer 4 code:%s", m_pszCode );
+		return;
+	}
+
 	std::ofstream			oDumper;						///< 文件句柄
 	unsigned int			nLastLineIndex = 0;				///< 上一笔快照是索引值
 	T_MIN_LINE				tagLastLine = { 0 };			///< 上一笔快照的最后情况
@@ -926,7 +931,7 @@ void* SecurityTickCache::DumpThread( void* pSelf )
 
 			for( unsigned int n = 0; n < nCodeNumber && false == SimpleThread::GetGlobalStopFlag(); n++ )
 			{
-				T_MAP_TICKS::iterator	it = NULL;
+				T_MAP_TICKS::iterator	it;
 
 				{
 					CriticalLock			section( refData.m_oLockData );
