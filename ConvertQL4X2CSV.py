@@ -203,27 +203,48 @@ class Conversion:
         self.__sSourceFolder = sSourceFolder
         self.__sTargetFolder = sTargetFolder
 
-    def Format2CSV():
-        pass
+    def Do( self ):
+        """
+            1. 递归遍历钱龙4x转码机的源目录
+            2. 对找到的合法文件进行格式转换
+            3. 转储转换后的数据到钱育CSV文件目录
+        """
+        ### 先递归遍历数据源目录 ###########################
+        for lstSrcPath in os.walk( self.__sSourceFolder ):
+            sRootFolder = lstSrcPath[0]
+            if "shase" in sRootFolder and "kday" in sRootFolder:              # 上海L1市场(日线)
+                sCSVFolder = os.path.join(self.__sTargetFolder, "SSE/DAY/" )
+                for lstFiles in lstSrcPath[1:]:
+                    for sFile in lstFiles:
+                        self.__Format2CSV( MKID_SHL1, os.path.join(sRootFolder, sFile), os.path.join(sCSVFolder, sFile) )
+            elif "sznse" in sRootFolder and "kday" in sRootFolder:            # 深圳L1市场(日线)
+                pass
 
+    def __Format2CSV( self, nMarketNo, sSrcFile, sDestFile ):
+        print( sSrcFile, sDestFile )
 
 if __name__ == '__main__':
     try:
-        print( r"--------------------- [COMMENCE] ---------------------------" )
+        print( r"--------------------- [COMMENCE] -----------------------" )
         ### 从参数取解析文件路径+参数
-        opts, args = getopt.getopt( sys.argv[1:], "s:d:", ["src=","dest="] )
-        print( opts, args )
+        opts, _ = getopt.getopt( sys.argv[1:], "s:d:", ["src=","dest="] )
+        lstSrcFolder = [value for op, value in opts if op in ( "-s", "--src" )]
+        sSrcFolder = "./QL4X/" if (len(lstSrcFolder) == 0) else lstSrcFolder[0]
+        lstDestFolder = [value for op, value in opts if op in ( "-d", "--dest" )]
+        sDestFolder = "./CSV/" if (len(lstDestFolder) == 0) else lstDestFolder[0]
+        print( r"*** NOTE! Conversion: [{QL4XData}] ---> [{QYCSV}]".format( QL4XData = sSrcFolder, QYCSV = sDestFolder ) )
 
-        lstFilePath = [value for op, value in opts if op in ( "-f", "--file" )]
-        sFilePath = "" if (len(lstFilePath) == 0) else lstFilePath[0]
-        f = open( sFilePath, 'rb' )
-        if None == f:
-            raise Exception( "Failed 2 open data file : {path}".format( path=sFilePath )  )
+        objConversion = Conversion( sSourceFolder = sSrcFolder, sTargetFolder = sDestFolder )
+        objConversion.Do()
+
+        #f = open( sFilePath, 'rb' )
+        #if None == f:
+        #    raise Exception( "Failed 2 open data file : {path}".format( path=sFilePath )  )
 
         ### 开始解析
-        oTargetFileSaver = SHSZL1DayLineSaver( MKID_SHL1, ""  )
-        oRawDataReader = QL4XDataPump( f, True, oTargetFileSaver, "" )
-        oRawDataReader.Pump()
+        #oTargetFileSaver = SHSZL1DayLineSaver( MKID_SHL1, ""  )
+        #oRawDataReader = QL4XDataPump( f, True, oTargetFileSaver, "" )
+        #oRawDataReader.Pump()
 
     except Exception as e:
         print( e )
