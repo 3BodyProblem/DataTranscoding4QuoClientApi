@@ -36,7 +36,8 @@ class SHSZL1DayLineSaver:
 
 class QL4XDataPump:
     """
-        钱龙4x转码机落盘文件读取器，注：支持 日线、1分钟线
+        钱龙4x转码机落盘文件数据解析泵，[***注：仅支持 日线、1分钟线***]
+        补充： 日线、1分钟线 的落盘数据格式是统一的!
     """
     T_DAY_LINE = (ord('y') << 8 * 3) | (ord('a') << 8 * 2) | (ord( 'd' ) << 8) | ord( 'k' )         # 日线类型值
     T_1MIN_LINE = (ord('1') << 8 * 3) | (ord('n') << 8 * 2) | (ord( 'm' ) << 8) | ord( 'k' )        # 1分钟线类型值
@@ -48,8 +49,10 @@ class QL4XDataPump:
     def __init__( self, objFile, bIsIndex, objCallBackInterface, sCode ):
         """
             构造函数
-            objFile     是待加载的文件
-            bIsIndex    是否是指数数据(true是指数)
+            objFile                     是待加载的文件
+            bIsIndex                    是否是指数数据(true是指数)
+            objCallBackInterface        数据转存CSV回调接口
+            sCode                       商品代码字符串
         """
         self.__sCode = sCode                                # 商品代码
         self.__bIsIndex = bIsIndex                          # 是指数类型
@@ -105,7 +108,7 @@ class QL4XDataPump:
 
     def __PumpDataBody( self ):
         """
-            加载数据体结构 && 回调数据内容！  C++结构定义如下：
+            解析 && 遍历数据体结构 && 回调数据内容！  C++原始结构定义如下：
             typedef struct {                //通用Ql时间格式(4字节)
                 unsigned long               Minute  : 6;        //分[0~59]
                 unsigned long               Hour    : 5;        //时[0~23]
