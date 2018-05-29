@@ -13,7 +13,7 @@
 """
 
 
-import struct, getopt, time, sys, os, socket
+import struct, getopt, time, sys, os
 
 
 MKID_SHL1 = 0           ### 上海L1市场编号
@@ -189,11 +189,31 @@ class QL4XDataPump:
             self.__objCallBackInterface.Save2CSV( self.__sCode, nDate, nTime, dOpen, dHigh, dLow, dClose, dAmount, nVolume, nTradeNumber, dVoip )
 
 
+class Conversion:
+    """
+        数据格式转换器
+        钱龙4x转码机数据(指定源数据Input目录) ---> 钱育CSV转码机落盘格式(指定目标数据Output目录)
+    """
+    def __init__( self, sSourceFolder, sTargetFolder ):
+        """
+            构造函数
+            sSourceFolder               钱龙4x转码机输入文件所在根目录
+            sTargetFolder               钱育CSV转码机输出文件所在根目录
+        """
+        self.__sSourceFolder = sSourceFolder
+        self.__sTargetFolder = sTargetFolder
+
+    def Format2CSV():
+        pass
+
+
 if __name__ == '__main__':
     try:
         print( r"--------------------- [COMMENCE] ---------------------------" )
         ### 从参数取解析文件路径+参数
-        opts, args = getopt.getopt( sys.argv[1:], "f:", ["file=",] )
+        opts, args = getopt.getopt( sys.argv[1:], "s:d:", ["src=","dest="] )
+        print( opts, args )
+
         lstFilePath = [value for op, value in opts if op in ( "-f", "--file" )]
         sFilePath = "" if (len(lstFilePath) == 0) else lstFilePath[0]
         f = open( sFilePath, 'rb' )
