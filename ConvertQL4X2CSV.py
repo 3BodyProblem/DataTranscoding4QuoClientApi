@@ -20,14 +20,25 @@ MKID_SHL1 = 0           ### 上海L1市场编号
 MKID_SZL1 = 1           ### 深圳L1市场编号
 
 
-class SHSZL1DayLineSaver:
+class CSVSaver:
+    """
+        CSV文件格式数据转储类
+    """
+    def __init__( self, sFilePath ):
+        """
+            sFilePath   目标CSV文件路径
+        """
+        self.__sFilePath = sFilePath
+
+class SHSZL1DayLineSaver(CSVSaver):
     """
         沪深L1日线数据保存CSV模块
     """
-    def __init__( self, nMarketNo ):
+    def __init__( self, nMarketNo,  sFilePath ):
         """
             nMarketNo   市场编号: 0上海 1深圳
         """
+        CSVSaver.__init__( self, sFilePath )
         self.__nMarketNo = nMarketNo
 
     def Save2CSV( self, sCode, nDate, nTime, dOpen, dHigh, dLow, dClose, dAmount, nVolume, nTradeNumber, dVoip ):
@@ -190,7 +201,7 @@ if __name__ == '__main__':
             raise Exception( "Failed 2 open data file : {path}".format( path=sFilePath )  )
 
         ### 开始解析
-        oTargetFileSaver = SHSZL1DayLineSaver( MKID_SHL1  )
+        oTargetFileSaver = SHSZL1DayLineSaver( MKID_SHL1, ""  )
         oRawDataReader = QL4XDataPump( f, True, oTargetFileSaver, "" )
         oRawDataReader.Pump()
 
