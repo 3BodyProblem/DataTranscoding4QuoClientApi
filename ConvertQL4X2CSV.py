@@ -40,6 +40,10 @@ class QL4XDataPump:
     """
     T_DAY_LINE = (ord('y') << 8 * 3) | (ord('a') << 8 * 2) | (ord( 'd' ) << 8) | ord( 'k' )         # 日线类型值
     T_1MIN_LINE = (ord('1') << 8 * 3) | (ord('n') << 8 * 2) | (ord( 'm' ) << 8) | ord( 'k' )        # 1分钟线类型值
+    FMT_Unpack_STR = r"<IIIHH"                                                                      # 数据头：文件头解析格式串
+    FMT_UnpackTime_STR = r"<I"                                                                      # 数据体：时间头解析格式串
+    FMT_UnpackData_STR = r"<IIIIdQ"                                                                 # 数据体：价格部分解析格式串
+    FMT_UnpackExt_STR = r"<III"                                                                     # 数据体：扩展部分解析格式串
 
     def __init__( self, objFile, bIsIndex, objCallBackInterface, sCode ):
         """
@@ -79,13 +83,12 @@ class QL4XDataPump:
                 unsigned short	usOffset;		//文件内容开始偏移
             } tagQLHisFileHead;
         """
-        sUnpackFmt = r"<IIIHH"
-        bytesQLHisFileHead = self.__fileHandle.read( struct.calcsize(sUnpackFmt) )
+        bytesQLHisFileHead = self.__fileHandle.read( struct.calcsize(QL4XDataPump.FMT_Unpack_STR) )
         if not bytesQLHisFileHead:
             print( "QL4XDataPump::__LoadHeaderOfFile() : cannot read header struct from file" )
             return False
 
-        ulImagic, self.__nDataType, ulFileVer, self.__nBlockSize, __nDataOffset = struct.unpack( sUnpackFmt, bytesQLHisFileHead )
+        ulImagic, self.__nDataType, ulFileVer, self.__nBlockSize, __nDataOffset = struct.unpack( QL4XDataPump.FMT_Unpack_STR, bytesQLHisFileHead )
         if 0x46484c51 != ulImagic:
             print( "QL4XDataPump::__LoadHeaderOfFile() : Invalid Image ID : %x " % ulImagic )
             return False
@@ -133,16 +136,12 @@ class QL4XDataPump:
                 };
             } tagHqFile_HisData;
         """
-        sUnpackTimeFmt = r"<I"
-        sUnpackDataFmt = r"<IIIIdQ"
-        sUnpackExtFmt = r"<III"
-
         while True:
             ### 解析数据体的时间 #################################
-            bytesQLTime = self.__fileHandle.read( struct.calcsize(sUnpackTimeFmt) )
+            bytesQLTime = self.__fileHandle.read( struct.calcsize(QL4XDataPump.FMT_UnpackTime_STR) )
             if not bytesQLTime:
                 return True
-            nObjTime, = struct.unpack( sUnpackTimeFmt, bytesQLTime )
+            nObjTime, = struct.unpack( QL4XDataPump.FMT_UnpackTime_STR, bytesQLTime )
             nYear = nObjTime >> 20
             nMonth = (nObjTime & 0b00000000000011110000000000000000) >> 16
             nDay = (nObjTime &   0b00000000000000001111100000000000) >> 11
@@ -151,12 +150,12 @@ class QL4XDataPump:
             nDate = ((nYear*10000) + (nMonth*100) + nDay);
             nTime = nHour * 10000 + nMinute * 100
             ### 解析数据体行情部分 ###############################
-            bytesQLData = self.__fileHandle.read( struct.calcsize(sUnpackDataFmt) )
+            bytesQLData = self.__fileHandle.read( struct.calcsize(QL4XDataPump.FMT_UnpackData_STR) )
             if not bytesQLData:
                 print( "QL4XDataPump::__LoadHeaderOfFile() : cannot read data struct from file" )
                 return False
 
-            dOpen, dHigh, dLow, dClose, dAmount, nVolume = struct.unpack( sUnpackDataFmt, bytesQLData )
+            dOpen, dHigh, dLow, dClose, dAmount, nVolume = struct.unpack( QL4XDataPump.FMT_UnpackData_STR, bytesQLData )
             dVoip = 0.          # 基金模拟净值
             nTradeNumber = 0    # 今日成交笔数
             dOpen /= 1000.      # 开盘价
@@ -165,12 +164,12 @@ class QL4XDataPump:
             dClose /= 1000.     # 收盘价
             #print( dOpen, dHigh, dLow, dClose, dAmount, nVolume )
             ### 解析股票扩展数据 (成交笔数、模净、流通股本) #########
-            bytesQLExtension = self.__fileHandle.read( struct.calcsize(sUnpackExtFmt) )
+            bytesQLExtension = self.__fileHandle.read( struct.calcsize(QL4XDataPump.FMT_UnpackExt_STR) )
             if not bytesQLExtension:
                 print( "QL4XDataPump::__LoadHeaderOfFile() : cannot read extension struct from file" )
                 return False
             if False == self.__bIsIndex:
-                nTradeNumber, dVoip, _ = struct.unpack( sUnpackExtFmt, bytesQLExtension )
+                nTradeNumber, dVoip, _ = struct.unpack( QL4XDataPump.FMT_UnpackExt_STR, bytesQLExtension )
                 dVoip /= 1000.
             ### 回调数据给数据转存CSV接口 #########################
             self.__objCallBackInterface.Save2CSV( self.__sCode, nDate, nTime, dOpen, dHigh, dLow, dClose, dAmount, nVolume, nTradeNumber, dVoip )
