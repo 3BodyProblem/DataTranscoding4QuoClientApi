@@ -10,7 +10,7 @@
 
 const std::string		g_sVersion = "1.0.1";
 
-
+#include <fstream>
 QuoCollector::QuoCollector()
  : m_pCbDataHandle( NULL )
 {
