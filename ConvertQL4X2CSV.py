@@ -20,6 +20,7 @@ MKID_SHL1 = 0           ### 上海L1市场编号
 MKID_SZL1 = 1           ### 深圳L1市场编号
 
 
+################### 基础功能封装 ##################################
 def JudgeIndexType( nMarketNo, sCode ):
     """
         根据市场编号 和 商品代码判断是否为指数
@@ -76,6 +77,8 @@ class CSVSaver:
         if None != self.__fileHandle:
             self.__fileHandle.write( sRecord )
 
+
+################### CSV 文件转存策略类 ##################################
 class SHSZL1DayLineSaver(CSVSaver):
     """
         沪深L1日线数据保存CSV模块
@@ -93,6 +96,7 @@ class SHSZL1DayLineSaver(CSVSaver):
         self.WriteString( sRecord )
 
 
+################### 钱龙转码机原始文件加类 ################################
 class QL4XFilePump:
     """
         钱龙4x转码机落盘文件数据解析泵，[***注：仅支持 日线、1分钟线***]
@@ -246,6 +250,7 @@ class QL4XFilePump:
             self.__objCallBackInterface.Save2CSV( self.__sCode, nDate, nTime, dOpen, dHigh, dLow, dClose, dAmount, nVolume, nTradeNumber, dVoip )
 
 
+################### 目录递归读取并转换控制类 #############################
 class Conversion:
     """
         数据格式转换器
@@ -330,9 +335,9 @@ class Conversion:
         #print( sSrcFile, sDestFile )
 
 
+
+
 ################# Entrance #############################################################
-
-
 if __name__ == '__main__':
     print( 'usage:  python3 ConvertQL4X2CSV.py --src=/srcroot/ --dest=/destroot/\n\n\n' )
     print( r"--------------------- [COMMENCE] ------------------------" )
