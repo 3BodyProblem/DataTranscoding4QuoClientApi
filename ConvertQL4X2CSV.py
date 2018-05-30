@@ -20,15 +20,61 @@ MKID_SHL1 = 0           ### 上海L1市场编号
 MKID_SZL1 = 1           ### 深圳L1市场编号
 
 
+def JudgeIndexType( nMarketNo, sCode ):
+    """
+        根据市场编号 和 商品代码判断是否为指数
+        nMarketNo       市场编号
+        sCode           商品代码
+    """
+    bIsIndex = False
+
+    if MKID_SHL1 == nMarketNo:
+        if sCode.find( "000" ) == 0:
+            bIsIndex = True
+    elif  MKID_SZL1 == nMarketNo:
+        if sCode.find( "399" ) == 0:
+            bIsIndex = True
+
+    return bIsIndex
+
+
 class CSVSaver:
     """
         CSV文件格式数据转储类
     """
-    def __init__( self, sFilePath ):
+    def __init__( self, sFilePath, sTitle ):
         """
             sFilePath   目标CSV文件路径
         """
         self.__sFilePath = sFilePath
+        self.__fileHandle = None
+        self.__sTitle = sTitle
+
+    def Open( self ):
+        """
+            打开要写的目标文件(CSV)
+        """
+        if None == self.__fileHandle:
+            if False == os.path.exists( os.path.split(self.__sFilePath)[0] ):
+                os.makedirs( os.path.split(self.__sFilePath)[0] )      # 递归创建目标目录(CSV)
+            self.__fileHandle = open( self.__sFilePath, 'w' )          # 文件句柄
+            if None == self.__fileHandle:
+                raise Exception( "CSVSaver::Open : cannot open destination file : {path}".format( path=self.__sFilePath )  )
+            self.WriteString( self.__sTitle )                          # 写入标题行
+
+    def Close( self ):
+        """
+            关闭目标文件(CSV)
+        """
+        if None != self.__fileHandle:
+            self.__fileHandle.close()
+
+    def WriteString( self, sRecord ):
+        """
+            将csv记录字符串写入文件
+        """
+        if None != self.__fileHandle:
+            self.__fileHandle.write( sRecord )
 
 class SHSZL1DayLineSaver(CSVSaver):
     """
@@ -38,11 +84,13 @@ class SHSZL1DayLineSaver(CSVSaver):
         """
             nMarketNo   市场编号: 0上海 1深圳
         """
-        CSVSaver.__init__( self, sFilePath )
+        CSVSaver.__init__( self, sFilePath, "date,openpx,highpx,lowpx,closepx,settlepx,amount,volume,openinterest,numtrades,voip\n" )
         self.__nMarketNo = nMarketNo
 
     def Save2CSV( self, sCode, nDate, nTime, dOpen, dHigh, dLow, dClose, dAmount, nVolume, nTradeNumber, dVoip ):
-        print( nDate, nTime, dOpen, dHigh, dLow, dClose, dAmount, nVolume, nTradeNumber, dVoip )
+        self.Open()
+        sRecord = "{date},{openpx:.4f},{highpx:.4f},{lowpx:.4f},{closepx:.4f},0.0000,{amount:.4f},{volume},0,{numtrades},{voip:.4f}\n".format( date = nDate, openpx = dOpen, highpx = dHigh, lowpx = dLow, closepx = dClose, amount = dAmount, volume = nVolume, numtrades = nTradeNumber, voip = dVoip )
+        self.WriteString( sRecord )
 
 
 class QL4XFilePump:
@@ -57,16 +105,17 @@ class QL4XFilePump:
     FMT_UnpackData_STR = r"<IIIIdQ"                                                                 # 数据体：价格部分解析格式串
     FMT_UnpackExt_STR = r"<III"                                                                     # 数据体：扩展部分解析格式串
 
-    def __init__( self, sSrcFile, bIsIndex, objCallBackInterface, sCode ):
+    def __init__( self, nMarketNo, sSrcFile, objCallBackInterface, sCode ):
         """
             构造函数
-            objFile                     是待加载的文件
-            bIsIndex                    是否是指数数据(true是指数)
+            nMarketNo                   市场编号
+            sSrcFile                    待加载的文件的路径
             objCallBackInterface        数据转存CSV回调接口
             sCode                       商品代码字符串
         """
+        self.__nMarketNo = nMarketNo                        # 市场编号
         self.__sCode = sCode                                # 商品代码
-        self.__bIsIndex = bIsIndex                          # 是指数类型
+        self.__bIsIndex = JudgeIndexType( nMarketNo, sCode )# 是指数类型
         self.__nDataType = 0                                # 用以标识是日线、还是分钟线等 ( 0, 代表未赋值 )
         self.__nDataOffset = 0                              # 文件头偏移量
         self.__nBlockSize = 0                               # 每个文件块结构大小
@@ -262,10 +311,12 @@ class Conversion:
             sSrcFile                数据源文件路径
             sDestFile               目标文件路径(CSV)
         """
+        ### 开始转换原始文件数据到CSV文件
         oTargetFileSaver = SHSZL1DayLineSaver( MKID_SHL1, sDestFile  )
-        oRawFilePump = QL4XFilePump( sSrcFile, True, oTargetFileSaver, sCode )
+        oRawFilePump = QL4XFilePump( MKID_SHL1, sSrcFile, oTargetFileSaver, sCode )
         oRawFilePump.Pump()
         oRawFilePump.Close()
+        oTargetFileSaver.Close()
 
     def __Format1MINLine2CSV( self, nMarketNo, sCode, sSrcFile, sDestFile ):
         """
@@ -276,7 +327,6 @@ class Conversion:
             sSrcFile                数据源文件路径
             sDestFile               目标文件基础路径(CSV)
         """
-        pass
         #print( sSrcFile, sDestFile )
 
 
@@ -284,25 +334,23 @@ class Conversion:
 
 
 if __name__ == '__main__':
-    try:
-        print( r"--------------------- [COMMENCE] ------------------------" )
-        opts, _ = getopt.getopt( sys.argv[1:], "s:d:", ["src=","dest="] )
-        lstSrcFolder = [value for op, value in opts if op in ( "-s", "--src" )]
-        lstDestFolder = [value for op, value in opts if op in ( "-d", "--dest" )]
+    print( 'usage:  python3 ConvertQL4X2CSV.py --src=/srcroot/ --dest=/destroot/\n\n\n' )
+    print( r"--------------------- [COMMENCE] ------------------------" )
+    ### 先获取所有的命令行输入
+    opts, _ = getopt.getopt( sys.argv[1:], "s:d:", ["src=","dest="] )
+    lstSrcFolder = [value for op, value in opts if op in ( "-s", "--src" )]
+    lstDestFolder = [value for op, value in opts if op in ( "-d", "--dest" )]
 
-        ### 从参数取解析文件路径+参数
-        sSrcFolder = "./QL4X/" if (len(lstSrcFolder) == 0) else lstSrcFolder[0]     ### 数据源设定
-        sDestFolder = "./CSV/" if (len(lstDestFolder) == 0) else lstDestFolder[0]   ### 目标目录设定
-        print( r"*** NOTE! Conversion: [{QL4XData}] ---> [{QYCSV}]".format( QL4XData = sSrcFolder, QYCSV = sDestFolder ) )
+    ### 再从参数取解析文件路径(I/O)
+    sSrcFolder = "./QL4X/" if (len(lstSrcFolder) == 0) else lstSrcFolder[0]     ### 数据源设定
+    sDestFolder = "./CSV/" if (len(lstDestFolder) == 0) else lstDestFolder[0]   ### 目标目录设定
+    print( r"*** NOTE! Conversion: [{QL4XData}] ---> [{QYCSV}]".format( QL4XData = sSrcFolder, QYCSV = sDestFolder ) )
 
-        ### 开始将源数据转换到目标位置
-        objConversion = Conversion( sSourceFolder = sSrcFolder, sTargetFolder = sDestFolder )
-        objConversion.Do()
+    ### 最后开始将源数据转换到目标位置
+    objConversion = Conversion( sSourceFolder = sSrcFolder, sTargetFolder = sDestFolder )
+    objConversion.Do()
 
-    except Exception as e:
-        print( e )
-    finally:
-        print( r"--------------------- [COMPLETE] ------------------------" )
+    print( r"--------------------- [COMPLETE] ------------------------" )
 
 
 
