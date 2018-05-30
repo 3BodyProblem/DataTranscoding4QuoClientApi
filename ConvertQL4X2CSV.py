@@ -117,6 +117,7 @@ class QL4XFilePump:
             objCallBackInterface        数据转存CSV回调接口
             sCode                       商品代码字符串
         """
+        self.__sSrcFile = sSrcFile                          # 数据原始文件路径
         self.__nMarketNo = nMarketNo                        # 市场编号
         self.__sCode = sCode                                # 商品代码
         self.__bIsIndex = JudgeIndexType( nMarketNo, sCode )# 是指数类型
@@ -160,20 +161,20 @@ class QL4XFilePump:
         """
         bytesQLHisFileHead = self.__fileHandle.read( struct.calcsize(QL4XFilePump.FMT_Unpack_STR) )
         if not bytesQLHisFileHead:
-            print( "QL4XFilePump::__LoadHeaderOfFile() : cannot read header struct from file" )
+            print( "QL4XFilePump::__LoadHeaderOfFile() : cannot read header struct from file : ", self.__sSrcFile )
             return False
 
         ulImagic, self.__nDataType, ulFileVer, self.__nBlockSize, __nDataOffset = struct.unpack( QL4XFilePump.FMT_Unpack_STR, bytesQLHisFileHead )
         if 0x46484c51 != ulImagic:
-            print( "QL4XFilePump::__LoadHeaderOfFile() : Invalid Image ID : %x " % ulImagic )
+            print( "QL4XFilePump::__LoadHeaderOfFile() : Invalid Image ID : %x, File : %s " % (ulImagic, self.__sSrcFile) )
             return False
 
         if 0x640001 != ulFileVer:
-            print( "QL4XFilePump::__LoadHeaderOfFile() : Invalid File Version : %x " % ulFileVer )
+            print( "QL4XFilePump::__LoadHeaderOfFile() : Invalid File Version : %x, File : %s " % (ulFileVer, self.__sSrcFile) )
             return False
 
         if self.__nDataType != QL4XFilePump.T_DAY_LINE and self.__nDataType != QL4XFilePump.T_1MIN_LINE:
-            print( "QL4XFilePump::__LoadHeaderOfFile() : Invalid Data Identifier : %d " % self.__nDataType )
+            print( "QL4XFilePump::__LoadHeaderOfFile() : Invalid Data Identifier : %d, File : %s" % (self.__nDataType, self.__sSrcFile) )
             return False
 
         return True
@@ -227,7 +228,7 @@ class QL4XFilePump:
             ### 解析数据体行情部分 ###############################
             bytesQLData = self.__fileHandle.read( struct.calcsize(QL4XFilePump.FMT_UnpackData_STR) )
             if not bytesQLData:
-                print( "QL4XFilePump::__LoadHeaderOfFile() : cannot read data struct from file" )
+                print( "QL4XFilePump::__LoadHeaderOfFile() : cannot read data struct from file : ", self.__sSrcFile )
                 return False
 
             dOpen, dHigh, dLow, dClose, dAmount, nVolume = struct.unpack( QL4XFilePump.FMT_UnpackData_STR, bytesQLData )
@@ -241,7 +242,7 @@ class QL4XFilePump:
             ### 解析股票扩展数据 (成交笔数、模净、流通股本) #########
             bytesQLExtension = self.__fileHandle.read( struct.calcsize(QL4XFilePump.FMT_UnpackExt_STR) )
             if not bytesQLExtension:
-                print( "QL4XFilePump::__LoadHeaderOfFile() : cannot read extension struct from file" )
+                print( "QL4XFilePump::__LoadHeaderOfFile() : cannot read extension struct from file : ", self.__sSrcFile )
                 return False
             if False == self.__bIsIndex:
                 nTradeNumber, dVoip, _ = struct.unpack( QL4XFilePump.FMT_UnpackExt_STR, bytesQLExtension )
