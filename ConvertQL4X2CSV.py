@@ -45,7 +45,7 @@ class SHSZL1DayLineSaver(CSVSaver):
         print( nDate, nTime, dOpen, dHigh, dLow, dClose, dAmount, nVolume, nTradeNumber, dVoip )
 
 
-class QL4XDataPump:
+class QL4XFilePump:
     """
         钱龙4x转码机落盘文件数据解析泵，[***注：仅支持 日线、1分钟线***]
         补充： 日线、1分钟线 的落盘数据格式是统一的!
@@ -57,7 +57,7 @@ class QL4XDataPump:
     FMT_UnpackData_STR = r"<IIIIdQ"                                                                 # 数据体：价格部分解析格式串
     FMT_UnpackExt_STR = r"<III"                                                                     # 数据体：扩展部分解析格式串
 
-    def __init__( self, objFile, bIsIndex, objCallBackInterface, sCode ):
+    def __init__( self, sSrcFile, bIsIndex, objCallBackInterface, sCode ):
         """
             构造函数
             objFile                     是待加载的文件
@@ -67,11 +67,19 @@ class QL4XDataPump:
         """
         self.__sCode = sCode                                # 商品代码
         self.__bIsIndex = bIsIndex                          # 是指数类型
-        self.__fileHandle = objFile                         # 文件句柄
         self.__nDataType = 0                                # 用以标识是日线、还是分钟线等 ( 0, 代表未赋值 )
         self.__nDataOffset = 0                              # 文件头偏移量
         self.__nBlockSize = 0                               # 每个文件块结构大小
         self.__objCallBackInterface = objCallBackInterface  # 原始数据转存CSV文件的回调接口
+        self.__fileHandle = open( sSrcFile, 'rb' )          # 文件句柄
+        if None == self.__fileHandle:
+            raise Exception( "QL4XFilePump::__init()__ : cannot open source file : {path}".format( path=sSrcFile )  )
+
+    def Close( self ):
+        """
+            释放资源
+        """
+        self.__fileHandle.close()
 
     def Pump( self ):
         """
@@ -81,7 +89,7 @@ class QL4XDataPump:
         if False == self.__LoadHeaderOfFile(): 
             return False
         ### 判断数据类型是否合法 ###############
-        if self.__nDataType != QL4XDataPump.T_DAY_LINE and self.__nDataType != QL4XDataPump.T_1MIN_LINE:
+        if self.__nDataType != QL4XFilePump.T_DAY_LINE and self.__nDataType != QL4XFilePump.T_1MIN_LINE:
             return False
         ### 解析数据体 ########################
         return self.__PumpDataBody()
@@ -97,22 +105,22 @@ class QL4XDataPump:
                 unsigned short	usOffset;		//文件内容开始偏移
             } tagQLHisFileHead;
         """
-        bytesQLHisFileHead = self.__fileHandle.read( struct.calcsize(QL4XDataPump.FMT_Unpack_STR) )
+        bytesQLHisFileHead = self.__fileHandle.read( struct.calcsize(QL4XFilePump.FMT_Unpack_STR) )
         if not bytesQLHisFileHead:
-            print( "QL4XDataPump::__LoadHeaderOfFile() : cannot read header struct from file" )
+            print( "QL4XFilePump::__LoadHeaderOfFile() : cannot read header struct from file" )
             return False
 
-        ulImagic, self.__nDataType, ulFileVer, self.__nBlockSize, __nDataOffset = struct.unpack( QL4XDataPump.FMT_Unpack_STR, bytesQLHisFileHead )
+        ulImagic, self.__nDataType, ulFileVer, self.__nBlockSize, __nDataOffset = struct.unpack( QL4XFilePump.FMT_Unpack_STR, bytesQLHisFileHead )
         if 0x46484c51 != ulImagic:
-            print( "QL4XDataPump::__LoadHeaderOfFile() : Invalid Image ID : %x " % ulImagic )
+            print( "QL4XFilePump::__LoadHeaderOfFile() : Invalid Image ID : %x " % ulImagic )
             return False
 
         if 0x640001 != ulFileVer:
-            print( "QL4XDataPump::__LoadHeaderOfFile() : Invalid File Version : %x " % ulFileVer )
+            print( "QL4XFilePump::__LoadHeaderOfFile() : Invalid File Version : %x " % ulFileVer )
             return False
 
-        if self.__nDataType != QL4XDataPump.T_DAY_LINE and self.__nDataType != QL4XDataPump.T_1MIN_LINE:
-            print( "QL4XDataPump::__LoadHeaderOfFile() : Invalid Data Identifier : %d " % self.__nDataType )
+        if self.__nDataType != QL4XFilePump.T_DAY_LINE and self.__nDataType != QL4XFilePump.T_1MIN_LINE:
+            print( "QL4XFilePump::__LoadHeaderOfFile() : Invalid Data Identifier : %d " % self.__nDataType )
             return False
 
         return True
@@ -152,10 +160,10 @@ class QL4XDataPump:
         """
         while True:
             ### 解析数据体的时间 #################################
-            bytesQLTime = self.__fileHandle.read( struct.calcsize(QL4XDataPump.FMT_UnpackTime_STR) )
+            bytesQLTime = self.__fileHandle.read( struct.calcsize(QL4XFilePump.FMT_UnpackTime_STR) )
             if not bytesQLTime:
                 return True
-            nObjTime, = struct.unpack( QL4XDataPump.FMT_UnpackTime_STR, bytesQLTime )
+            nObjTime, = struct.unpack( QL4XFilePump.FMT_UnpackTime_STR, bytesQLTime )
             nYear = nObjTime >> 20
             nMonth = (nObjTime & 0b00000000000011110000000000000000) >> 16
             nDay = (nObjTime &   0b00000000000000001111100000000000) >> 11
@@ -164,12 +172,12 @@ class QL4XDataPump:
             nDate = ((nYear*10000) + (nMonth*100) + nDay);
             nTime = nHour * 10000 + nMinute * 100
             ### 解析数据体行情部分 ###############################
-            bytesQLData = self.__fileHandle.read( struct.calcsize(QL4XDataPump.FMT_UnpackData_STR) )
+            bytesQLData = self.__fileHandle.read( struct.calcsize(QL4XFilePump.FMT_UnpackData_STR) )
             if not bytesQLData:
-                print( "QL4XDataPump::__LoadHeaderOfFile() : cannot read data struct from file" )
+                print( "QL4XFilePump::__LoadHeaderOfFile() : cannot read data struct from file" )
                 return False
 
-            dOpen, dHigh, dLow, dClose, dAmount, nVolume = struct.unpack( QL4XDataPump.FMT_UnpackData_STR, bytesQLData )
+            dOpen, dHigh, dLow, dClose, dAmount, nVolume = struct.unpack( QL4XFilePump.FMT_UnpackData_STR, bytesQLData )
             dVoip = 0.          # 基金模拟净值
             nTradeNumber = 0    # 今日成交笔数
             dOpen /= 1000.      # 开盘价
@@ -178,12 +186,12 @@ class QL4XDataPump:
             dClose /= 1000.     # 收盘价
             #print( dOpen, dHigh, dLow, dClose, dAmount, nVolume )
             ### 解析股票扩展数据 (成交笔数、模净、流通股本) #########
-            bytesQLExtension = self.__fileHandle.read( struct.calcsize(QL4XDataPump.FMT_UnpackExt_STR) )
+            bytesQLExtension = self.__fileHandle.read( struct.calcsize(QL4XFilePump.FMT_UnpackExt_STR) )
             if not bytesQLExtension:
-                print( "QL4XDataPump::__LoadHeaderOfFile() : cannot read extension struct from file" )
+                print( "QL4XFilePump::__LoadHeaderOfFile() : cannot read extension struct from file" )
                 return False
             if False == self.__bIsIndex:
-                nTradeNumber, dVoip, _ = struct.unpack( QL4XDataPump.FMT_UnpackExt_STR, bytesQLExtension )
+                nTradeNumber, dVoip, _ = struct.unpack( QL4XFilePump.FMT_UnpackExt_STR, bytesQLExtension )
                 dVoip /= 1000.
             ### 回调数据给数据转存CSV接口 #########################
             self.__objCallBackInterface.Save2CSV( self.__sCode, nDate, nTime, dOpen, dHigh, dLow, dClose, dAmount, nVolume, nTradeNumber, dVoip )
@@ -228,7 +236,7 @@ class Conversion:
                         sMainFileName, sExtName = os.path.splitext( sTmpFileName )
                         sMainFileName = "DAY" + sMainFileName + ".csv"
                         self.__FormatDAYLine2CSV( MKID_SZL1, os.path.join(sRootFolder, sFile), os.path.join(sCSVFolder, sMainFileName) )
-            elif "shase" in sRootFolder and "kmn1" in sRootFolder:              # 上海L1市场(1分钟线)
+            elif "shase" in sRootFolder and "kmn1" in sRootFolder:            # 上海L1市场(1分钟线)
                 sCSVFolder = os.path.join(self.__sTargetFolder, "SSE/MIN/" )
                 for lstFiles in lstSrcPath[1:]:
                     for sFile in lstFiles:
@@ -254,8 +262,10 @@ class Conversion:
             sSrcFile                数据源文件路径
             sDestFile               目标文件路径(CSV)
         """
-        pass
-        #print( sSrcFile, sDestFile )
+        oTargetFileSaver = SHSZL1DayLineSaver( MKID_SHL1, sDestFile  )
+        oRawFilePump = QL4XFilePump( sSrcFile, True, oTargetFileSaver, "" )
+        oRawFilePump.Pump()
+        oRawFilePump.Close()
 
     def __Format1MINLine2CSV( self, nMarketNo, sSrcFile, sDestFile ):
         """
@@ -269,33 +279,30 @@ class Conversion:
         pass
         #print( sSrcFile, sDestFile )
 
+
+################# Entrance #############################################################
+
+
 if __name__ == '__main__':
     try:
-        print( r"--------------------- [COMMENCE] -----------------------" )
-        ### 从参数取解析文件路径+参数
+        print( r"--------------------- [COMMENCE] ------------------------" )
         opts, _ = getopt.getopt( sys.argv[1:], "s:d:", ["src=","dest="] )
         lstSrcFolder = [value for op, value in opts if op in ( "-s", "--src" )]
-        sSrcFolder = "./QL4X/" if (len(lstSrcFolder) == 0) else lstSrcFolder[0]
         lstDestFolder = [value for op, value in opts if op in ( "-d", "--dest" )]
-        sDestFolder = "./CSV/" if (len(lstDestFolder) == 0) else lstDestFolder[0]
+
+        ### 从参数取解析文件路径+参数
+        sSrcFolder = "./QL4X/" if (len(lstSrcFolder) == 0) else lstSrcFolder[0]     ### 数据源设定
+        sDestFolder = "./CSV/" if (len(lstDestFolder) == 0) else lstDestFolder[0]   ### 目标目录设定
         print( r"*** NOTE! Conversion: [{QL4XData}] ---> [{QYCSV}]".format( QL4XData = sSrcFolder, QYCSV = sDestFolder ) )
 
+        ### 开始将源数据转换到目标位置
         objConversion = Conversion( sSourceFolder = sSrcFolder, sTargetFolder = sDestFolder )
         objConversion.Do()
-
-        #f = open( sFilePath, 'rb' )
-        #if None == f:
-        #    raise Exception( "Failed 2 open data file : {path}".format( path=sFilePath )  )
-
-        ### 开始解析
-        #oTargetFileSaver = SHSZL1DayLineSaver( MKID_SHL1, ""  )
-        #oRawDataReader = QL4XDataPump( f, True, oTargetFileSaver, "" )
-        #oRawDataReader.Pump()
 
     except Exception as e:
         print( e )
     finally:
-        print( r"--------------------- [DONE] ---------------------------" )
+        print( r"--------------------- [COMPLETE] ------------------------" )
 
 
 
