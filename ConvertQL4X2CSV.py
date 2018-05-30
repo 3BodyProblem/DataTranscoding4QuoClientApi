@@ -2,14 +2,19 @@
 """
 	@summary:
 		钱龙4x转码机落盘文件转钱育转码机的CSV落盘文件格式
+
 	@version:
 		1.0.1
+
 	@date:
 		2018/5/28
+
     @enviroment:
         需要使用 python3.x 以上的版本, 无需安装其他组件
+
 	@usage:
-		python3 ConvertQL4XData2CSV.py -f 000001.d01
+		python3 ConvertQL4X2CSV.py --src=/srcroot/ --dest=/destroot/
+
 """
 
 
@@ -47,7 +52,7 @@ class CSVSaver:
         """
             sFilePath   目标CSV文件路径
         """
-        self.__sFilePath = sFilePath
+        self.FilePath = sFilePath
         self.__fileHandle = None
         self.__sTitle = sTitle
 
@@ -56,11 +61,11 @@ class CSVSaver:
             打开要写的目标文件(CSV)
         """
         if None == self.__fileHandle:
-            if False == os.path.exists( os.path.split(self.__sFilePath)[0] ):
-                os.makedirs( os.path.split(self.__sFilePath)[0] )      # 递归创建目标目录(CSV)
-            self.__fileHandle = open( self.__sFilePath, 'w' )          # 文件句柄
+            if False == os.path.exists( os.path.split(self.FilePath)[0] ):
+                os.makedirs( os.path.split(self.FilePath)[0] )      # 递归创建目标目录(CSV)
+            self.__fileHandle = open( self.FilePath, 'w' )          # 文件句柄
             if None == self.__fileHandle:
-                raise Exception( "CSVSaver::Open : cannot open destination file : {path}".format( path=self.__sFilePath )  )
+                raise Exception( "CSVSaver::Open : cannot open destination file : {path}".format( path=self.FilePath )  )
             self.WriteString( self.__sTitle )                          # 写入标题行
 
     def Close( self ):
@@ -69,6 +74,7 @@ class CSVSaver:
         """
         if None != self.__fileHandle:
             self.__fileHandle.close()
+            self.__fileHandle = None
 
     def WriteString( self, sRecord ):
         """
@@ -91,8 +97,39 @@ class SHSZL1DayLineSaver(CSVSaver):
         self.__nMarketNo = nMarketNo
 
     def Save2CSV( self, sCode, nDate, nTime, dOpen, dHigh, dLow, dClose, dAmount, nVolume, nTradeNumber, dVoip ):
+        """
+            日线数据回调，不管属于哪一个年份，每一条日线都追加到同一个文件后
+        """
         self.Open()
         sRecord = "{date},{openpx:.4f},{highpx:.4f},{lowpx:.4f},{closepx:.4f},0.0000,{amount:.4f},{volume},0,{numtrades},{voip:.4f}\n".format( date = nDate, openpx = dOpen, highpx = dHigh, lowpx = dLow, closepx = dClose, amount = dAmount, volume = nVolume, numtrades = nTradeNumber, voip = dVoip )
+        self.WriteString( sRecord )
+
+
+class SHSZL1Minute1LineSaver(CSVSaver):
+    """
+        沪深L1的1分钟线数据保存CSV模块
+    """
+    def __init__( self, nMarketNo,  sFilePath ):
+        """
+            nMarketNo   市场编号: 0上海 1深圳
+        """
+        CSVSaver.__init__( self, "", "date,time,openpx,highpx,lowpx,closepx,settlepx,amount,volume,openinterest,numtrades,voip\n" )
+        self.__nMarketNo = nMarketNo
+        self.__nLastYear = 0
+        self.__sFileBasePath = sFilePath
+
+    def Save2CSV( self, sCode, nDate, nTime, dOpen, dHigh, dLow, dClose, dAmount, nVolume, nTradeNumber, dVoip ):
+        """
+            一分钟线数据回调（包含一个商品中的所有年份的一分钟线），然后按年份分别保存到不同的CSV文件中
+        """
+        nYear = int(nDate/10000)
+        if self.__nLastYear != nYear:    ### 若最后年份和当前不同，就生成新的目标路径 && 再打开文件
+            self.Close()
+            self.FilePath = self.__sFileBasePath + str(nYear) + ".csv"    ### 重新生成新的目标文件路径(CSV)
+            self.__nLastYear = nYear
+
+        self.Open()
+        sRecord = "{date},{time},{openpx:.4f},{highpx:.4f},{lowpx:.4f},{closepx:.4f},0.0000,{amount:.4f},{volume},0,{numtrades},{voip:.4f}\n".format( date = nDate, time = nTime, openpx = dOpen, highpx = dHigh, lowpx = dLow, closepx = dClose, amount = dAmount, volume = nVolume, numtrades = nTradeNumber, voip = dVoip )
         self.WriteString( sRecord )
 
 
@@ -318,11 +355,12 @@ class Conversion:
             sDestFile               目标文件路径(CSV)
         """
         ### 开始转换原始文件数据到CSV文件
-        oTargetFileSaver = SHSZL1DayLineSaver( MKID_SHL1, sDestFile  )
-        oRawFilePump = QL4XFilePump( MKID_SHL1, sSrcFile, oTargetFileSaver, sCode )
-        oRawFilePump.Pump()
-        oRawFilePump.Close()
-        oTargetFileSaver.Close()
+        if MKID_SHL1 == nMarketNo or MKID_SZL1 == nMarketNo:
+            oTargetFileSaver = SHSZL1DayLineSaver( nMarketNo, sDestFile  )
+            oRawFilePump = QL4XFilePump( nMarketNo, sSrcFile, oTargetFileSaver, sCode )
+            oRawFilePump.Pump()
+            oRawFilePump.Close()
+            oTargetFileSaver.Close()
 
     def __Format1MINLine2CSV( self, nMarketNo, sCode, sSrcFile, sDestFile ):
         """
@@ -333,14 +371,19 @@ class Conversion:
             sSrcFile                数据源文件路径
             sDestFile               目标文件基础路径(CSV)
         """
-        #print( sSrcFile, sDestFile )
+        if MKID_SHL1 == nMarketNo or MKID_SZL1 == nMarketNo:
+            oTargetFileSaver = SHSZL1Minute1LineSaver( nMarketNo, sDestFile  )
+            oRawFilePump = QL4XFilePump( nMarketNo, sSrcFile, oTargetFileSaver, sCode )
+            oRawFilePump.Pump()
+            oRawFilePump.Close()
+            oTargetFileSaver.Close()
 
 
 
 
 ################# Entrance #############################################################
 if __name__ == '__main__':
-    print( 'usage:  python3 ConvertQL4X2CSV.py --src=/srcroot/ --dest=/destroot/\n\n\n' )
+    print( '*** usage:  python3 ConvertQL4X2CSV.py --src=/srcroot/ --dest=/destroot/ ***\n\n\n' )
     print( r"--------------------- [COMMENCE] ------------------------" )
     ### 先获取所有的命令行输入
     opts, _ = getopt.getopt( sys.argv[1:], "s:d:", ["src=","dest="] )
