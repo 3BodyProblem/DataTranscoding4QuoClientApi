@@ -225,37 +225,37 @@ class Conversion:
                 for lstFiles in lstSrcPath[1:]:
                     for sFile in lstFiles:
                         sTmpPath, sTmpFileName = os.path.split( sFile )
-                        sMainFileName, sExtName = os.path.splitext( sTmpFileName )
-                        sMainFileName = "DAY" + sMainFileName + ".csv"
-                        self.__FormatDAYLine2CSV( MKID_SHL1, os.path.join(sRootFolder, sFile), os.path.join(sCSVFolder, sMainFileName) )
+                        sCode, sExtName = os.path.splitext( sTmpFileName )
+                        sMainFileName = "DAY" + sCode + ".csv"
+                        self.__FormatDAYLine2CSV( MKID_SHL1, sCode, os.path.join(sRootFolder, sFile), os.path.join(sCSVFolder, sMainFileName) )
             elif "sznse" in sRootFolder and "kday" in sRootFolder:            # 深圳L1市场(日线)
                 sCSVFolder = os.path.join(self.__sTargetFolder, "SZSE/DAY/" )
                 for lstFiles in lstSrcPath[1:]:
                     for sFile in lstFiles:
                         sTmpPath, sTmpFileName = os.path.split( sFile )
-                        sMainFileName, sExtName = os.path.splitext( sTmpFileName )
-                        sMainFileName = "DAY" + sMainFileName + ".csv"
-                        self.__FormatDAYLine2CSV( MKID_SZL1, os.path.join(sRootFolder, sFile), os.path.join(sCSVFolder, sMainFileName) )
+                        sCode, sExtName = os.path.splitext( sTmpFileName )
+                        sMainFileName = "DAY" + sCode + ".csv"
+                        self.__FormatDAYLine2CSV( MKID_SZL1, sCode, os.path.join(sRootFolder, sFile), os.path.join(sCSVFolder, sMainFileName) )
             elif "shase" in sRootFolder and "kmn1" in sRootFolder:            # 上海L1市场(1分钟线)
                 sCSVFolder = os.path.join(self.__sTargetFolder, "SSE/MIN/" )
                 for lstFiles in lstSrcPath[1:]:
                     for sFile in lstFiles:
                         sTmpPath, sTmpFileName = os.path.split( sFile )
-                        sMainFileName, sExtName = os.path.splitext( sTmpFileName )
-                        sCSVPath = os.path.join(sCSVFolder, sMainFileName)
-                        sCSVPath = os.path.join(sCSVPath, "MIN" + sMainFileName + "_")
-                        self.__Format1MINLine2CSV( MKID_SHL1, os.path.join(sRootFolder, sFile), sCSVPath )
+                        sCode, sExtName = os.path.splitext( sTmpFileName )
+                        sCSVPath = os.path.join(sCSVFolder, sCode)
+                        sCSVPath = os.path.join(sCSVPath, "MIN" + sCode + "_")
+                        self.__Format1MINLine2CSV( MKID_SHL1, sCode, os.path.join(sRootFolder, sFile), sCSVPath )
             elif "sznse" in sRootFolder and "kmn1" in sRootFolder:            # 深圳L1市场(1分钟线)
                 sCSVFolder = os.path.join(self.__sTargetFolder, "SZSE/MIN/" )
                 for lstFiles in lstSrcPath[1:]:
                     for sFile in lstFiles:
                         sTmpPath, sTmpFileName = os.path.split( sFile )
-                        sMainFileName, sExtName = os.path.splitext( sTmpFileName )
-                        sCSVPath = os.path.join(sCSVFolder, sMainFileName)
-                        sCSVPath = os.path.join(sCSVPath, "MIN" + sMainFileName + "_")
-                        self.__Format1MINLine2CSV( MKID_SZL1, os.path.join(sRootFolder, sFile), sCSVPath )
+                        sCode, sExtName = os.path.splitext( sTmpFileName )
+                        sCSVPath = os.path.join(sCSVFolder, sCode)
+                        sCSVPath = os.path.join(sCSVPath, "MIN" + sCode + "_")
+                        self.__Format1MINLine2CSV( MKID_SZL1, sCode, os.path.join(sRootFolder, sFile), sCSVPath )
 
-    def __FormatDAYLine2CSV( self, nMarketNo, sSrcFile, sDestFile ):
+    def __FormatDAYLine2CSV( self, nMarketNo, sCode, sSrcFile, sDestFile ):
         """
             将每个日线原始文件重新格式化后输出到新的CSV格式的目标目录中
             nMarketNo               市场编号
@@ -263,11 +263,11 @@ class Conversion:
             sDestFile               目标文件路径(CSV)
         """
         oTargetFileSaver = SHSZL1DayLineSaver( MKID_SHL1, sDestFile  )
-        oRawFilePump = QL4XFilePump( sSrcFile, True, oTargetFileSaver, "" )
+        oRawFilePump = QL4XFilePump( sSrcFile, True, oTargetFileSaver, sCode )
         oRawFilePump.Pump()
         oRawFilePump.Close()
 
-    def __Format1MINLine2CSV( self, nMarketNo, sSrcFile, sDestFile ):
+    def __Format1MINLine2CSV( self, nMarketNo, sCode, sSrcFile, sDestFile ):
         """
             将每一个一分钟线源文件数据分派出多个Folder/SZSE/MIN/000001/MIN000001_YYYY.csv
             其中 sDestFile 的形式为 Folder/MARKETSTRING/MIN/CODENUMBER/MINnnnnnn_
