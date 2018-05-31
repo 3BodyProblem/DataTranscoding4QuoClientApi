@@ -170,20 +170,26 @@ class QL4XFilePump:
         """
             释放资源
         """
-        self.__fileHandle.close()
+        if self.__fileHandle != None:
+            self.__fileHandle.close()
 
     def Pump( self ):
         """
             根据文件名的规模，对不同数据结构指定对应的解析函数
         """
-        ### 解析文件头 ########################
-        if False == self.__LoadHeaderOfFile(): 
-            return False
-        ### 判断数据类型是否合法 ###############
-        if self.__nDataType != QL4XFilePump.T_DAY_LINE and self.__nDataType != QL4XFilePump.T_1MIN_LINE:
-            return False
-        ### 解析数据体 ########################
-        return self.__PumpDataBody()
+        try:
+            ### 解析文件头 ########################
+            if False == self.__LoadHeaderOfFile(): 
+                return False
+            ### 判断数据类型是否合法 ###############
+            if self.__nDataType != QL4XFilePump.T_DAY_LINE and self.__nDataType != QL4XFilePump.T_1MIN_LINE:
+                return False
+            ### 解析数据体 ########################
+            return self.__PumpDataBody()
+        except Exception as e:
+            print( "QL4XFilePump::Pump() : an error occur in Pump() : ", e, self.__sSrcFile )
+        finally:
+            self.Close()
 
     def __LoadHeaderOfFile( self ):
         """
