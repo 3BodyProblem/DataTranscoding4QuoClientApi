@@ -100,7 +100,7 @@ class SHSZL1DayLineSaver(CSVSaver):
         """
             日线数据回调，不管属于哪一个年份，每一条日线都追加到同一个文件后
         """
-        if nDate > 1990 && nDate < 2030:
+        if nDate > 19901010 and nDate < 20301010:
             self.Open()
             sRecord = "{date},{openpx:.4f},{highpx:.4f},{lowpx:.4f},{closepx:.4f},0.0000,{amount:.4f},{volume},0,{numtrades},{voip:.4f}\n".format( date = nDate, openpx = dOpen, highpx = dHigh, lowpx = dLow, closepx = dClose, amount = dAmount, volume = nVolume, numtrades = nTradeNumber, voip = dVoip )
             self.WriteString( sRecord )
@@ -123,7 +123,7 @@ class SHSZL1Minute1LineSaver(CSVSaver):
         """
             一分钟线数据回调（包含一个商品中的所有年份的一分钟线），然后按年份分别保存到不同的CSV文件中
         """
-        if nDate < 1990 || nDate > 2030:
+        if nDate < 19901010 or nDate > 20301010:
             return
 
         nYear = int(nDate/10000)
