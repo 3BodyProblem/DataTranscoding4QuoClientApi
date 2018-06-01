@@ -100,9 +100,10 @@ class SHSZL1DayLineSaver(CSVSaver):
         """
             日线数据回调，不管属于哪一个年份，每一条日线都追加到同一个文件后
         """
-        self.Open()
-        sRecord = "{date},{openpx:.4f},{highpx:.4f},{lowpx:.4f},{closepx:.4f},0.0000,{amount:.4f},{volume},0,{numtrades},{voip:.4f}\n".format( date = nDate, openpx = dOpen, highpx = dHigh, lowpx = dLow, closepx = dClose, amount = dAmount, volume = nVolume, numtrades = nTradeNumber, voip = dVoip )
-        self.WriteString( sRecord )
+        if nDate > 1990 && nDate < 2030:
+            self.Open()
+            sRecord = "{date},{openpx:.4f},{highpx:.4f},{lowpx:.4f},{closepx:.4f},0.0000,{amount:.4f},{volume},0,{numtrades},{voip:.4f}\n".format( date = nDate, openpx = dOpen, highpx = dHigh, lowpx = dLow, closepx = dClose, amount = dAmount, volume = nVolume, numtrades = nTradeNumber, voip = dVoip )
+            self.WriteString( sRecord )
 
 
 class SHSZL1Minute1LineSaver(CSVSaver):
@@ -122,6 +123,9 @@ class SHSZL1Minute1LineSaver(CSVSaver):
         """
             一分钟线数据回调（包含一个商品中的所有年份的一分钟线），然后按年份分别保存到不同的CSV文件中
         """
+        if nDate < 1990 || nDate > 2030:
+            return
+
         nYear = int(nDate/10000)
         if self.__nLastYear != nYear:    ### 若最后年份和当前不同，就生成新的目标路径 && 再打开文件
             self.Close()
@@ -324,34 +328,34 @@ class Conversion:
                     for sFile in lstFiles:
                         sTmpPath, sTmpFileName = os.path.split( sFile )
                         sCode, sExtName = os.path.splitext( sTmpFileName )
-                        sMainFileName = "DAY" + sCode + ".csv"
-                        self.__FormatDAYLine2CSV( MKID_SHL1, sCode, os.path.join(sRootFolder, sFile), os.path.join(sCSVFolder, sMainFileName) )
+                        if sCode.isdigit() == True:
+                            self.__FormatDAYLine2CSV( MKID_SHL1, sCode, os.path.join(sRootFolder, sFile), os.path.join(sCSVFolder, "DAY" + sCode + ".csv") )
             elif "sznse" in sRootFolder and "kday" in sRootFolder:            # 深圳L1市场(日线)
                 sCSVFolder = os.path.join(self.__sTargetFolder, "SZSE/DAY/" )
                 for lstFiles in lstSrcPath[1:]:
                     for sFile in lstFiles:
                         sTmpPath, sTmpFileName = os.path.split( sFile )
                         sCode, sExtName = os.path.splitext( sTmpFileName )
-                        sMainFileName = "DAY" + sCode + ".csv"
-                        self.__FormatDAYLine2CSV( MKID_SZL1, sCode, os.path.join(sRootFolder, sFile), os.path.join(sCSVFolder, sMainFileName) )
+                        if sCode.isdigit() == True:
+                            self.__FormatDAYLine2CSV( MKID_SZL1, sCode, os.path.join(sRootFolder, sFile), os.path.join(sCSVFolder, "DAY" + sCode + ".csv") )
             elif "shase" in sRootFolder and "kmn1" in sRootFolder:            # 上海L1市场(1分钟线)
                 sCSVFolder = os.path.join(self.__sTargetFolder, "SSE/MIN/" )
                 for lstFiles in lstSrcPath[1:]:
                     for sFile in lstFiles:
                         sTmpPath, sTmpFileName = os.path.split( sFile )
                         sCode, sExtName = os.path.splitext( sTmpFileName )
-                        sCSVPath = os.path.join(sCSVFolder, sCode)
-                        sCSVPath = os.path.join(sCSVPath, "MIN" + sCode + "_")
-                        self.__Format1MINLine2CSV( MKID_SHL1, sCode, os.path.join(sRootFolder, sFile), sCSVPath )
+                        sCSVPath = os.path.join(os.path.join(sCSVFolder, sCode), "MIN" + sCode + "_")
+                        if sCode.isdigit() == True:
+                            self.__Format1MINLine2CSV( MKID_SHL1, sCode, os.path.join(sRootFolder, sFile), sCSVPath )
             elif "sznse" in sRootFolder and "kmn1" in sRootFolder:            # 深圳L1市场(1分钟线)
                 sCSVFolder = os.path.join(self.__sTargetFolder, "SZSE/MIN/" )
                 for lstFiles in lstSrcPath[1:]:
                     for sFile in lstFiles:
                         sTmpPath, sTmpFileName = os.path.split( sFile )
                         sCode, sExtName = os.path.splitext( sTmpFileName )
-                        sCSVPath = os.path.join(sCSVFolder, sCode)
-                        sCSVPath = os.path.join(sCSVPath, "MIN" + sCode + "_")
-                        self.__Format1MINLine2CSV( MKID_SZL1, sCode, os.path.join(sRootFolder, sFile), sCSVPath )
+                        sCSVPath = os.path.join(os.path.join(sCSVFolder, sCode), "MIN" + sCode + "_")
+                        if sCode.isdigit() == True:
+                            self.__Format1MINLine2CSV( MKID_SZL1, sCode, os.path.join(sRootFolder, sFile), sCSVPath )
 
     def __FormatDAYLine2CSV( self, nMarketNo, sCode, sSrcFile, sDestFile ):
         """
