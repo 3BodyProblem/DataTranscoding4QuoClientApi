@@ -232,9 +232,9 @@ __inline bool	PrepareStaticFile( T_STATIC_LINE& refStaticLine, std::ofstream& oD
 	std::string				sFilePath = JoinPath( Configuration::GetConfig().GetDumpFolder(), pszFilePath );
 	File::CreateDirectoryTree( sFilePath );
 	char	pszFileName[128] = { 0 };
-	::sprintf( pszFileName, "STATIC%u.csv", refStaticLine.Date/10000 );
+	::sprintf( pszFileName, "STATIC%u.csv", refStaticLine.Date );
 	sFilePath += pszFileName;
-	oDumper.open( sFilePath.c_str() , std::ios::out|std::ios::app );
+	oDumper.open( sFilePath.c_str() , std::ios::out );
 
 	if( !oDumper.is_open() )
 	{
@@ -245,7 +245,7 @@ __inline bool	PrepareStaticFile( T_STATIC_LINE& refStaticLine, std::ofstream& oD
 	oDumper.seekp( 0, std::ios::end );
 	if( 0 == oDumper.tellp() )
 	{
-		std::string		sTitle = "date,code,name,lotsize,contractmult,contractunit,startdate,enddate,xqdate,deliverydate,expiredate,underlyingcode,underlyingname,optiontype,callorput,exercisepx\n";
+		std::string		sTitle = "code,name,lotsize,contractmult,contractunit,startdate,enddate,xqdate,deliverydate,expiredate,underlyingcode,underlyingname,optiontype,callorput,exercisepx\n";
 		oDumper << sTitle;
 	}
 
@@ -373,8 +373,8 @@ int Quotation::SaveShLv1_Static_Tick_Day( enum XDFRunStat eStatus, bool bBuild )
 						if( true == bNeedSaveStatic ) {
 							if( true == PrepareStaticFile( tagStaticLine, oDumper ) )
 							{
-								int		nLen = ::sprintf( pszLine, "%u,%s,%s,%d,%d,%d,%d,%d,%d,%d,%d,%s,%s,%c,%c,%.4f\n"
-									, tagStaticLine.Date, tagStaticLine.Code, tagStaticLine.Name, tagStaticLine.LotSize, tagStaticLine.ContractMult, tagStaticLine.ContractUnit
+								int		nLen = ::sprintf( pszLine, "%s,%s,%d,%d,%d,%d,%d,%d,%d,%d,%s,%s,%c,%c,%.4f\n"
+									, tagStaticLine.Code, tagStaticLine.Name, tagStaticLine.LotSize, tagStaticLine.ContractMult, tagStaticLine.ContractUnit
 									, tagStaticLine.StartDate, tagStaticLine.EndDate, tagStaticLine.XqDate, tagStaticLine.DeliveryDate, tagStaticLine.ExpireDate
 									, tagStaticLine.UnderlyingCode, tagStaticLine.UnderlyingName, tagStaticLine.OptionType, tagStaticLine.CallOrPut, tagStaticLine.ExercisePx );
 								oDumper.write( pszLine, nLen );
@@ -583,8 +583,8 @@ int Quotation::SaveSzLv1_Static_Tick_Day( enum XDFRunStat eStatus, bool bBuild )
 						if( true == bNeedSaveStatic ) {
 							if( true == PrepareStaticFile( tagStaticLine, oDumper ) )
 							{
-								int		nLen = ::sprintf( pszLine, "%u,%s,%s,%d,%d,%d,%d,%d,%d,%d,%d,%s,%s,%c,%c,%.4f\n"
-									, tagStaticLine.Date, tagStaticLine.Code, tagStaticLine.Name, tagStaticLine.LotSize, tagStaticLine.ContractMult, tagStaticLine.ContractUnit
+								int		nLen = ::sprintf( pszLine, "%s,%s,%d,%d,%d,%d,%d,%d,%d,%d,%s,%s,%c,%c,%.4f\n"
+									, tagStaticLine.Code, tagStaticLine.Name, tagStaticLine.LotSize, tagStaticLine.ContractMult, tagStaticLine.ContractUnit
 									, tagStaticLine.StartDate, tagStaticLine.EndDate, tagStaticLine.XqDate, tagStaticLine.DeliveryDate, tagStaticLine.ExpireDate
 									, tagStaticLine.UnderlyingCode, tagStaticLine.UnderlyingName, tagStaticLine.OptionType, tagStaticLine.CallOrPut, tagStaticLine.ExercisePx );
 								oDumper.write( pszLine, nLen );
