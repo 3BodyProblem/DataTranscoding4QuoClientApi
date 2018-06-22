@@ -109,7 +109,7 @@ MinGenerator& MinGenerator::operator=( const MinGenerator& obj )
 int MinGenerator::Initialize()
 {
 	m_nWriteSize = -1;
-	m_nDataSize - 0;
+	m_nDataSize = 0;
 
 	return 0;
 }
@@ -135,7 +135,7 @@ int MinGenerator::Update( T_DATA& objData )
 	unsigned int		nMM = nMKTime % 10000 / 100;
 	int					nDataIndex = -1;
 
-	if( nMKTime >= 150000 ) {
+	if( nMKTime > 150000 ) {
 		s_bCloseMarket = true;		///< 如果有商品的市场时间为15:00，则标记为需要集体生成分钟线
 	}
 
@@ -400,6 +400,7 @@ int SecurityMinCache::NewSecurity( enum XDFMarket eMarket, const std::string& sC
 		return -2;
 	}
 
+	::memset( m_pMinDataTable + m_nAlloPos, 0, sizeof(MinGenerator::T_DATA) * 241 );
 	m_objMapMinutes[sCode] = MinGenerator( eMarket, nDate, sCode, dPriceRate, objData, m_pMinDataTable + m_nAlloPos );
 	if( 0 != m_objMapMinutes[sCode].Initialize() )
 	{
@@ -1006,7 +1007,6 @@ QuotationData::~QuotationData()
 int QuotationData::Initialize( void* pQuotation )
 {
 	QuoCollector::GetCollector()->OnLog( TLV_INFO, "QuotationData::Initialize() : enter ......................" );
-	int					nErrorCode = 0;
 
 	Release();
 	m_pQuotation = pQuotation;
@@ -1014,7 +1014,7 @@ int QuotationData::Initialize( void* pQuotation )
 	{
 		if( 0 != m_oThdIdle.Create( "ThreadOnIdle()", ThreadOnIdle, this ) ) {
 			QuoCollector::GetCollector()->OnLog( TLV_ERROR, "QuotationData::Initialize() : failed 2 create onidle line thread" );
-			return -6;
+			return -1;
 		}
 	}
 
