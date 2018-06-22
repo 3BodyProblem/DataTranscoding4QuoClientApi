@@ -523,8 +523,8 @@ int Quotation::SaveSzLv1_Static_Tick_Day( enum XDFRunStat eStatus, bool bBuild )
 		m_oQuoDataCenter.SetMarketTime( XDF_SZ, tagStatus.MarketTime );
 		ServerStatus::GetStatusObj().UpdateMkTime( XDF_SZ, tagStatus.MarketDate, tagStatus.MarketTime );
 
-		if( m_nSHL1MkDate != tagStatus.MarketDate ) {
-			m_nSHL1MkDate = tagStatus.MarketDate;
+		if( m_nSZL1MkDate != tagStatus.MarketDate ) {
+			m_nSZL1MkDate = tagStatus.MarketDate;
 			bNeedSaveStatic = true;
 		}
 	}
@@ -533,8 +533,8 @@ int Quotation::SaveSzLv1_Static_Tick_Day( enum XDFRunStat eStatus, bool bBuild )
 		m_oQuoDataCenter.SetMarketTime( XDF_SZ, DateTime::Now().TimeToLong() );
 		ServerStatus::GetStatusObj().UpdateMkTime( XDF_SZ, DateTime::Now().DateToLong(), DateTime::Now().TimeToLong() );
 
-		if( m_nSHL1MkDate != DateTime::Now().DateToLong() ) {
-			m_nSHL1MkDate = DateTime::Now().DateToLong();
+		if( m_nSZL1MkDate != DateTime::Now().DateToLong() ) {
+			m_nSZL1MkDate = DateTime::Now().DateToLong();
 			bNeedSaveStatic = true;
 		}
 	}
