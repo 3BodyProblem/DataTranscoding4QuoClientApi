@@ -404,7 +404,9 @@ int Quotation::SaveShLv1_Static_Tick_Day( enum XDFRunStat eStatus, bool bBuild )
 	}
 
 	m_vctMkSvrStatus[XDF_SH] = ET_SS_WORKING;				///< 设置“可服务”状态标识
-	m_oQuoDataCenter.GetSHL1TickCache().ActivateDumper();
+	if( true == bBuild ) {
+		m_oQuoDataCenter.GetSHL1TickCache().ActivateDumper();
+	}
 	nNum = 0;
 	///< ---------------- 获取快照表数据 -------------------------------------------
 	int		noffset = (sizeof(XDFAPI_StockData5) + sizeof(XDFAPI_UniMsgHead)) * nCodeCount;	///< 根据商品数量，分配获取快照表需要的缓存
@@ -456,7 +458,9 @@ int Quotation::SaveShLv1_Static_Tick_Day( enum XDFRunStat eStatus, bool bBuild )
 		pszCodeBuf = NULL;
 	}
 
-	m_oQuoDataCenter.GetSHL1Cache().ActivateDumper();
+	if( true == bBuild ) {
+		m_oQuoDataCenter.GetSHL1Cache().ActivateDumper();
+	}
 	QuoCollector::GetCollector()->OnLog( TLV_INFO, "Quotation::SaveShLv1_Static_Tick_Day() : Loading... SHL1 Snaptable Size = %d", nNum );
 
 	return 0;
@@ -615,7 +619,9 @@ int Quotation::SaveSzLv1_Static_Tick_Day( enum XDFRunStat eStatus, bool bBuild )
 	}
 
 	m_vctMkSvrStatus[XDF_SZ] = ET_SS_WORKING;				///< 设置“可服务”状态标识
-	m_oQuoDataCenter.GetSZL1TickCache().ActivateDumper();
+	if( true == bBuild ) {
+		m_oQuoDataCenter.GetSZL1TickCache().ActivateDumper();
+	}
 	nNum = 0;
 	///< ---------------- 获取快照表数据 -------------------------------------------
 	int		noffset = (sizeof(XDFAPI_StockData5) + sizeof(XDFAPI_UniMsgHead)) * nCodeCount;	///< 根据商品数量，分配获取快照表需要的缓存
@@ -667,7 +673,9 @@ int Quotation::SaveSzLv1_Static_Tick_Day( enum XDFRunStat eStatus, bool bBuild )
 		pszCodeBuf = NULL;
 	}
 
-	m_oQuoDataCenter.GetSZL1Cache().ActivateDumper();
+	if( true == bBuild ) {
+		m_oQuoDataCenter.GetSZL1Cache().ActivateDumper();
+	}
 	QuoCollector::GetCollector()->OnLog( TLV_INFO, "Quotation::SaveSzLv1_Static_Tick_Day() : Loading... SZL1 Snaptable Size = %d", nNum );
 
 	return 0;
