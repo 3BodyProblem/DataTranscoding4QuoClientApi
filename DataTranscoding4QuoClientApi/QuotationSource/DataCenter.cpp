@@ -114,7 +114,8 @@ int MinGenerator::Initialize()
 	return 0;
 }
 
-static bool s_bCloseMarket = false;
+static unsigned int	s_nLastCloseDate = 0;
+static bool			s_bCloseMarket = false;
 
 int MinGenerator::Update( T_DATA& objData )
 {
@@ -136,7 +137,12 @@ int MinGenerator::Update( T_DATA& objData )
 	int					nDataIndex = -1;
 
 	if( nMKTime > 150000 ) {
-		s_bCloseMarket = true;		///< 如果有商品的市场时间为15:00，则标记为需要集体生成分钟线
+		unsigned int	nNowDate = DateTime::Now().DateToLong();
+
+		if( s_nLastCloseDate != nNowDate ) {
+			s_bCloseMarket = true;				///< 如果有商品的市场时间为15:00，则标记为需要集体生成分钟线
+			s_nLastCloseDate = nNowDate;		///< 一天里，只能做一次收盘标记(存盘一次最后一块记录)
+		}
 	}
 
 	if( nMKTime < 93000 ) {
