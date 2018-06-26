@@ -138,8 +138,9 @@ int MinGenerator::Update( T_DATA& objData )
 
 	if( nMKTime > 150000 ) {
 		unsigned int	nNowDate = DateTime::Now().DateToLong();
+		unsigned int	nNowTime = DateTime::Now().TimeToLong();
 
-		if( s_nLastCloseDate != nNowDate ) {
+		if( s_nLastCloseDate != nNowDate && (nNowTime > 150000 && nNowTime < 161501) ) {
 			s_bCloseMarket = true;				///< 如果有商品的市场时间为15:00，则标记为需要集体生成分钟线
 			s_nLastCloseDate = nNowDate;		///< 一天里，只能做一次收盘标记(存盘一次最后一块记录)
 		}
