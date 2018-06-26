@@ -66,7 +66,7 @@ __inline std::string GenFinancialFilePath( enum XDFMarket eMkID )
 
 	sFilePath = JoinPath( Configuration::GetConfig().GetDumpFolder(), pszFilePath );
 	File::CreateDirectoryTree( sFilePath );							///< 若目录不存在则新建
-	::sprintf( pszFileName, "Financial%u.csv", DateTime::Now().DateToLong() );
+	::sprintf( pszFileName, "FINANCIAL%u.csv", DateTime::Now().DateToLong() );
 	sFilePath += pszFileName;										///< 拼接出文件全路径
 
 	return sFilePath;
