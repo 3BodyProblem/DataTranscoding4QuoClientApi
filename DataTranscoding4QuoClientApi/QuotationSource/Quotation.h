@@ -109,7 +109,7 @@ protected:///< 加载市场行情数据: 落盘 静态数据文件 + tick文件 或者 创建日线文件
 	/**
 	 * @brief					加载上海Lv1的基础信息
 	 * @param[in]				eStatus		市场模块状态
-	 * @param[in]				bBuild		是否为初始过程中:true,创建静态信息文件+tick信息 false,只创建日线信息
+	 * @param[in]				bBuild		是否为初始过程中:true,创建静态信息文件+tick信息+启动k线落盘线程 false,只创建日线信息
 	 * @return					==0			成功
 								!=0			失败
 	 */
@@ -118,7 +118,7 @@ protected:///< 加载市场行情数据: 落盘 静态数据文件 + tick文件 或者 创建日线文件
 	/**
 	 * @brief					加载深圳Lv1的基础信息
 	 * @param[in]				eStatus		市场模块状态
-	 * @param[in]				bBuild		是否为初始过程中:true,创建静态信息文件+tick信息 false,只创建日线信息
+	 * @param[in]				bBuild		是否为初始过程中:true,创建静态信息文件+tick信息+启动k线落盘线程 false,只创建日线信息
 	 * @return					==0			成功
 								!=0			失败
 	 */
