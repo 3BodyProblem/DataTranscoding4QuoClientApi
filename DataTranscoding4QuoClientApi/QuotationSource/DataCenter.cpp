@@ -1051,12 +1051,12 @@ void QuotationData::Release()
 	::memset( m_lstMkTime, 0, sizeof(m_lstMkTime) );
 }
 
-SecurityMinCache& QuotationData::GetSHL1Cache()
+SecurityMinCache& QuotationData::GetSHL1Min1Cache()
 {
 	return m_objMinCache4SHL1;
 }
 
-SecurityMinCache& QuotationData::GetSZL1Cache()
+SecurityMinCache& QuotationData::GetSZL1Min1Cache()
 {
 	return m_objMinCache4SZL1;
 }

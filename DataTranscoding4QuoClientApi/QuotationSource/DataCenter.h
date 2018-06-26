@@ -533,8 +533,8 @@ public:
 	 */
 	int							DumpDayLine( enum XDFMarket eMarket, char* pSnapData, unsigned int nSnapSize, unsigned int nTradeDate = 0 );
 
-	SecurityMinCache&			GetSHL1Cache();
-	SecurityMinCache&			GetSZL1Cache();
+	SecurityMinCache&			GetSHL1Min1Cache();
+	SecurityMinCache&			GetSZL1Min1Cache();
 	SecurityTickCache&			GetSHL1TickCache();
 	SecurityTickCache&			GetSZL1TickCache();
 

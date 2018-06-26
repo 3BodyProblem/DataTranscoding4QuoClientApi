@@ -277,7 +277,7 @@ int Quotation::SaveShLv1_Static_Tick_Day( enum XDFRunStat eStatus, bool bBuild )
 	XDFAPI_MarketKindHead* pKindHead = (XDFAPI_MarketKindHead*)(tempbuf+ sizeof(XDFAPI_MsgHead));
 	QuoCollector::GetCollector()->OnLog( TLV_INFO, "Quotation::SaveShLv1_Static_Tick_Day() : Loading... SHL1 WareCount = %d", pKindHead->WareCount );
 	if( true == bBuild ) {
-		if( 0 != m_oQuoDataCenter.GetSHL1Cache().Initialize( pKindHead->WareCount ) ) {
+		if( 0 != m_oQuoDataCenter.GetSHL1Min1Cache().Initialize( pKindHead->WareCount ) ) {
 			QuoCollector::GetCollector()->OnLog( TLV_ERROR, "Quotation::SaveShLv1_Static_Tick_Day() : cannot initialize minute lines cache" );
 			return -2;
 		}
@@ -459,7 +459,7 @@ int Quotation::SaveShLv1_Static_Tick_Day( enum XDFRunStat eStatus, bool bBuild )
 	}
 
 	if( true == bBuild ) {
-		m_oQuoDataCenter.GetSHL1Cache().ActivateDumper();
+		m_oQuoDataCenter.GetSHL1Min1Cache().ActivateDumper();
 	}
 	QuoCollector::GetCollector()->OnLog( TLV_INFO, "Quotation::SaveShLv1_Static_Tick_Day() : Loading... SHL1 Snaptable Size = %d", nNum );
 
@@ -491,7 +491,7 @@ int Quotation::SaveSzLv1_Static_Tick_Day( enum XDFRunStat eStatus, bool bBuild )
 	XDFAPI_MarketKindHead* pKindHead = (XDFAPI_MarketKindHead*)(tempbuf+ sizeof(XDFAPI_MsgHead));
 	QuoCollector::GetCollector()->OnLog( TLV_INFO, "Quotation::SaveSzLv1_Static_Tick_Day() : Loading... SZL1 WareCount = %d", pKindHead->WareCount );
 	if( true == bBuild ) {
-		if( 0 != m_oQuoDataCenter.GetSZL1Cache().Initialize( pKindHead->WareCount ) ) {
+		if( 0 != m_oQuoDataCenter.GetSZL1Min1Cache().Initialize( pKindHead->WareCount ) ) {
 			QuoCollector::GetCollector()->OnLog( TLV_ERROR, "Quotation::SaveSzLv1_Static_Tick_Day() : cannot initialize minutes lines cache." );
 			return -2;
 		}
@@ -674,7 +674,7 @@ int Quotation::SaveSzLv1_Static_Tick_Day( enum XDFRunStat eStatus, bool bBuild )
 	}
 
 	if( true == bBuild ) {
-		m_oQuoDataCenter.GetSZL1Cache().ActivateDumper();
+		m_oQuoDataCenter.GetSZL1Min1Cache().ActivateDumper();
 	}
 	QuoCollector::GetCollector()->OnLog( TLV_INFO, "Quotation::SaveSzLv1_Static_Tick_Day() : Loading... SZL1 Snaptable Size = %d", nNum );
 
@@ -805,7 +805,7 @@ void Quotation::FlushDayLineOnCloseTime()
 				case XDF_SH:		///< 上证L1
 					{
 						SaveShLv1_Static_Tick_Day( XRS_Normal, false );	///< 日线落盘
-						m_oQuoDataCenter.GetSHL1Cache().Release();		///< 退出1分钟线落盘线程
+						m_oQuoDataCenter.GetSHL1Min1Cache().Release();	///< 退出1分钟线落盘线程
 						QuoCollector::GetCollector()->OnLog( TLV_INFO, "Quotation::FlushDayLineOnCloseTime() : SHL1 Minite Line Thread released!" );	
 						m_oQuoDataCenter.GetSHL1TickCache().Release();	///< 退出TICK线落盘线程
 						QuoCollector::GetCollector()->OnLog( TLV_INFO, "Quotation::FlushDayLineOnCloseTime() : SHL1 TICK Line Thread released!" );	
@@ -814,7 +814,7 @@ void Quotation::FlushDayLineOnCloseTime()
 				case XDF_SZ:		///< 深证L1
 					{
 						SaveSzLv1_Static_Tick_Day( XRS_Normal, false );	///< 日线落盘
-						m_oQuoDataCenter.GetSZL1Cache().Release();		///< 退出1分钟线落盘线程
+						m_oQuoDataCenter.GetSZL1Min1Cache().Release();	///< 退出1分钟线落盘线程
 						QuoCollector::GetCollector()->OnLog( TLV_INFO, "Quotation::FlushDayLineOnCloseTime() : SZL1 Minite Line Thread released!" );	
 						m_oQuoDataCenter.GetSHL1TickCache().Release();	///< 退出TICK线落盘线程
 						QuoCollector::GetCollector()->OnLog( TLV_INFO, "Quotation::FlushDayLineOnCloseTime() : SZL1 TICK Line Thread released!" );	
