@@ -178,8 +178,9 @@ public:
 
 	/**
 	 * @brief					生成分钟线并存盘
+	 * @param[in]				bMarketClosed			市场闭市标识（true，需要落盘余下的全部1分钟线）
 	 */
-	void						DumpMinutes();
+	void						DumpMinutes( bool bMarketClosed );
 protected:
 	double						m_dAmountBefore930;		///< 9:30前的金额
 	unsigned __int64			m_nVolumeBefore930;		///< 9:30前的量

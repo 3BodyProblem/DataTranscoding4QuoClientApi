@@ -70,6 +70,7 @@ __inline bool	PrepareMinuteFile( enum XDFMarket eMarket, const char* pszCode, un
 	return true;
 }
 
+
 MinGenerator::MinGenerator()
  : m_nDate( 0 ), m_nMaxLineCount( 241 ), m_pDataCache( NULL ), m_dPriceRate( 0 )
  , m_nWriteSize( -1 ), m_nDataSize( 0 ), m_dAmountBefore930( 0. ), m_nVolumeBefore930( 0 ), m_nNumTradesBefore930( 0 )
@@ -114,38 +115,24 @@ int MinGenerator::Initialize()
 	return 0;
 }
 
-static unsigned int	s_nLastCloseDate = 0;
-static bool			s_bCloseMarket = false;
-
 int MinGenerator::Update( T_DATA& objData )
 {
-	if( NULL == m_pDataCache )
-	{
+	if( NULL == m_pDataCache )	{
 		QuoCollector::GetCollector()->OnLog( TLV_ERROR, "MinGenerator::Update() : invalid buffer pointer" );
 		return -1;
 	}
-
-	if( 0 == objData.Time )
-	{
+	if( 0 == objData.Time )	{
 		QuoCollector::GetCollector()->OnLog( TLV_ERROR, "MinGenerator::Update() : invalid snap time" );
 		return -2;
 	}
 
+	///< 判断是否需要打"收盘标记"
 	unsigned int		nMKTime = objData.Time / 1000;
 	unsigned int		nHH = nMKTime / 10000;
 	unsigned int		nMM = nMKTime % 10000 / 100;
 	int					nDataIndex = -1;
 
-	if( nMKTime > 150000 ) {
-		unsigned int	nNowDate = DateTime::Now().DateToLong();
-		unsigned int	nNowTime = DateTime::Now().TimeToLong();
-
-		if( s_nLastCloseDate != nNowDate && (nNowTime > 150000 && nNowTime < 161501) ) {
-			s_bCloseMarket = true;				///< 如果有商品的市场时间为15:00，则标记为需要集体生成分钟线
-			s_nLastCloseDate = nNowDate;		///< 一天里，只能做一次收盘标记(存盘一次最后一块记录)
-		}
-	}
-
+	///< 用当前市场时间，映射出对应的一分钟线的索引值
 	if( nMKTime < 93000 ) {
 		m_dAmountBefore930 = objData.Amount;		///< 9:30前的金额
 		m_nVolumeBefore930 = objData.Volume;		///< 9:30前的量
@@ -168,19 +155,19 @@ int MinGenerator::Update( T_DATA& objData )
 		} else if( 14 == nHH ) {
 			nDataIndex += (60 + nMM);				///< 14:00~14:59 = 60根
 		} else if( 15 == nHH ) {
-			nDataIndex += 120;						///< 15:00~15:00 = 1根
+			nDataIndex += (120-1);					///< 15:00~15:00 = 1根
 		}
 	}
 
 	if( nDataIndex < 0 ) {
 		return 0;
 	}
-
 	if( nDataIndex >= 241 ) {
 		QuoCollector::GetCollector()->OnLog( TLV_ERROR, "MinGenerator::Update() : out of range" );
 		return -4;
 	}
 
+	///< 除最高/低价以外，其他原样更新到对应的每分钟数据中
 	T_DATA*		pData = m_pDataCache + nDataIndex;
 
 	pData->Amount = objData.Amount;
@@ -193,7 +180,6 @@ int MinGenerator::Update( T_DATA& objData )
 		pData->OpenPx = objData.ClosePx;
 		pData->HighPx = objData.ClosePx;
 		pData->LowPx = objData.ClosePx;
-//if( ::strncmp( m_pszCode, "600000", 6 ) == 0 )::printf( "First, 600000, Time=%u, Open=%u, Hight=%u, Low=%u, %u, %I64d\n", pData->Time, pData->OpenPx, pData->HighPx, pData->LowPx, pData->ClosePx, pData->Volume );
 	} else {
 		pData->Time = objData.Time;
 		if( objData.ClosePx > pData->HighPx ) {
@@ -202,7 +188,6 @@ int MinGenerator::Update( T_DATA& objData )
 		if( objData.ClosePx < pData->LowPx ) {
 			pData->LowPx = objData.ClosePx;
 		}
-//if( ::strncmp( m_pszCode, "600000", 6 ) == 0 )::printf( "Then, 600000, Time=%u, Open=%u, Hight=%u, Low=%u, %u, %I64d\n", pData->Time, pData->OpenPx, pData->HighPx, pData->LowPx, pData->ClosePx, pData->Volume );
 	}
 
 	if( nDataIndex > m_nDataSize ) {
@@ -212,37 +197,32 @@ int MinGenerator::Update( T_DATA& objData )
 	return 0;
 }
 
-void MinGenerator::DumpMinutes()
+void MinGenerator::DumpMinutes( bool bMarketClosed )
 {
 	if( NULL == m_pDataCache ) {
 		QuoCollector::GetCollector()->OnLog( TLV_ERROR, "MinGenerator::DumpMinutes() : invalid buffer pointer 4 code:%s", m_pszCode );
 		return;
 	}
 
-	std::ofstream			oDumper;						///< 文件句柄
-	unsigned int			nLastLineIndex = 0;				///< 上一笔快照是索引值
-	T_MIN_LINE				tagLastLine = { 0 };			///< 上一笔快照的最后情况
-	T_MIN_LINE				tagLastLastLine = { 0 };		///< 上上笔快照的最后情况
+	std::ofstream			oDumper;								///< 文件句柄
+	unsigned int			nLastLineIndex = 0;						///< 上一笔快照是索引值
+	T_MIN_LINE				tagLastLine = { 0 };					///< 上一笔快照的最后情况
+	T_MIN_LINE				tagLastLastLine = { 0 };				///< 上上笔快照的最后情况
+
 	///< 准备好需要写入的文件句柄
-	if( false == PrepareMinuteFile( m_eMarket, m_pszCode, m_nDate, oDumper ) )
-	{
+	if( false == PrepareMinuteFile( m_eMarket, m_pszCode, m_nDate, oDumper ) )	{
 		QuoCollector::GetCollector()->OnLog( TLV_ERROR, "MinGenerator::DumpMinutes() : cannot open file 4 security:%s", m_pszCode );
 		return;
 	}
 
-	if( true == s_bCloseMarket ) m_nDataSize = m_nMaxLineCount;
+	if( true == bMarketClosed ) m_nDataSize = m_nMaxLineCount;
 	///< 从头遍历，直到最后一个收到的时间节点上
-	for( int i = 0; i < m_nDataSize; i++ )
-	{
-		///< 收市，需要生成所有分钟线
-		if( true == s_bCloseMarket ) {
-			m_nDataSize = m_nMaxLineCount;
-		}
+	for( int i = 0; i < m_nDataSize; i++ )	{
 		///< 跳过已经落盘过的时间节点，以m_pDataCache[i].Time大于零为标识，进行"后续写入"
 		if( i > m_nWriteSize ) {
 			char			pszLine[1024] = { 0 };
 			T_MIN_LINE		tagMinuteLine = { 0 };
-
+			///< 计算每个分钟线的对应时间(单位：分)
 			tagMinuteLine.Date = m_nDate;
 			if( i == 0 ) {											///< [ 上午121根分钟线，下午120根 ]
 				tagMinuteLine.Time = 93000;							///< 9:30~9:30 = 1根 (i:0)
@@ -257,7 +237,7 @@ void MinGenerator::DumpMinutes()
 			} else if( i > 179 && i <= 239 ) {
 				tagMinuteLine.Time = (1400 + (i-180)) * 100;		///< 14:00~14:59 = 60根 (i:180--239)
 			} else if( i == 240 ) {
-				tagMinuteLine.Time = 150000;						///< 15:00~15:00 = 1根 (i:240)
+				tagMinuteLine.Time = 150000;						///< 15:00~15:00 = 1根-1 (i:240-1)
 			}
 
 			if( 0 == i ) {	////////////////////////< 第一个节点是9:30，此时只需要将9:30分的第一个快照落盘
@@ -274,8 +254,7 @@ void MinGenerator::DumpMinutes()
 										, tagMinuteLine.SettlePx, tagMinuteLine.Amount, tagMinuteLine.Volume, tagMinuteLine.OpenInterest, tagMinuteLine.NumTrades, tagMinuteLine.Voip );
 				oDumper.write( pszLine, nLen );
 				m_pDataCache[i].Time = 0;								///< 把时间清零，即，标记为已经落盘
-				m_nWriteSize = i;										///< 更新最新的写盘数据位置
-//if( ::strncmp( m_pszCode, "600000", 6 ) == 0 )::printf( "[WRITE], 600000, Time=%u, Open=%f, High=%f, Low=%f, %f, %I64d\n", tagMinuteLine.Time, tagMinuteLine.OpenPx, tagMinuteLine.HighPx, tagMinuteLine.LowPx, tagMinuteLine.ClosePx, tagMinuteLine.Volume );
+				m_nWriteSize = i;										///< 更新最新的写盘数据位置(避免同1分钟的重复落盘)
 			} else {		////////////////////////< 处理9:30后的分钟线计算与落盘的情况 [1. 前面无成交的情况 2.前面是连续成交的情况]
 				if( i - nLastLineIndex > 1 ) {	///< 如果前面n分钟内无成交，则开盘最高最低等于ClosePx
 					tagMinuteLine.OpenPx = tagLastLine.ClosePx;
@@ -298,8 +277,7 @@ void MinGenerator::DumpMinutes()
 										, tagMinuteLine.Date, tagMinuteLine.Time, tagMinuteLine.OpenPx, tagMinuteLine.HighPx, tagMinuteLine.LowPx, tagMinuteLine.ClosePx
 										, tagMinuteLine.SettlePx, tagMinuteLine.Amount, tagMinuteLine.Volume, tagMinuteLine.OpenInterest, tagMinuteLine.NumTrades, tagMinuteLine.Voip );
 				oDumper.write( pszLine, nLen );
-				m_nWriteSize = i;										///< 更新最新的写盘数据位置
-//if( ::strncmp( m_pszCode, "600000", 6 ) == 0 )::printf( "[WRITE], 600000, Time=%u, Open=%f, High=%f, Low=%f, %f, %I64d\n", tagMinuteLine.Time, tagMinuteLine.OpenPx, tagMinuteLine.HighPx, tagMinuteLine.LowPx, tagMinuteLine.ClosePx, tagMinuteLine.Volume );
+				m_nWriteSize = i;										///< 更新最新的写盘数据位置(避免同1分钟的重复落盘)
 			}
 		}
 
@@ -324,7 +302,7 @@ void MinGenerator::DumpMinutes()
 			tagLastLine.Voip = m_pDataCache[i].Voip / m_dPriceRate;
 		}
 	}
-
+	///< 关闭落盘文件句柄
 	if( oDumper.is_open() ) {
 		oDumper.close();
 	}
@@ -377,7 +355,6 @@ void SecurityMinCache::Release()
 
 	m_nAlloPos = 0;
 	m_nSecurityCount = 0;
-	s_bCloseMarket = false;
 }
 
 void SecurityMinCache::ActivateDumper()
@@ -473,9 +450,11 @@ int SecurityMinCache::UpdateSecurity( const XDFAPI_StockData5& refObj, unsigned 
 
 void* SecurityMinCache::DumpThread( void* pSelf )
 {
+	unsigned int			nLastCloseDate = 0;						///< 最后一次收盘落全部1分钟的日期
+	bool					bCloseMarket = false;					///< true:需要做次全部1分钟线的落盘 false:不需要
 	SecurityMinCache&		refData = *(SecurityMinCache*)pSelf;
-	QuoCollector::GetCollector()->OnLog( TLV_INFO, "SecurityMinCache::DumpThread() : MarketID = %d, enter...................", (int)(refData.m_eMarketID) );
 
+	QuoCollector::GetCollector()->OnLog( TLV_INFO, "SecurityMinCache::DumpThread() : MarketID = %d, enter...................", (int)(refData.m_eMarketID) );
 	while( true == refData.m_oDumpThread.IsAlive() )
 	{
 		SimpleThread::Sleep( 1000 * 3 );
@@ -483,6 +462,15 @@ void* SecurityMinCache::DumpThread( void* pSelf )
 		try
 		{
 			unsigned int	nCodeNumber = refData.m_vctCode.size();
+			unsigned int	nNowDate = DateTime::Now().DateToLong();
+			unsigned int	nNowTime = DateTime::Now().TimeToLong();
+
+			if( nLastCloseDate != nNowDate && (nNowTime > 150901 && nNowTime < 153010) ) {
+				bCloseMarket = true;				///< 如果有商品的市场时间为15:00，则标记为需要集体生成分钟线
+				nLastCloseDate = nNowDate;			///< 一天里，只能做一次收盘标记(存盘一次最后一块记录)
+			} else {
+				bCloseMarket = false;				///< 标记为不在闭市阶段，不需要落余下的全部1分钟线
+			}
 
 			for( unsigned int n = 0; n < nCodeNumber && true == refData.m_oDumpThread.IsAlive(); n++ )
 			{
@@ -496,7 +484,7 @@ void* SecurityMinCache::DumpThread( void* pSelf )
 					}
 				}
 
-				it->second.DumpMinutes();
+				it->second.DumpMinutes( bCloseMarket );
 			}
 		}
 		catch( std::exception& err )
