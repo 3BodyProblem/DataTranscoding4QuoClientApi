@@ -148,7 +148,7 @@ int MinGenerator::Update( T_DATA& objData )
 		} else if( 13 == nHH ) {
 			nDataIndex += 120;						///< 13:01(即13:00)的数据存放到11:30的位置
 		}
-	} else if( nMKTime > 130000 && nMKTime <= 150000 ) {
+	} else if( nMKTime > 130000 && nMKTime <= 151500 ) {
 		nDataIndex = 120;							///< 上午共121根
 		if( 13 == nHH ) {
 			nDataIndex += nMM;						///< 13:01~13:59 = 59根
@@ -249,11 +249,14 @@ void MinGenerator::DumpMinutes( bool bMarketClosed )
 				tagMinuteLine.LowPx = m_pDataCache[i].LowPx / m_dPriceRate;
 				tagMinuteLine.ClosePx = m_pDataCache[i].ClosePx / m_dPriceRate;
 				tagMinuteLine.Voip = m_pDataCache[i].Voip / m_dPriceRate;
-				int		nLen = ::sprintf( pszLine, "%d,%d,%.4f,%.4f,%.4f,%.4f,%.4f,%.4f,%I64d,%I64d,%I64d,%.4f\n"
-										, tagMinuteLine.Date, tagMinuteLine.Time, tagMinuteLine.OpenPx, tagMinuteLine.HighPx, tagMinuteLine.LowPx, tagMinuteLine.ClosePx
-										, tagMinuteLine.SettlePx, tagMinuteLine.Amount, tagMinuteLine.Volume, tagMinuteLine.OpenInterest, tagMinuteLine.NumTrades, tagMinuteLine.Voip );
-				oDumper.write( pszLine, nLen );
-				m_pDataCache[i].Time = 0;								///< 把时间清零，即，标记为已经落盘
+
+				if( m_pDataCache[i].Time > 0 ) {
+					int		nLen = ::sprintf( pszLine, "%d,%d,%.4f,%.4f,%.4f,%.4f,%.4f,%.4f,%I64d,%I64d,%I64d,%.4f\n"
+											, tagMinuteLine.Date, tagMinuteLine.Time, tagMinuteLine.OpenPx, tagMinuteLine.HighPx, tagMinuteLine.LowPx, tagMinuteLine.ClosePx
+											, tagMinuteLine.SettlePx, tagMinuteLine.Amount, tagMinuteLine.Volume, tagMinuteLine.OpenInterest, tagMinuteLine.NumTrades, tagMinuteLine.Voip );
+					oDumper.write( pszLine, nLen );
+					m_pDataCache[i].Time = 0;						///< 把时间清零，即，标记为已经落盘
+				}
 				m_nWriteSize = i;										///< 更新最新的写盘数据位置(避免同1分钟的重复落盘)
 			} else {		////////////////////////< 处理9:30后的分钟线计算与落盘的情况 [1. 前面无成交的情况 2.前面是连续成交的情况]
 				if( i - nLastLineIndex > 1 ) {	///< 如果前面n分钟内无成交，则开盘最高最低等于ClosePx
@@ -273,11 +276,14 @@ void MinGenerator::DumpMinutes( bool bMarketClosed )
 					tagMinuteLine.NumTrades = tagLastLine.NumTrades - tagLastLastLine.NumTrades;
 				}
 
-				int		nLen = ::sprintf( pszLine, "%d,%d,%.4f,%.4f,%.4f,%.4f,%.4f,%.4f,%I64d,%I64d,%I64d,%.4f\n"
-										, tagMinuteLine.Date, tagMinuteLine.Time, tagMinuteLine.OpenPx, tagMinuteLine.HighPx, tagMinuteLine.LowPx, tagMinuteLine.ClosePx
-										, tagMinuteLine.SettlePx, tagMinuteLine.Amount, tagMinuteLine.Volume, tagMinuteLine.OpenInterest, tagMinuteLine.NumTrades, tagMinuteLine.Voip );
-				oDumper.write( pszLine, nLen );
-				m_nWriteSize = i;										///< 更新最新的写盘数据位置(避免同1分钟的重复落盘)
+				if( m_pDataCache[i].Time > 0 ) {
+					int		nLen = ::sprintf( pszLine, "%d,%d,%.4f,%.4f,%.4f,%.4f,%.4f,%.4f,%I64d,%I64d,%I64d,%.4f\n"
+											, tagMinuteLine.Date, tagMinuteLine.Time, tagMinuteLine.OpenPx, tagMinuteLine.HighPx, tagMinuteLine.LowPx, tagMinuteLine.ClosePx
+											, tagMinuteLine.SettlePx, tagMinuteLine.Amount, tagMinuteLine.Volume, tagMinuteLine.OpenInterest, tagMinuteLine.NumTrades, tagMinuteLine.Voip );
+					oDumper.write( pszLine, nLen );
+					m_pDataCache[i].Time = 0;						///< 把时间清零，即，标记为已经落盘
+				}
+				m_nWriteSize = i;									///< 更新最新的写盘数据位置(避免同1分钟的重复落盘)
 			}
 		}
 
@@ -450,7 +456,6 @@ int SecurityMinCache::UpdateSecurity( const XDFAPI_StockData5& refObj, unsigned 
 
 void* SecurityMinCache::DumpThread( void* pSelf )
 {
-	unsigned int			nLastCloseDate = 0;						///< 最后一次收盘落全部1分钟的日期
 	bool					bCloseMarket = false;					///< true:需要做次全部1分钟线的落盘 false:不需要
 	SecurityMinCache&		refData = *(SecurityMinCache*)pSelf;
 
@@ -462,12 +467,10 @@ void* SecurityMinCache::DumpThread( void* pSelf )
 		try
 		{
 			unsigned int	nCodeNumber = refData.m_vctCode.size();
-			unsigned int	nNowDate = DateTime::Now().DateToLong();
 			unsigned int	nNowTime = DateTime::Now().TimeToLong();
 
-			if( nLastCloseDate != nNowDate && (nNowTime > 150901 && nNowTime < 153010) ) {
+			if( nNowTime > 1501501 && nNowTime < 153501 ) {
 				bCloseMarket = true;				///< 如果有商品的市场时间为15:00，则标记为需要集体生成分钟线
-				nLastCloseDate = nNowDate;			///< 一天里，只能做一次收盘标记(存盘一次最后一块记录)
 			} else {
 				bCloseMarket = false;				///< 标记为不在闭市阶段，不需要落余下的全部1分钟线
 			}

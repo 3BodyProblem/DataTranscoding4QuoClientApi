@@ -51,7 +51,7 @@ int FileScanner::Execute()
 	{
 		try
 		{
-			SimpleThread::Sleep( 1000*15 );
+			SimpleThread::Sleep( 1000*60*3 );
 
 			ResaveWeightFile();					///< 解析转存权息文件
 			ResaveFinancialFile();				///< 解析转存财经数据文件
