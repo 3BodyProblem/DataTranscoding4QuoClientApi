@@ -62,7 +62,7 @@
 			<Tool
 				Name="VCLinkerTool"
 				AdditionalDependencies="gtestd.lib"
-				OutputFile="..\..\..\..\..\ServiceManager\srvunit\DataTranscoding4QuoClientApi\$(ProjectName).dll"
+				OutputFile="Debug\$(ProjectName).dll"
 				LinkIncremental="2"
 				AdditionalLibraryDirectories="../libs/gtest/library_vc9/Debug/"
 				ModuleDefinitionFile="DataTranscoding4QuoClientApi.def"
@@ -139,7 +139,7 @@
 			<Tool
 				Name="VCLinkerTool"
 				AdditionalDependencies="gtest.lib"
-				OutputFile="..\..\..\..\..\ServiceManager\srvunit\DataTranscoding4QuoClientApi\$(ProjectName).dll"
+				OutputFile="Release\$(ProjectName).dll"
 				LinkIncremental="1"
 				AdditionalLibraryDirectories="../libs/gtest/library_vc9/Release/"
 				ModuleDefinitionFile="DataTranscoding4QuoClientApi.def"
@@ -356,6 +356,10 @@
 			>
 		</File>
 		<File
+			RelativePath=".\DataTranscoding4QuoClientApi.rc"
+			>
+		</File>
+		<File
 			RelativePath=".\dllmain.cpp"
 			>
 			<FileConfiguration
@@ -391,6 +395,10 @@
 		</File>
 		<File
 			RelativePath=".\ReadMe.txt"
+			>
+		</File>
+		<File
+			RelativePath=".\resource.h"
 			>
 		</File>
 		<File

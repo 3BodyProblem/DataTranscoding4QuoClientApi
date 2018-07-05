@@ -255,7 +255,6 @@ void MinGenerator::DumpMinutes( bool bMarketClosed )
 											, tagMinuteLine.Date, tagMinuteLine.Time, tagMinuteLine.OpenPx, tagMinuteLine.HighPx, tagMinuteLine.LowPx, tagMinuteLine.ClosePx
 											, tagMinuteLine.SettlePx, tagMinuteLine.Amount, tagMinuteLine.Volume, tagMinuteLine.OpenInterest, tagMinuteLine.NumTrades, tagMinuteLine.Voip );
 					oDumper.write( pszLine, nLen );
-					m_pDataCache[i].Time = 0;						///< 把时间清零，即，标记为已经落盘
 				}
 				m_nWriteSize = i;										///< 更新最新的写盘数据位置(避免同1分钟的重复落盘)
 			} else {		////////////////////////< 处理9:30后的分钟线计算与落盘的情况 [1. 前面无成交的情况 2.前面是连续成交的情况]
@@ -276,12 +275,12 @@ void MinGenerator::DumpMinutes( bool bMarketClosed )
 					tagMinuteLine.NumTrades = tagLastLine.NumTrades - tagLastLastLine.NumTrades;
 				}
 
-				if( m_pDataCache[i].Time > 0 ) {
+				if( m_pDataCache[i-1].Time > 0 ) {
 					int		nLen = ::sprintf( pszLine, "%d,%d,%.4f,%.4f,%.4f,%.4f,%.4f,%.4f,%I64d,%I64d,%I64d,%.4f\n"
 											, tagMinuteLine.Date, tagMinuteLine.Time, tagMinuteLine.OpenPx, tagMinuteLine.HighPx, tagMinuteLine.LowPx, tagMinuteLine.ClosePx
 											, tagMinuteLine.SettlePx, tagMinuteLine.Amount, tagMinuteLine.Volume, tagMinuteLine.OpenInterest, tagMinuteLine.NumTrades, tagMinuteLine.Voip );
 					oDumper.write( pszLine, nLen );
-					m_pDataCache[i].Time = 0;						///< 把时间清零，即，标记为已经落盘
+					m_pDataCache[i-1].Time = 0;						///< 把时间清零，即，标记为已经落盘
 				}
 				m_nWriteSize = i;									///< 更新最新的写盘数据位置(避免同1分钟的重复落盘)
 			}
@@ -469,7 +468,7 @@ void* SecurityMinCache::DumpThread( void* pSelf )
 			unsigned int	nCodeNumber = refData.m_vctCode.size();
 			unsigned int	nNowTime = DateTime::Now().TimeToLong();
 
-			if( nNowTime > 1501501 && nNowTime < 153501 ) {
+			if( nNowTime > 151501 && nNowTime < 153501 ) {
 				bCloseMarket = true;				///< 如果有商品的市场时间为15:00，则标记为需要集体生成分钟线
 			} else {
 				bCloseMarket = false;				///< 标记为不在闭市阶段，不需要落余下的全部1分钟线
