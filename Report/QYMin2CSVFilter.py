@@ -69,7 +69,7 @@ def Dispatch2CSVFiles( nDate, sMarketCode, sCode, sQYMinFilePath, sDispathFolder
         if objDestCSVFile:
             objDestCSVFile.close()
 
-
+    return True
 
 
 
@@ -121,9 +121,9 @@ if __name__ == '__main__':
                     sQYFullMinFilePath = os.path.join( sQYFullMinPath, sQYFilePath )
                     if not os.path.isdir( sQYFullMinFilePath ):
                         ### 将每个通达信源文件中的数据按年份归类分别转存 #####
-                        Dispatch2CSVFiles( nExtractDate, sMarketCode, sCode, sQYFullMinFilePath, sCSVFileFolder, nExtractDate )
-                        print( str(nCount) + " [完成] 提取 ---> ", sQYFullMinFilePath )
-                        nCount += 1
+                        if True == Dispatch2CSVFiles( nExtractDate, sMarketCode, sCode, sQYFullMinFilePath, sCSVFileFolder, nExtractDate ):
+                            print( str(nCount) + " [完成] 提取 ---> ", sQYFullMinFilePath )
+                            nCount += 1
 
 
 
