@@ -20,7 +20,7 @@ import os, sys
 
 ### 必选参数
 # 钱育某市场的分钟线所在目录
-sQYMinCSVFolder = r"D:\ServiceManager\srvunit\DataTranscoding4QuoClientApi\data\SSE\MIN"
+sQYMinCSVFolder = r"D:\ServiceManager\srvunit\DataTranscoding4QuoClientApi\data\SZSE\MIN"
 # 生成的CSV新格式数据文件的根目录
 sCSVFileFolder = r"./"
 # 待从CSV文件过滤出来的数据日期
@@ -84,7 +84,7 @@ if __name__ == '__main__':
         ########## 根据提供的数据目录路径确定所属市场 ##############
         if r"SSE/MIN" in sQYMinCSVFolder:
             sMarketCode = "SSE"
-        elif r"SSE/MIN" in sQYMinCSVFolder:
+        elif r"SZSE/MIN" in sQYMinCSVFolder:
             sMarketCode = "SZSE"
         else:
             print( "指定的钱育数据源路径中，不包含市场归属信息!" )
@@ -106,7 +106,7 @@ if __name__ == '__main__':
 
                 bDo = False
                 if "SSE" == sMarketCode:
-                    if (nCode > 0 and nCode < 999) or (nCode>=600000 or nCode<=609999) or (nCode>=510000 and nCode<=519999):
+                    if (nCode > 0 and nCode < 999) or (nCode>=600000 and nCode<=609999) or (nCode>=510000 and nCode<=519999):
                         bDo = True
                 elif "SZSE" == sMarketCode:
                     if (nCode >= 399000 and nCode < 399999) or (nCode>=1 and nCode<=9999) or (nCode>=159000 and nCode<=159999) or (nCode>=300000 and nCode<=300999):
