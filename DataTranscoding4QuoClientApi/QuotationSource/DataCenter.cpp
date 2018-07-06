@@ -250,12 +250,11 @@ void MinGenerator::DumpMinutes( bool bMarketClosed )
 				tagMinuteLine.ClosePx = m_pDataCache[i].ClosePx / m_dPriceRate;
 				tagMinuteLine.Voip = m_pDataCache[i].Voip / m_dPriceRate;
 
-				if( m_pDataCache[i].Time > 0 ) {
-					int		nLen = ::sprintf( pszLine, "%d,%d,%.4f,%.4f,%.4f,%.4f,%.4f,%.4f,%I64d,%I64d,%I64d,%.4f\n"
-											, tagMinuteLine.Date, tagMinuteLine.Time, tagMinuteLine.OpenPx, tagMinuteLine.HighPx, tagMinuteLine.LowPx, tagMinuteLine.ClosePx
-											, tagMinuteLine.SettlePx, tagMinuteLine.Amount, tagMinuteLine.Volume, tagMinuteLine.OpenInterest, tagMinuteLine.NumTrades, tagMinuteLine.Voip );
-					oDumper.write( pszLine, nLen );
-				}
+				int		nLen = ::sprintf( pszLine, "%d,%d,%.4f,%.4f,%.4f,%.4f,%.4f,%.4f,%I64d,%I64d,%I64d,%.4f\n"
+										, tagMinuteLine.Date, tagMinuteLine.Time, tagMinuteLine.OpenPx, tagMinuteLine.HighPx, tagMinuteLine.LowPx, tagMinuteLine.ClosePx
+										, tagMinuteLine.SettlePx, tagMinuteLine.Amount, tagMinuteLine.Volume, tagMinuteLine.OpenInterest, tagMinuteLine.NumTrades, tagMinuteLine.Voip );
+				oDumper.write( pszLine, nLen );
+
 				m_nWriteSize = i;										///< 更新最新的写盘数据位置(避免同1分钟的重复落盘)
 			} else {		////////////////////////< 处理9:30后的分钟线计算与落盘的情况 [1. 前面无成交的情况 2.前面是连续成交的情况]
 				if( i - nLastLineIndex > 1 ) {	///< 如果前面n分钟内无成交，则开盘最高最低等于ClosePx
@@ -275,13 +274,12 @@ void MinGenerator::DumpMinutes( bool bMarketClosed )
 					tagMinuteLine.NumTrades = tagLastLine.NumTrades - tagLastLastLine.NumTrades;
 				}
 
-				if( m_pDataCache[i-1].Time > 0 ) {
-					int		nLen = ::sprintf( pszLine, "%d,%d,%.4f,%.4f,%.4f,%.4f,%.4f,%.4f,%I64d,%I64d,%I64d,%.4f\n"
-											, tagMinuteLine.Date, tagMinuteLine.Time, tagMinuteLine.OpenPx, tagMinuteLine.HighPx, tagMinuteLine.LowPx, tagMinuteLine.ClosePx
-											, tagMinuteLine.SettlePx, tagMinuteLine.Amount, tagMinuteLine.Volume, tagMinuteLine.OpenInterest, tagMinuteLine.NumTrades, tagMinuteLine.Voip );
-					oDumper.write( pszLine, nLen );
-					m_pDataCache[i-1].Time = 0;						///< 把时间清零，即，标记为已经落盘
-				}
+				int		nLen = ::sprintf( pszLine, "%d,%d,%.4f,%.4f,%.4f,%.4f,%.4f,%.4f,%I64d,%I64d,%I64d,%.4f\n"
+										, tagMinuteLine.Date, tagMinuteLine.Time, tagMinuteLine.OpenPx, tagMinuteLine.HighPx, tagMinuteLine.LowPx, tagMinuteLine.ClosePx
+										, tagMinuteLine.SettlePx, tagMinuteLine.Amount, tagMinuteLine.Volume, tagMinuteLine.OpenInterest, tagMinuteLine.NumTrades, tagMinuteLine.Voip );
+				oDumper.write( pszLine, nLen );
+				m_pDataCache[i-1].Time = 0;						///< 把时间清零，即，标记为已经落盘
+
 				m_nWriteSize = i;									///< 更新最新的写盘数据位置(避免同1分钟的重复落盘)
 			}
 		}
