@@ -108,7 +108,8 @@ if __name__ == '__main__':
                 if "SSE" == sMarketCode:
                     if (nCode > 0 and nCode < 999) or (nCode>=600000 or nCode<=609999) or (nCode>=510000 and nCode<=519999):
                         bDo = True
-                    elif (nCode >= 399000 and nCode < 399999) or (nCode>=1 and nCode<=9999) or (nCode>=159000 and nCode<=159999) or (nCode>=300000 and nCode<=300999):
+                elif "SSE" == sMarketCode:
+                    if (nCode >= 399000 and nCode < 399999) or (nCode>=1 and nCode<=9999) or (nCode>=159000 and nCode<=159999) or (nCode>=300000 and nCode<=300999):
                         bDo = True
 
                 if False == bDo:

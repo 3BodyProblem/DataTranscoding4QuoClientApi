@@ -45,7 +45,7 @@ from struct import *
 
 ### 必选参数
 # 通达信分钟线所在目录
-sTdxMinDataFolder = r"C:\zd_zszq\vipdoc\sz\minline"
+sTdxMinDataFolder = r"C:\zd_zszq\vipdoc\sh\minline"
 # 生成的CSV新格式数据文件的根目录
 sCSVFileFolder = r"./"
 
