@@ -1,5 +1,7 @@
 """
 
+用途：通达信分钟线转CSV文件工具
+
 通达信5分钟线*.lc5文件和*.lc1文件数据结构：
     文件名即股票代码
     每32个字节为一个5分钟数据，每字段内低字节在前
@@ -28,7 +30,6 @@
     python3 TdxMin2CSV.py
 
 编写：    Barry
-日期：    2018/7/5
 
 
 """
@@ -44,7 +45,7 @@ from struct import *
 
 ### 必选参数
 # 通达信分钟线所在目录
-sTdxMinDataFolder = r"C:\zd_zszq\vipdoc\sh\minline"
+sTdxMinDataFolder = r"C:\zd_zszq\vipdoc\sz\minline"
 # 生成的CSV新格式数据文件的根目录
 sCSVFileFolder = r"./"
 
@@ -77,7 +78,7 @@ def ConvertTDXFile( sTdxFilePath ):
     nDataCount = len(objBuffer) / 32 # 计算1分钟线的数量
     for i in range(int(nDataCount)):
         objMinData = unpack('hhfffffii',objBuffer[nMinDataBegin:nMinDataEnd])   # 1分钟线原始数据块
-        lstMinData.append( [str(int(objMinData[0]/2048)+2004)+str(int(objMinData[0]%2048/100)).zfill(2)+str(objMinData[0]%2048%100).zfill(2),str(int(objMinData[1]/60)).zfill(2)+str(objMinData[1]%60).zfill(2)+'00', objMinData[2], objMinData[3], objMinData[4], objMinData[5], objMinData[6], objMinData[7]] )
+        lstMinData.append( [str(int(objMinData[0]/2048)+2004)+str(int(objMinData[0]%2048/100)).zfill(2)+str(objMinData[0]%2048%100).zfill(2),str(int(objMinData[1]/60))+str(objMinData[1]%60).zfill(2)+'00', objMinData[2], objMinData[3], objMinData[4], objMinData[5], objMinData[6], objMinData[7]] )
 
         ### 为下次取1分钟线数据做好偏移
         nMinDataBegin = nMinDataBegin + 32

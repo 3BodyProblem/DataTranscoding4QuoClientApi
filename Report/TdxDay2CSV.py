@@ -1,4 +1,10 @@
-#!/usr/bin/python
+"""
+
+用途：通达信日线转CSV文件工具
+
+编写：    Barry
+
+"""
 
 from struct import unpack
 
