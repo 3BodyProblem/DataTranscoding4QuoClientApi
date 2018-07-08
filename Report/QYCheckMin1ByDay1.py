@@ -33,6 +33,19 @@ nExtractDate = 20180705
 sMarketCode = ""        # 市场编号
 
 
+def CheckMin1RecordWithTickFile( sMinData, lstAllTickData, nBeginOffset ):
+    """
+        用对应的TICK线数据来验证一条1分钟线数据
+
+        sMinData            1分钟线数据
+        lstAllTickData      指定TICK内的所有的tick线
+        nBeginOffset        读取TICK线的开始位置索引
+
+        返回，1分钟线是否正确 + 读到的TICK线的最后位置
+    """
+    return bool, 0
+
+
 def CheckMin1CSVFile( sMarketCode, sCode, nExtractDate, sQYMinFilePath, sQYTickCSVFolder ):
     """
         将钱育的分钟线数据文件(sQYMinFilePath)逐每到对应的TICK文件中，计算验证正确性
@@ -46,23 +59,27 @@ def CheckMin1CSVFile( sMarketCode, sCode, nExtractDate, sQYMinFilePath, sQYTickC
     """
     objMinCSVFile = None
     objTickCSVFile = None
+    nTickDataIndex  = 0
     ########### 先过滤掉非指定的年份文件 #########################################
     sYear = str(int(nExtractDate/10000))
     if "MIN" + sCode + "_" + sYear not in sQYMinFilePath:
         return False
-    ########### 循环遍历数据记录，按年份把分钟线数据转存到对应年份的文件中 ##########
+
     try:
+        ###### 打开分钟线和对应的TICK文件 ###############
         objMinCSVFile = open( sQYMinFilePath )
         sTickFile = os.path.join( sQYTickCSVFolder, sMarketCode + "/TICK/" + sCode + '/' + str(nExtractDate) + '/' )
         sTickFile = os.path.join( sTickFile, "TICK" + sCode + "_" + str(nExtractDate) + ".csv" )
-
-
         objTickCSVFile = open( sTickFile, 'w' )
-        ###### 过滤出需要年份的记录到文件 ##########
-        lstAllData = objMinCSVFile.readlines()[1:]
-        for sMinData in lstAllData:
+        ###### 循环，过滤出需要年份的记录来验证 ##########
+        lstAllMin1Data = objMinCSVFile.readlines()[1:]
+        lstAllTickData = objTickCSVFile.readlines()[1:]
+        for sMinData in lstAllMin1Data:
             if str(nExtractDate)+"," in sMinData:
-                objDestCSVFile.write( sMinData )
+                bOK, nTickDataIndex = CheckMin1RecordWithTickFile(sMinData, lstAllTickData, nTickDataIndex)
+
+                if False == bOK:
+                    raise Exception( "Invalid Min1 Record! " + sQYMinFilePath )
     finally:
         if objMinCSVFile:
             objMinCSVFile.close()
