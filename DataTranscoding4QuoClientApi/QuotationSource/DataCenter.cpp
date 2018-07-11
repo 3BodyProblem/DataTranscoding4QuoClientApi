@@ -109,13 +109,15 @@ MinGenerator& MinGenerator::operator=( const MinGenerator& obj )
 
 int MinGenerator::Initialize()
 {
-	m_nWriteSize = -1;
 	m_nDataSize = 0;
+	m_nWriteSize = -1;
+	m_nBeginOffset = 1024;
+	m_nPreClose = -1;
 
 	return 0;
 }
 
-int MinGenerator::Update( T_DATA& objData )
+int MinGenerator::Update( T_DATA& objData, int nPreClose )
 {
 	if( NULL == m_pDataCache )	{
 		QuoCollector::GetCollector()->OnLog( TLV_ERROR, "MinGenerator::Update() : invalid buffer pointer" );
@@ -132,11 +134,16 @@ int MinGenerator::Update( T_DATA& objData )
 	unsigned int		nMM = nMKTime % 10000 / 100;
 	int					nDataIndex = -1;
 
+	if( m_nPreClose != nPreClose && nPreClose > 0 ) {
+		m_nPreClose = nPreClose;					///< 更新昨收
+	}
+
 	///< 用当前市场时间，映射出对应的一分钟线的索引值
 	if( nMKTime < 93000 ) {
 		m_dAmountBefore930 = objData.Amount;		///< 9:30前的金额
 		m_nVolumeBefore930 = objData.Volume;		///< 9:30前的量
 		m_nNumTradesBefore930 = objData.NumTrades;	///< 9:30前的笔数
+		m_nBeginOffset = 0;							///< 开始数据落盘的起始位置(说明盘前启动，且中间没有中断过)
 	} else if( nMKTime >= 93000 && nMKTime <= 130000 ) {
 		nDataIndex = 0;								///< 需要包含9:30这根线
 		if( 9 == nHH ) {
@@ -165,6 +172,10 @@ int MinGenerator::Update( T_DATA& objData )
 	if( nDataIndex >= 241 ) {
 		QuoCollector::GetCollector()->OnLog( TLV_ERROR, "MinGenerator::Update() : out of range" );
 		return -4;
+	}
+
+	if( m_nBeginOffset > 1000 ) {					///< 若盘中还是初始化大值(非盘前启动)，直接跳到第1个快照的写入位置
+		m_nBeginOffset = nDataIndex;
 	}
 
 	///< 除最高/低价以外，其他原样更新到对应的每分钟数据中
@@ -209,15 +220,35 @@ void MinGenerator::DumpMinutes( bool bMarketClosed )
 	T_MIN_LINE				tagLastLine = { 0 };					///< 上一笔快照的最后情况
 	T_MIN_LINE				tagLastLastLine = { 0 };				///< 上上笔快照的最后情况
 
-	///< 准备好需要写入的文件句柄
+	/////////////////////< 准备好需要写入的文件句柄
 	if( false == PrepareMinuteFile( m_eMarket, m_pszCode, m_nDate, oDumper ) )	{
 		QuoCollector::GetCollector()->OnLog( TLV_ERROR, "MinGenerator::DumpMinutes() : cannot open file 4 security:%s", m_pszCode );
 		return;
 	}
 
-	if( true == bMarketClosed ) m_nDataSize = m_nMaxLineCount;
-	///< 从头遍历，直到最后一个收到的时间节点上
-	for( int i = 0; i < m_nDataSize; i++ )	{
+	/////////////////////< 收盘准备： a) 全天无行情: 将全天的价格都赋为昨收 b)有情行：将最后更新数据位置赋值成241
+	if( true == bMarketClosed ) {
+		///< 一天内无快照的情况
+		if( 0 >= m_nBeginOffset ) {
+			double			dPreClosePx = m_nPreClose / m_dPriceRate;	///< 昨收价
+
+			m_nBeginOffset = 0;		///< 起始位置为0
+			///< 将一天无行情的商品，的241条1分钟线全用昨收价填充
+			tagLastLine.OpenPx = dPreClosePx;
+			tagLastLine.HighPx = dPreClosePx;
+			tagLastLine.LowPx = dPreClosePx;
+			tagLastLine.ClosePx = dPreClosePx;
+			m_pDataCache[0].OpenPx = m_nPreClose;
+			m_pDataCache[0].HighPx = m_nPreClose;
+			m_pDataCache[0].LowPx = m_nPreClose;
+			m_pDataCache[0].ClosePx = m_nPreClose;
+		}
+
+		m_nDataSize = m_nMaxLineCount;								///< 将最后更新数据位置赋值成241
+	}
+
+	//////////////////////< 计算并写分钟线：从头遍历，直到最后一个收到的时间节点上
+	for( int i = m_nBeginOffset; i < m_nDataSize; i++ )	{
 		///< 跳过已经落盘过的时间节点，以m_pDataCache[i].Time大于零为标识，进行"后续写入"
 		if( i > m_nWriteSize ) {
 			char			pszLine[1024] = { 0 };
@@ -305,7 +336,8 @@ void MinGenerator::DumpMinutes( bool bMarketClosed )
 			tagLastLine.Voip = m_pDataCache[i].Voip / m_dPriceRate;
 		}
 	}
-	///< 关闭落盘文件句柄
+
+	//////////////////< 关闭落盘文件句柄
 	if( oDumper.is_open() ) {
 		oDumper.close();
 	}
@@ -419,7 +451,7 @@ int SecurityMinCache::UpdateSecurity( const XDFAPI_IndexData& refObj, unsigned i
 		objData.Amount = refObj.Amount;
 		objData.Volume = refObj.Volume;
 
-		return it->second.Update( objData );
+		return it->second.Update( objData, refObj.PreClose );
 	}
 
 	return -1;
@@ -445,7 +477,7 @@ int SecurityMinCache::UpdateSecurity( const XDFAPI_StockData5& refObj, unsigned 
 		objData.NumTrades = refObj.Records;
 		objData.Voip = refObj.Voip;
 
-		return it->second.Update( objData );
+		return it->second.Update( objData, refObj.PreClose );
 	}
 
 	return -1;
@@ -466,7 +498,7 @@ void* SecurityMinCache::DumpThread( void* pSelf )
 			unsigned int	nCodeNumber = refData.m_vctCode.size();
 			unsigned int	nNowTime = DateTime::Now().TimeToLong();
 
-			if( nNowTime > 151501 && nNowTime < 153501 ) {
+			if( nNowTime > 153010 && nNowTime < 155010 ) {
 				bCloseMarket = true;				///< 如果有商品的市场时间为15:00，则标记为需要集体生成分钟线
 			} else {
 				bCloseMarket = false;				///< 标记为不在闭市阶段，不需要落余下的全部1分钟线

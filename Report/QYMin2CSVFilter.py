@@ -20,11 +20,11 @@ import os, sys
 
 ### 必选参数
 # 钱育某市场的分钟线所在目录
-sQYMinCSVFolder = r"D:\ServiceManager\srvunit\DataTranscoding4QuoClientApi\data\SZSE\MIN"
+sQYMinCSVFolder = r"D:\ServiceManager\srvunit\DataTranscoding4QuoClientApi\data\SSE\MIN"
 # 生成的CSV新格式数据文件的根目录
 sCSVFileFolder = r"./"
 # 待从CSV文件过滤出来的数据日期
-nExtractDate = 20180705
+nExtractDate = 20180711
 
 
 ############ Convertion Code ###########################################################

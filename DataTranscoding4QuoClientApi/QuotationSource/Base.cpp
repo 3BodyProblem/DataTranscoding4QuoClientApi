@@ -9,7 +9,7 @@ char* FormatDouble2Str( const double& dVal, char* pszOutputBuffer, unsigned int 
 		return NULL;
 	}
 
-	//////////////////< 清空缓存
+	//////////////////< 清空缓存 ///////////////////////////////////////////////////
 	::strncpy( pszOutputBuffer, "0.0", 3 );
 
 	//////////////////< 处理，零值的情况
@@ -22,7 +22,7 @@ char* FormatDouble2Str( const double& dVal, char* pszOutputBuffer, unsigned int 
 		}
 	}
 
-	/////////////////// 处理，非零值，需要做精确位数 & 去末尾无意义的零值
+	/////////////////// 处理，非零值，需要做精确位数 & 去末尾无意义的零值 //////////
 	switch( nPrecision )
 	{
 	case 1:

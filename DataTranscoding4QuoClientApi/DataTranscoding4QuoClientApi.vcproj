@@ -62,7 +62,7 @@
 			<Tool
 				Name="VCLinkerTool"
 				AdditionalDependencies="gtestd.lib"
-				OutputFile="Debug\$(ProjectName).dll"
+				OutputFile="D:\ServiceManager\srvunit\DataTranscoding4QuoClientApi\$(ProjectName).dll"
 				LinkIncremental="2"
 				AdditionalLibraryDirectories="../libs/gtest/library_vc9/Debug/"
 				ModuleDefinitionFile="DataTranscoding4QuoClientApi.def"
@@ -178,6 +178,14 @@
 		<Filter
 			Name="QuotationSource"
 			>
+			<File
+				RelativePath=".\QuotationSource\Base.cpp"
+				>
+			</File>
+			<File
+				RelativePath=".\QuotationSource\Base.h"
+				>
+			</File>
 			<File
 				RelativePath=".\QuotationSource\DataCenter.cpp"
 				>

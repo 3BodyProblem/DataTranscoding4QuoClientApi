@@ -172,9 +172,10 @@ public:
 	/**
 	 * @brief					将行情中的每分钟的第一笔快照，更新到对应的241条分钟线数据槽中
 	 * @param[in]				objData					行情快照
+	 * @param[in]				nPreClose				昨收
 	 * @return					0						成功
 	 */
-	int							Update( T_DATA& objData );
+	int							Update( T_DATA& objData, int nPreClose );
 
 	/**
 	 * @brief					生成分钟线并存盘
@@ -185,6 +186,7 @@ protected:
 	double						m_dAmountBefore930;		///< 9:30前的金额
 	unsigned __int64			m_nVolumeBefore930;		///< 9:30前的量
 	unsigned __int64			m_nNumTradesBefore930;	///< 9:30前的笔数
+	int							m_nPreClose;			///< 昨收
 protected:
 	double						m_dPriceRate;			///< 放大倍数
 	enum XDFMarket				m_eMarket;				///< 市场编号
@@ -192,8 +194,9 @@ protected:
 	char						m_pszCode[9];			///< 商品代码
 protected:
 	T_DATA*						m_pDataCache;			///< 241根1分钟缓存
-	int							m_nWriteSize;			///< 写入分钟线的长度
-	int							m_nDataSize;			///< 数据长度
+	short						m_nBeginOffset;			///< 第一个真实写入数据的索引(如果盘中才启动，那之前的分钟线不应该落盘，不然为全零记录)
+	short						m_nWriteSize;			///< 已经落过盘的分钟线位置(避免重复落盘)
+	short						m_nDataSize;			///< 数据长度
 };
 
 

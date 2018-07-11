@@ -20,11 +20,11 @@ import os, sys
 
 ### 必选参数
 # 钱育某市场的1分钟线所在目录
-sQYMin1CSVFolder = r"D:\ServiceManager\srvunit\DataTranscoding4QuoClientApi\data\SSE\MIN"
+sQYMin1CSVFolder = r"D:\HQHISDATA\SSE\MIN"
 # 钱育某市场的TICK线所在目录
-sQYTickCSVFolder = r"D:\ServiceManager\srvunit\DataTranscoding4QuoClientApi\data\SSE\TICK"
+sQYTickCSVFolder = r"D:\HQHISDATA\SSE\TICK"
 # 待从CSV文件过滤出来的数据日期
-nExtractDate = 20180705
+nExtractDate = 20180706
 
 
 ############ Convertion Code ###########################################################
@@ -43,7 +43,36 @@ def CheckMin1RecordWithTickFile( sMinData, lstAllTickData, nBeginOffset ):
 
         返回，1分钟线是否正确 + 读到的TICK线的最后位置
     """
-    return bool, 0
+    nLastIndex = 0
+    lstMinValue = sMinData.split(",")
+    if len(lstMinValue) < 12:
+        print("无效的分钟线数据, 长度不足: ", sMinData)
+        return False
+
+    nLastVolume = -1
+    nFirstVolume = -1
+    sMinYear = lstMinValue[0]
+    nMinTime = int(int(lstMinValue[1])/100)
+    for n in range(nBeginOffset, len(lstAllTickData)):
+        sTickData = lstAllTickData[n]
+        lstTickValue = sTickData.split(",")
+        if len(lstTickValue) < 26:
+            print("无效的TICK线数据, 长度不足: ", sTickData)
+            return False
+        ### 在同一年份，同一分钟内，做一分钟线的配对验证 #######
+        sTickYear = lstTickValue[0]
+        nTickTime = int(int(lstTickValue[1]) / 100000)
+        if sMinYear == sTickYear:
+            if nMinTime == nTickTime:
+                nLastVolume = int(lstTickValue[13])
+                if nFirstVolume < 0:
+                    nFirstVolume = nLastVolume
+
+            print( sTickYear, nTickTime, nFirstVolume, nLastVolume )
+
+        nLastIndex = n
+
+    return False, len(lstAllTickData)
 
 
 def CheckMin1CSVFile( sMarketCode, sCode, nExtractDate, sQYMinFilePath, sQYTickCSVFolder ):
@@ -68,18 +97,19 @@ def CheckMin1CSVFile( sMarketCode, sCode, nExtractDate, sQYMinFilePath, sQYTickC
     try:
         ###### 打开分钟线和对应的TICK文件 ###############
         objMinCSVFile = open( sQYMinFilePath )
-        sTickFile = os.path.join( sQYTickCSVFolder, sMarketCode + "/TICK/" + sCode + '/' + str(nExtractDate) + '/' )
+        sTickFile = os.path.join( sQYTickCSVFolder, sCode + '/' + str(nExtractDate) + '/' )
         sTickFile = os.path.join( sTickFile, "TICK" + sCode + "_" + str(nExtractDate) + ".csv" )
-        objTickCSVFile = open( sTickFile, 'w' )
+        objTickCSVFile = open( sTickFile )
         ###### 循环，过滤出需要年份的记录来验证 ##########
         lstAllMin1Data = objMinCSVFile.readlines()[1:]
         lstAllTickData = objTickCSVFile.readlines()[1:]
         for sMinData in lstAllMin1Data:
             if str(nExtractDate)+"," in sMinData:
                 bOK, nTickDataIndex = CheckMin1RecordWithTickFile(sMinData, lstAllTickData, nTickDataIndex)
-
                 if False == bOK:
                     raise Exception( "Invalid Min1 Record! " + sQYMinFilePath )
+                else:
+                    print( "[匹配成功] --> ", sCode )
     finally:
         if objMinCSVFile:
             objMinCSVFile.close()

@@ -14,6 +14,8 @@
  * @param[in]		nPrecision			格式化的精确小数位数
  * @param[in]		bEconomicalModel	true:开启节约模式，如果为0值，则输出空串 --> '', false:不开启节约模式，如果为0值，输出'0'或'0.0'
  * @return			返回格式化以后的字符串指针
+ * @date			2018/7/10
+ * @author			barry
  */
 char* FormatDouble2Str( const double& dVal, char* pszOutputBuffer, unsigned int nOutputBufLen, unsigned int nPrecision, bool bEconomicalModel = false );
 
