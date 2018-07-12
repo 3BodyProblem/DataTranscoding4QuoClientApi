@@ -350,16 +350,15 @@ int Quotation::SaveShLv1_Static_Tick_Day( enum XDFRunStat eStatus, bool bBuild )
 				{
 					if( abs(pMsgHead->MsgType) == 5 )
 					{
-						T_LINE_PARAM			tagParam = { 0 };
 						MinGenerator::T_DATA	tagMinData = { 0 };
 						TickGenerator::T_DATA	tagTickData = { 0 };
 						char					pszLine[1024] = { 0 };
 						T_STATIC_LINE			tagStaticLine = { 0 };
 						XDFAPI_NameTableSh*		pData = (XDFAPI_NameTableSh*)pbuf;
 						///< 构建商品集合
-						tagParam.dPriceRate = ::pow(10.0, int(vctKindInfo[pData->SecKind].PriceRate) );
-						m_oQuoDataCenter.BuildSecurity( XDF_SH, std::string( pData->Code, 6 ), DateTime::Now().DateToLong(), tagParam.dPriceRate, tagTickData, NULL, 0 );
-						m_oQuoDataCenter.BuildSecurity4Min( XDF_SH, std::string( pData->Code, 6 ), DateTime::Now().DateToLong(), tagParam.dPriceRate, tagMinData );
+						double					dPriceRate = ::pow(10.0, int(vctKindInfo[pData->SecKind].PriceRate) );
+						m_oQuoDataCenter.BuildSecurity( XDF_SH, std::string( pData->Code, 6 ), DateTime::Now().DateToLong(), dPriceRate, tagTickData, NULL, 0 );
+						m_oQuoDataCenter.BuildSecurity4Min( XDF_SH, std::string( pData->Code, 6 ), DateTime::Now().DateToLong(), dPriceRate, tagMinData );
 						nNum++;
 
 						///< 静态数据落盘
@@ -373,10 +372,7 @@ int Quotation::SaveShLv1_Static_Tick_Day( enum XDFRunStat eStatus, bool bBuild )
 						if( true == bNeedSaveStatic ) {
 							if( true == PrepareStaticFile( tagStaticLine, oDumper ) )
 							{
-								int		nLen = ::sprintf( pszLine, "%s,%s,%d,%d,%d,%d,%d,%d,%d,%d,%s,%s,%c,%c,%.4f\n"
-									, tagStaticLine.Code, tagStaticLine.Name, tagStaticLine.LotSize, tagStaticLine.ContractMult, tagStaticLine.ContractUnit
-									, tagStaticLine.StartDate, tagStaticLine.EndDate, tagStaticLine.XqDate, tagStaticLine.DeliveryDate, tagStaticLine.ExpireDate
-									, tagStaticLine.UnderlyingCode, tagStaticLine.UnderlyingName, tagStaticLine.OptionType, tagStaticLine.CallOrPut, tagStaticLine.ExercisePx );
+								int		nLen = ::sprintf( pszLine, "%s,%s,%d,,,,,,,,,,,,\n", tagStaticLine.Code, tagStaticLine.Name, tagStaticLine.LotSize );
 								oDumper.write( pszLine, nLen );
 							}
 						}
@@ -564,7 +560,6 @@ int Quotation::SaveSzLv1_Static_Tick_Day( enum XDFRunStat eStatus, bool bBuild )
 				{
 					if( abs(pMsgHead->MsgType) == 6 )
 					{
-						T_LINE_PARAM			tagParam = { 0 };
 						MinGenerator::T_DATA	tagMinData = { 0 };
 						TickGenerator::T_DATA	tagTickData = { 0 };
 						char					pszLine[1024] = { 0 };
@@ -572,9 +567,9 @@ int Quotation::SaveSzLv1_Static_Tick_Day( enum XDFRunStat eStatus, bool bBuild )
 						XDFAPI_NameTableSz*		pData = (XDFAPI_NameTableSz*)pbuf;
 
 						///< 数据集合构建
-						tagParam.dPriceRate = ::pow(10.0, int(vctKindInfo[pData->SecKind].PriceRate) );
-						m_oQuoDataCenter.BuildSecurity( XDF_SZ, std::string( pData->Code, 6 ), DateTime::Now().DateToLong(), tagParam.dPriceRate, tagTickData, pData->PreName, 4 );
-						m_oQuoDataCenter.BuildSecurity4Min( XDF_SZ, std::string( pData->Code, 6 ), DateTime::Now().DateToLong(), tagParam.dPriceRate, tagMinData );
+						double					dPriceRate = ::pow(10.0, int(vctKindInfo[pData->SecKind].PriceRate) );
+						m_oQuoDataCenter.BuildSecurity( XDF_SZ, std::string( pData->Code, 6 ), DateTime::Now().DateToLong(), dPriceRate, tagTickData, pData->PreName, 4 );
+						m_oQuoDataCenter.BuildSecurity4Min( XDF_SZ, std::string( pData->Code, 6 ), DateTime::Now().DateToLong(), dPriceRate, tagMinData );
 
 						///< 静态数据落盘
 						tagStaticLine.Type = 0;
@@ -587,10 +582,7 @@ int Quotation::SaveSzLv1_Static_Tick_Day( enum XDFRunStat eStatus, bool bBuild )
 						if( true == bNeedSaveStatic ) {
 							if( true == PrepareStaticFile( tagStaticLine, oDumper ) )
 							{
-								int		nLen = ::sprintf( pszLine, "%s,%s,%d,%d,%d,%d,%d,%d,%d,%d,%s,%s,%c,%c,%.4f\n"
-									, tagStaticLine.Code, tagStaticLine.Name, tagStaticLine.LotSize, tagStaticLine.ContractMult, tagStaticLine.ContractUnit
-									, tagStaticLine.StartDate, tagStaticLine.EndDate, tagStaticLine.XqDate, tagStaticLine.DeliveryDate, tagStaticLine.ExpireDate
-									, tagStaticLine.UnderlyingCode, tagStaticLine.UnderlyingName, tagStaticLine.OptionType, tagStaticLine.CallOrPut, tagStaticLine.ExercisePx );
+								int		nLen = ::sprintf( pszLine, "%s,%s,%d,,,,,,,,,,,,\n", tagStaticLine.Code, tagStaticLine.Name, tagStaticLine.LotSize );
 								oDumper.write( pszLine, nLen );
 							}
 						}

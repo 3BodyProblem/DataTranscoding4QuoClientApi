@@ -46,6 +46,10 @@ char* FormatDouble2Str( const double& dVal, char* pszOutputBuffer, unsigned int 
 	while( nFormatStrLen > 3 && nPrecision > 1 ) {
 		nFormatStrLen--;
 
+		if( '.' == pszOutputBuffer[nFormatStrLen-1] )	{
+			break;
+		}
+
 		if( pszOutputBuffer[nFormatStrLen] == '0' ) {
 			pszOutputBuffer[nFormatStrLen] = '\0';
 		}

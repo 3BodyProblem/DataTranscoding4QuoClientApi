@@ -75,6 +75,14 @@ typedef struct
 }XDFAPI_UniMsgHead;
 
 
+//数据查询接口参数定义
+typedef struct
+{
+	int8_t					MkID;			//市场ID
+	uint32_t				nBufLen;		//输出缓存最大长度
+} XDFAPI_ReqFuncParam;
+
+
 //价位
 typedef struct
 {

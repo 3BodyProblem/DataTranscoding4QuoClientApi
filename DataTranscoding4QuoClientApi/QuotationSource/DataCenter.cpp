@@ -4,6 +4,7 @@
 #include <windows.h>
 #include <time.h>
 #include <sys/timeb.h>
+#include "Base.h"
 #include "SvrStatus.h"
 #include "../Infrastructure/File.h"
 #include "../DataTranscoding4QuoClientApi.h"
@@ -253,6 +254,12 @@ void MinGenerator::DumpMinutes( bool bMarketClosed )
 		if( i > m_nWriteSize ) {
 			char			pszLine[1024] = { 0 };
 			T_MIN_LINE		tagMinuteLine = { 0 };
+			char			pszOpen[32] = { 0 };
+			char			pszHigh[32] = { 0 };
+			char			pszLow[32] = { 0 };
+			char			pszClose[32] = { 0 };
+			char			pszAmount[32] = { 0 };
+			char			pszVoip[32] = { 0 };
 			///< 计算每个分钟线的对应时间(单位：分)
 			tagMinuteLine.Date = m_nDate;
 			if( i == 0 ) {											///< [ 上午121根分钟线，下午120根 ]
@@ -280,10 +287,16 @@ void MinGenerator::DumpMinutes( bool bMarketClosed )
 				tagMinuteLine.LowPx = m_pDataCache[i].LowPx / m_dPriceRate;
 				tagMinuteLine.ClosePx = m_pDataCache[i].ClosePx / m_dPriceRate;
 				tagMinuteLine.Voip = m_pDataCache[i].Voip / m_dPriceRate;
+				FormatDouble2Str( tagMinuteLine.OpenPx, pszOpen, sizeof(pszOpen), 4, false );
+				FormatDouble2Str( tagMinuteLine.HighPx, pszHigh, sizeof(pszHigh), 4, false );
+				FormatDouble2Str( tagMinuteLine.LowPx, pszLow, sizeof(pszLow), 4, false );
+				FormatDouble2Str( tagMinuteLine.ClosePx, pszClose, sizeof(pszClose), 4, false );
+				FormatDouble2Str( tagMinuteLine.Amount, pszAmount, sizeof(pszAmount), 4, false );
+				FormatDouble2Str( tagMinuteLine.Voip, pszVoip, sizeof(pszVoip), 4, false );
 
-				int		nLen = ::sprintf( pszLine, "%d,%d,%.4f,%.4f,%.4f,%.4f,%.4f,%.4f,%I64d,%I64d,%I64d,%.4f\n"
-										, tagMinuteLine.Date, tagMinuteLine.Time, tagMinuteLine.OpenPx, tagMinuteLine.HighPx, tagMinuteLine.LowPx, tagMinuteLine.ClosePx
-										, tagMinuteLine.SettlePx, tagMinuteLine.Amount, tagMinuteLine.Volume, tagMinuteLine.OpenInterest, tagMinuteLine.NumTrades, tagMinuteLine.Voip );
+				int		nLen = ::sprintf( pszLine, "%d,%d,%s,%s,%s,%s,,%s,%I64d,,%I64d,%s\n"
+										, tagMinuteLine.Date, tagMinuteLine.Time, pszOpen, pszHigh, pszLow, pszClose
+										, pszAmount, tagMinuteLine.Volume, tagMinuteLine.NumTrades, pszVoip );
 				oDumper.write( pszLine, nLen );
 
 				m_nWriteSize = i;										///< 更新最新的写盘数据位置(避免同1分钟的重复落盘)
@@ -305,9 +318,16 @@ void MinGenerator::DumpMinutes( bool bMarketClosed )
 					tagMinuteLine.NumTrades = tagLastLine.NumTrades - tagLastLastLine.NumTrades;
 				}
 
-				int		nLen = ::sprintf( pszLine, "%d,%d,%.4f,%.4f,%.4f,%.4f,%.4f,%.4f,%I64d,%I64d,%I64d,%.4f\n"
-										, tagMinuteLine.Date, tagMinuteLine.Time, tagMinuteLine.OpenPx, tagMinuteLine.HighPx, tagMinuteLine.LowPx, tagMinuteLine.ClosePx
-										, tagMinuteLine.SettlePx, tagMinuteLine.Amount, tagMinuteLine.Volume, tagMinuteLine.OpenInterest, tagMinuteLine.NumTrades, tagMinuteLine.Voip );
+				FormatDouble2Str( tagMinuteLine.OpenPx, pszOpen, sizeof(pszOpen), 4, false );
+				FormatDouble2Str( tagMinuteLine.HighPx, pszHigh, sizeof(pszHigh), 4, false );
+				FormatDouble2Str( tagMinuteLine.LowPx, pszLow, sizeof(pszLow), 4, false );
+				FormatDouble2Str( tagMinuteLine.ClosePx, pszClose, sizeof(pszClose), 4, false );
+				FormatDouble2Str( tagMinuteLine.Amount, pszAmount, sizeof(pszAmount), 4, false );
+				FormatDouble2Str( tagMinuteLine.Voip, pszVoip, sizeof(pszVoip), 4, false );
+
+				int		nLen = ::sprintf( pszLine, "%d,%d,%s,%s,%s,%s,,%s,%I64d,,%I64d,%s\n"
+										, tagMinuteLine.Date, tagMinuteLine.Time, pszOpen, pszHigh, pszLow, pszClose
+										, pszAmount, tagMinuteLine.Volume, tagMinuteLine.NumTrades, pszVoip );
 				oDumper.write( pszLine, nLen );
 				m_pDataCache[i-1].Time = 0;						///< 把时间清零，即，标记为已经落盘
 
@@ -737,6 +757,20 @@ void TickGenerator::DumpTicks()
 		TickGenerator::T_DATA	tagData = { 0 };
 		T_TICK_LINE				tagTickData = { 0 };
 		char					pszLine[512] = { 0 };
+		char					pszPreClose[32] = { 0 };
+		char					pszOpen[32] = { 0 };
+		char					pszHigh[32] = { 0 };
+		char					pszLow[32] = { 0 };
+		char					pszClose[32] = { 0 };
+		char					pszNow[32] = { 0 };
+		char					pszAmount[32] = { 0 };
+		char					pszVoip[32] = { 0 };
+		char					pszUpper[32] = { 0 };
+		char					pszLower[32] = { 0 };
+		char					pszBidPx1[32] = { 0 };
+		char					pszBidPx2[32] = { 0 };
+		char					pszAskPx1[32] = { 0 };
+		char					pszAskPx2[32] = { 0 };
 
 		if( m_objTickQueue.GetData( &tagData ) <= 0 )	{
 			break;
@@ -757,7 +791,7 @@ void TickGenerator::DumpTicks()
 		tagTickData.PreClosePx = m_nPreClosePx / m_dPriceRate;
 		tagTickData.OpenPx = m_nOpenPx / m_dPriceRate;
 		tagTickData.HighPx = tagData.HighPx / m_dPriceRate;
-		tagTickData.LowerPx = tagData.LowerPx / m_dPriceRate;
+		tagTickData.LowPx = tagData.LowPx / m_dPriceRate;
 		tagTickData.ClosePx = tagData.ClosePx / m_dPriceRate;
 		tagTickData.NowPx = tagData.NowPx / m_dPriceRate;
 		tagTickData.UpperPx = tagData.UpperPx / m_dPriceRate;
@@ -774,13 +808,26 @@ void TickGenerator::DumpTicks()
 		tagTickData.AskPx2 = tagData.AskPx2 / m_dPriceRate;
 		tagTickData.AskVol2 = tagData.AskVol2;
 		tagTickData.Voip = tagData.Voip / m_dPriceRate;
+		FormatDouble2Str( tagTickData.PreClosePx, pszPreClose, sizeof(pszPreClose), 4, false );
+		FormatDouble2Str( tagTickData.OpenPx, pszOpen, sizeof(pszOpen), 4, false );
+		FormatDouble2Str( tagTickData.HighPx, pszHigh, sizeof(pszHigh), 4, false );
+		FormatDouble2Str( tagTickData.LowPx, pszLow, sizeof(pszLow), 4, false );
+		FormatDouble2Str( tagTickData.ClosePx, pszClose, sizeof(pszClose), 4, false );
+		FormatDouble2Str( tagTickData.NowPx, pszNow, sizeof(pszNow), 4, false );
+		FormatDouble2Str( tagTickData.UpperPx, pszUpper, sizeof(pszUpper), 4, false );
+		FormatDouble2Str( tagTickData.LowerPx, pszLower, sizeof(pszLower), 4, false );
+		FormatDouble2Str( tagTickData.Amount, pszAmount, sizeof(pszAmount), 4, false );
+		FormatDouble2Str( tagTickData.BidPx1, pszBidPx1, sizeof(pszBidPx1), 4, false );
+		FormatDouble2Str( tagTickData.BidPx2, pszBidPx2, sizeof(pszBidPx2), 4, false );
+		FormatDouble2Str( tagTickData.AskPx1, pszAskPx1, sizeof(pszAskPx1), 4, false );
+		FormatDouble2Str( tagTickData.AskPx2, pszAskPx2, sizeof(pszAskPx2), 4, false );
+		FormatDouble2Str( tagTickData.Voip, pszVoip, sizeof(pszVoip), 4, false );
 
-		int		nLen = ::sprintf( pszLine, "%u,%u,%f,%f,%f,%f,%f,%f,%f,%f,%f,%f,%f,%I64d,%I64d,%I64d,%f,%I64d,%f,%I64d,%f,%I64d,%f,%I64d,%f,,%s\n"
-			, tagTickData.Date, tagTickData.Time, tagTickData.PreClosePx, tagTickData.PreSettlePx
-			, tagTickData.OpenPx, tagTickData.HighPx, tagTickData.LowPx, tagTickData.ClosePx, tagTickData.NowPx, tagTickData.SettlePx
-			, tagTickData.UpperPx, tagTickData.LowerPx, tagTickData.Amount, tagTickData.Volume, tagTickData.OpenInterest, tagTickData.NumTrades
-			, tagTickData.BidPx1, tagTickData.BidVol1, tagTickData.BidPx2, tagTickData.BidVol2, tagTickData.AskPx1, tagTickData.AskVol1, tagTickData.AskPx2, tagTickData.AskVol2
-			, tagTickData.Voip, m_pszPreName );
+		int		nLen = ::sprintf( pszLine, "%u,%u,%s,,%s,%s,%s,%s,%s,,%s,%s,%s,%I64d,,%I64d,%s,%I64d,%s,%I64d,%s,%I64d,%s,%I64d,%s,,%s\n"
+			, tagTickData.Date, tagTickData.Time, pszPreClose, pszOpen, pszHigh, pszLow, pszClose, pszNow
+			, pszUpper, pszLower, pszAmount, tagTickData.Volume, tagTickData.NumTrades
+			, pszBidPx1, tagTickData.BidVol1, pszBidPx2, tagTickData.BidVol2, pszAskPx1, tagTickData.AskVol1, pszAskPx2, tagTickData.AskVol2
+			, pszVoip, m_pszPreName );
 
 		::fwrite( pszLine, sizeof(char), nLen, m_pDumpFile );
 	}
@@ -1014,6 +1061,55 @@ void* SecurityTickCache::DumpThread( void* pSelf )
 	QuoCollector::GetCollector()->OnLog( TLV_INFO, "SecurityTickCache::DumpThread() : MarketID = %d, misson complete!............", (int)(refData.m_eMarketID) );
 
 	return NULL;
+}
+
+
+///< 沪、深股票类停牌标记表 //////////////////////////////////////////////////////////////////////////////////
+SecurityStatus::SecurityStatus()
+{
+}
+
+int SecurityStatus::FetchAllSFlag( enum XDFMarket eMkID, QuotePrimeApi& refQuoteQueryApi, unsigned int nWareCount )
+{
+	int						nErrorCode = 0;
+	XDFAPI_ReqFuncParam		tagQueryParam = { 0 };
+	unsigned int			nFlagBufSize = sizeof(XDFAPI_StopFlag) * nWareCount + 128;
+	char*					pszFlagBuf = new char[nFlagBufSize];
+
+	if( NULL == pszFlagBuf ) {
+		return -1;
+	}
+
+	tagQueryParam.MkID = eMkID;
+	tagQueryParam.nBufLen = nFlagBufSize;
+	CriticalLock			section( m_oLockData );
+	nErrorCode = refQuoteQueryApi.ReqFuncData( 102, &tagQueryParam, pszFlagBuf );
+	for( int m = 0; m < nErrorCode; )
+	{
+		XDFAPI_UniMsgHead*	pMsgHead = (XDFAPI_UniMsgHead*)(pszFlagBuf+m);
+		char*				pbuf = pszFlagBuf+m +sizeof(XDFAPI_UniMsgHead);
+		int					MsgCount = pMsgHead->MsgCount;
+
+		for( int i = 0; i < MsgCount; i++ )
+		{
+			char			pszCode[8] = { 0 };
+
+			if( abs(pMsgHead->MsgType) == 23 )			///< stop flag
+			{
+				XDFAPI_StopFlag* pData = (XDFAPI_StopFlag*)pbuf;
+
+				m_mapSFlagTable[std::string( pData->Code, 6 )] = pData->SFlag;
+
+				pbuf += sizeof(XDFAPI_StopFlag);
+			}
+		}
+
+		m += (sizeof(XDFAPI_UniMsgHead) + pMsgHead->MsgLen - sizeof(pMsgHead->MsgCount));
+	}
+
+	delete []pszFlagBuf;
+
+	return m_mapSFlagTable.size();
 }
 
 
@@ -1352,9 +1448,23 @@ int QuotationData::DumpDayLine( enum XDFMarket eMarket, char* pSnapData, unsigne
 						{
 							if( false == CheckDateInDayFile( oLoader, nMachineDate ) ) // 未在日线文件中查找出今天的日线数据，所以需要写入一条
 							{
-								int	nLen = ::sprintf( pszDayLine, "%u,%.4f,%.4f,%.4f,%.4f,%.4f,%.4f,%I64d,%u,%u,%.4f\n", nMachineDate
-									, pStock->Open/dPriceRate, pStock->High/dPriceRate, pStock->Low/dPriceRate, pStock->Now/dPriceRate
-									, 0.0, pStock->Amount, pStock->Volume, 0, pStock->Records, pStock->Voip/dPriceRate );
+								char	pszOpen[32] = { 0 };
+								char	pszHigh[32] = { 0 };
+								char	pszLow[32] = { 0 };
+								char	pszNow[32] = { 0 };
+								char	pszAmount[32] = { 0 };
+								char	pszVoip[32] = { 0 };
+
+								FormatDouble2Str( pStock->Open/dPriceRate, pszOpen, sizeof(pszOpen), 4, false );
+								FormatDouble2Str( pStock->High/dPriceRate, pszHigh, sizeof(pszHigh), 4, false );
+								FormatDouble2Str( pStock->Low/dPriceRate, pszLow, sizeof(pszLow), 4, false );
+								FormatDouble2Str( pStock->Now/dPriceRate, pszNow, sizeof(pszNow), 4, false );
+								FormatDouble2Str( pStock->Amount, pszAmount, sizeof(pszAmount), 4, false );
+								FormatDouble2Str( pStock->Voip/dPriceRate, pszVoip, sizeof(pszVoip), 4, false );
+
+								int	nLen = ::sprintf( pszDayLine, "%u,%s,%s,%s,%s,,%s,%I64d,,%u,%s\n"
+									, nMachineDate, pszOpen, pszHigh, pszLow, pszNow
+									, pszAmount, pStock->Volume, pStock->Records, pszVoip );
 								oDumper.write( pszDayLine, nLen );
 							}
 						}
@@ -1372,10 +1482,21 @@ int QuotationData::DumpDayLine( enum XDFMarket eMarket, char* pSnapData, unsigne
 						{
 							if( false == CheckDateInDayFile( oLoader, nMachineDate ) ) // 未在日线文件中查找出今天的日线数据，所以需要写入一条
 							{
-								int	nLen = ::sprintf( pszDayLine, "%u,%.4f,%.4f,%.4f,%.4f,0.0000,%.4f,%I64d,0,0,0.0000\n"
-									, nMachineDate
-									, pStock->Open/dPriceRate, pStock->High/dPriceRate, pStock->Low/dPriceRate, pStock->Now/dPriceRate
-									, pStock->Amount, pStock->Volume );
+								char	pszOpen[32] = { 0 };
+								char	pszHigh[32] = { 0 };
+								char	pszLow[32] = { 0 };
+								char	pszNow[32] = { 0 };
+								char	pszAmount[32] = { 0 };
+								char	pszVoip[32] = { 0 };
+
+								FormatDouble2Str( pStock->Open/dPriceRate, pszOpen, sizeof(pszOpen), 4, false );
+								FormatDouble2Str( pStock->High/dPriceRate, pszHigh, sizeof(pszHigh), 4, false );
+								FormatDouble2Str( pStock->Low/dPriceRate, pszLow, sizeof(pszLow), 4, false );
+								FormatDouble2Str( pStock->Now/dPriceRate, pszNow, sizeof(pszNow), 4, false );
+								FormatDouble2Str( pStock->Amount, pszAmount, sizeof(pszAmount), 4, false );
+
+								int	nLen = ::sprintf( pszDayLine, "%u,%s,%s,%s,%s,,%s,%I64d,,,\n"
+									, nMachineDate, pszOpen, pszHigh, pszLow, pszNow, pszAmount, pStock->Volume );
 								oDumper.write( pszDayLine, nLen );
 							}
 						}
@@ -1400,9 +1521,23 @@ int QuotationData::DumpDayLine( enum XDFMarket eMarket, char* pSnapData, unsigne
 						{
 							if( false == CheckDateInDayFile( oLoader, nMachineDate ) ) // 未在日线文件中查找出今天的日线数据，所以需要写入一条
 							{
-								int	nLen = ::sprintf( pszDayLine, "%u,%.4f,%.4f,%.4f,%.4f,%.4f,%.4f,%I64d,%u,%u,%.4f\n", nMachineDate
-									, pStock->Open/dPriceRate, pStock->High/dPriceRate, pStock->Low/dPriceRate, pStock->Now/dPriceRate
-									, 0.0, pStock->Amount, pStock->Volume, 0, pStock->Records, pStock->Voip/dPriceRate );
+								char	pszOpen[32] = { 0 };
+								char	pszHigh[32] = { 0 };
+								char	pszLow[32] = { 0 };
+								char	pszNow[32] = { 0 };
+								char	pszAmount[32] = { 0 };
+								char	pszVoip[32] = { 0 };
+
+								FormatDouble2Str( pStock->Open/dPriceRate, pszOpen, sizeof(pszOpen), 4, false );
+								FormatDouble2Str( pStock->High/dPriceRate, pszHigh, sizeof(pszHigh), 4, false );
+								FormatDouble2Str( pStock->Low/dPriceRate, pszLow, sizeof(pszLow), 4, false );
+								FormatDouble2Str( pStock->Now/dPriceRate, pszNow, sizeof(pszNow), 4, false );
+								FormatDouble2Str( pStock->Amount, pszAmount, sizeof(pszAmount), 4, false );
+								FormatDouble2Str( pStock->Voip/dPriceRate, pszVoip, sizeof(pszVoip), 4, false );
+
+								int	nLen = ::sprintf( pszDayLine, "%u,%s,%s,%s,%s,,%s,%I64d,,%u,%s\n"
+									, nMachineDate, pszOpen, pszHigh, pszLow, pszNow
+									, pszAmount, pStock->Volume, pStock->Records, pszVoip );
 								oDumper.write( pszDayLine, nLen );
 							}
 						}
@@ -1420,10 +1555,21 @@ int QuotationData::DumpDayLine( enum XDFMarket eMarket, char* pSnapData, unsigne
 						{
 							if( false == CheckDateInDayFile( oLoader, nMachineDate ) ) // 未在日线文件中查找出今天的日线数据，所以需要写入一条
 							{
-								int	nLen = ::sprintf( pszDayLine, "%u,%.4f,%.4f,%.4f,%.4f,0.0000,%.4f,%I64d,0,0,0.0000\n"
-									, nMachineDate
-									, pStock->Open/dPriceRate, pStock->High/dPriceRate, pStock->Low/dPriceRate, pStock->Now/dPriceRate
-									, pStock->Amount, pStock->Volume );
+								char	pszOpen[32] = { 0 };
+								char	pszHigh[32] = { 0 };
+								char	pszLow[32] = { 0 };
+								char	pszNow[32] = { 0 };
+								char	pszAmount[32] = { 0 };
+								char	pszVoip[32] = { 0 };
+
+								FormatDouble2Str( pStock->Open/dPriceRate, pszOpen, sizeof(pszOpen), 4, false );
+								FormatDouble2Str( pStock->High/dPriceRate, pszHigh, sizeof(pszHigh), 4, false );
+								FormatDouble2Str( pStock->Low/dPriceRate, pszLow, sizeof(pszLow), 4, false );
+								FormatDouble2Str( pStock->Now/dPriceRate, pszNow, sizeof(pszNow), 4, false );
+								FormatDouble2Str( pStock->Amount, pszAmount, sizeof(pszAmount), 4, false );
+
+								int	nLen = ::sprintf( pszDayLine, "%u,%s,%s,%s,%s,,%s,%I64d,,,\n"
+									, nMachineDate, pszOpen, pszHigh, pszLow, pszNow, pszAmount, pStock->Volume );
 								oDumper.write( pszDayLine, nLen );
 							}
 						}

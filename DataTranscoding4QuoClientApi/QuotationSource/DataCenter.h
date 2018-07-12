@@ -8,6 +8,7 @@
 #include <string>
 #include <fstream>
 #include "../QuoteCltDef.h"
+#include "../QuoteClientApi.h"
 #include "../Configuration.h"
 #include "../Infrastructure/Thread.h"
 #include "../Infrastructure/DateTime.h"
@@ -100,39 +101,6 @@ typedef struct
 	unsigned __int64			NumTrades;				///< ³É½»±ÊÊýÒ»·ÖÖÓ×îºó±Ê¼õÈ¥µÚÒ»±ÊµÄnumtrades
 	double						Voip;					///< »ù½ðÄ£¾»¡¢È¨Ö¤Òç¼ÛÒ»·ÖÖÓµÄ×îºóÒ»±Êvoip
 } T_MIN_LINE;
-
-/**
- * @class						T_LINE_PARAM
- * @brief						»ù´¡²ÎÊý
- */
-typedef struct
-{
-	///< ---------------------- ²Î¿¼»ù´¡ÐÅÏ¢ ----------------------------------
-	unsigned char				Type;					///< ÀàÐÍ
-	unsigned int				UpperPrice;				///< ÕÇÍ£¼Û
-	unsigned int				LowerPrice;				///< µøÍ£¼Û
-	unsigned int				PreClosePx;				///< ×òÊÕ
-	unsigned int				PreSettlePx;			///< ×ò½á
-	unsigned int				PrePosition;			///< ×ò³Ö
-	char						PreName[8];				///< Ç°×º
-	double						dPriceRate;				///< ·Å´ó±¶Êý
-	///< ---------------------- ·ÖÖÓÏßÍ³¼ÆÐÅÏ¢ --------------------------------
-	unsigned char				Valid;					///< ÊÇ·ñÓÐÐ§Êý¾Ý, 1:ÓÐÐ§£¬ÐèÒªÂäÅÌ 0:ÎÞÐ§»òÒÑÂäÅÌ
-	unsigned int				MkMinute;				///< ÐÐÇéÊ±¼ä(¾«È·µ½·Ö£¬HHmm)
-	unsigned int				MinOpenPx1;				///< ·ÖÖÓÄÚµÚÒ»±Ê×îÐÂ¼Û
-	unsigned int				MinHighPx;				///< ·ÖÖÓÄÚ×î¸ß¼Û
-	unsigned int				MinLowPx;				///< ·ÖÖÓÄÚ×îµÍ¼Û
-	unsigned int				MinClosePx;				///< ·ÖÖÓÄÚ×îÐÂ¼Û
-	unsigned int				MinSettlePx;			///< ·ÖÖÓÄÚ×îÐÂ½áËã¼Û
-	double						MinAmount1;				///< ·ÖÖÓÄÚµÚÒ»±Ê½ð¶î
-	double						MinAmount2;				///< ·ÖÖÓÄÚµÚÄ©±Ê½ð¶î
-	unsigned __int64			MinVolume1;				///< ·ÖÖÓÄÚµÚÒ»±Ê³É½»Á¿
-	unsigned __int64			MinVolume2;				///< ·ÖÖÓÄÚµÚÄ©±Ê³É½»Á¿
-	unsigned __int64			MinOpenInterest;		///< ·ÖÖÓÄÚµÚÄ©±Ê³Ö²ÖÁ¿
-	unsigned __int64			MinNumTrades1;			///< ·ÖÖÓÄÚµÚÒ»±Ê³É½»±ÊÊý
-	unsigned __int64			MinNumTrades2;			///< ·ÖÖÓÄÚµÚÄ©±Ê³É½»±ÊÊý
-	unsigned int				MinVoip;				///< ·ÖÖÓÄÚµÚÄ©±ÊVoip
-} T_LINE_PARAM;
 #pragma pack()
 
 
@@ -269,7 +237,6 @@ typedef MLoopBufferSt<T_TICK_LINE>						T_TICKLINE_CACHE;			///< TickÏßÑ­»·¶ÓÁÐ»
 typedef MLoopBufferSt<T_MIN_LINE>						T_MINLINE_CACHE;			///< ·ÖÖÓÏßÑ­»·¶ÓÁÐ»º´æ
 typedef	std::map<enum XDFMarket,int>					TMAP_MKID2STATUS;			///< ¸÷ÊÐ³¡Ä£¿é×´Ì¬
 const	unsigned int									MAX_WRITER_NUM = 128;		///< ×î´óÂäÅÌÎÄ¼þ¾ä±ú
-typedef std::map<std::string,T_LINE_PARAM>				T_MAP_GEN_MLINES;			///< ·ÖÖÓÏßÉú³ÉÆ÷Map
 extern unsigned int										s_nNumberInSection;			///< Ò»¸öÊÐ³¡ÓÐ¿ÉÒÔ»º´æ¶àÉÙ¸öÊý¾Ý¿é(¿ÉÅä)
 
 
@@ -436,6 +403,32 @@ protected:
 	CriticalObject				m_oLockData;			///< TICKÏßÊý¾ÝËø
 };
 
+
+///< »¦¡¢Éî¹ÉÆ±ÀàÍ£ÅÆ±ê¼Ç±í //////////////////////////////////////////////////////////////////////////////////
+/**
+ * @class						SecurityStatus
+ * @brief						ÉÌÆ·×´Ì¬±í(Í£ÅÆ±ê¼Ç)
+ */
+class SecurityStatus
+{
+public:
+	typedef std::map<std::string,unsigned char>		T_CODE_SFlag_Table;	///< Í£ÅÆ±ê¼Ç±í
+public:
+	SecurityStatus();
+
+	/**
+	 * @brief					»ñÈ¡ËùÓÐÉÌÆ·µÄÍ£ÅÆ±ê¼Ç·û
+	 * @param[in]				eMkID				ÊÐ³¡±àºÅ
+	 * @param[in]				refQuoteQueryApi	²éÑ¯½Ó¿Ú
+	 * @param[in]				nWareCount			ÉÌÆ·×ÜÊý
+	 * @return					·µ»Ø»ñÈ¡µÄÊýÁ¿£»-1±íÊ¾Ê§°Ü
+	 */
+	int							FetchAllSFlag( enum XDFMarket eMkID, QuotePrimeApi& refQuoteQueryApi, unsigned int nWareCount );
+
+protected:
+	T_CODE_SFlag_Table			m_mapSFlagTable;		///< ¹ÉÆ±Í£ÅÆ±ê¼Ç±í
+	CriticalObject				m_oLockData;			///< ×´Ì¬±íÊý¾ÝËø
+};
 
 ///< Ö÷Àà ////////////////////////////////////////////////////////////////////////////////////////////////////
 /**
