@@ -187,6 +187,14 @@
 				>
 			</File>
 			<File
+				RelativePath=".\QuotationSource\Data1Min.cpp"
+				>
+			</File>
+			<File
+				RelativePath=".\QuotationSource\Data1Min.h"
+				>
+			</File>
+			<File
 				RelativePath=".\QuotationSource\DataCenter.cpp"
 				>
 			</File>
@@ -208,6 +216,22 @@
 			</File>
 			<File
 				RelativePath=".\QuotationSource\DataDump.h"
+				>
+			</File>
+			<File
+				RelativePath=".\QuotationSource\DataStatus.cpp"
+				>
+			</File>
+			<File
+				RelativePath=".\QuotationSource\DataStatus.h"
+				>
+			</File>
+			<File
+				RelativePath=".\QuotationSource\DataTick.cpp"
+				>
+			</File>
+			<File
+				RelativePath=".\QuotationSource\DataTick.h"
 				>
 			</File>
 			<File

@@ -234,13 +234,6 @@ int Configuration::Initialize()
 		QuoCollector::GetCollector()->OnLog( TLV_WARN, "Configuration::Initialize() : default quotation plugin path: %s", m_sQuoPluginPath.c_str() );
 	}
 
-	///< 每个市场的缓存中，可以缓存的tick数据的数量
-	int	nNum4OneMarket = oIniFile.getIntValue( std::string("SRV"), std::string("ItemCountInBuffer"), nErrCode );
-	if( nNum4OneMarket > 0 )	{
-		s_nNumberInSection = nNum4OneMarket;
-	}
-	QuoCollector::GetCollector()->OnLog( TLV_INFO, "Configuration::Initialize() : Setting Item Number ( = %d) In One Market Buffer ...", s_nNumberInSection );
-
 	///< 设置财经数据 和 权息文件 的配置路径
 	m_sFinancialFolder = oIniFile.getStringValue( std::string("DataSource"), std::string("FinancialData"), nErrCode );
 	if( 0 != nErrCode )	{
