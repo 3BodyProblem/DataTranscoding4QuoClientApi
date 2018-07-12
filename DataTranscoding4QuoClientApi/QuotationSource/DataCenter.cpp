@@ -183,14 +183,14 @@ int QuotationData::BuildSecurity4Min( enum XDFMarket eMarket, std::string& sCode
 		if( 0 == m_objStatus4SHL1.IsStop( sCode ) ) {
 			nErrorCode = m_objMinCache4SHL1.NewSecurity( eMarket, sCode, nDate, dPriceRate, objData );
 		} else {
-			QuoCollector::GetCollector()->OnLog( TLV_INFO, "QuotationData::BuildSecurity4Min() : [MkID=%d] code = %s stopflag = true", (int)eMarket, sCode.c_str() );
+			QuoCollector::GetCollector()->OnLog( TLV_INFO, "QuotationData::BuildSecurity4Min() : [MkID=%d] min1: code = %s stopflag = true", (int)eMarket, sCode.c_str() );
 		}
 		break;
 	case XDF_SZ:
 		if( 0 == m_objStatus4SZL1.IsStop( sCode ) ) {
 			nErrorCode = m_objMinCache4SZL1.NewSecurity( eMarket, sCode, nDate, dPriceRate, objData );
 		} else {
-			QuoCollector::GetCollector()->OnLog( TLV_INFO, "QuotationData::BuildSecurity4Min() : [MkID=%d] code = %s stopflag = true", (int)eMarket, sCode.c_str() );
+			QuoCollector::GetCollector()->OnLog( TLV_INFO, "QuotationData::BuildSecurity4Min() : [MkID=%d] min1: code = %s stopflag = true", (int)eMarket, sCode.c_str() );
 		}
 		break;
 	default:
@@ -213,10 +213,18 @@ int QuotationData::BuildSecurity( enum XDFMarket eMarket, std::string& sCode, un
 	switch( eMarket )
 	{
 	case XDF_SH:	///< 上证L1
-		nErrorCode = m_objTickCache4SHL1.NewSecurity( eMarket, sCode, nDate, dPriceRate, objData, pszPreName, nPreNamLen );
+		if( 0 == m_objStatus4SHL1.IsStop( sCode ) ) {
+			nErrorCode = m_objTickCache4SHL1.NewSecurity( eMarket, sCode, nDate, dPriceRate, objData, pszPreName, nPreNamLen );
+		} else {
+			QuoCollector::GetCollector()->OnLog( TLV_INFO, "QuotationData::BuildSecurity() : [MkID=%d] tick & day1: code = %s stopflag = true", (int)eMarket, sCode.c_str() );
+		}
 		break;
 	case XDF_SZ:	///< 深证L1
-		nErrorCode = m_objTickCache4SZL1.NewSecurity( eMarket, sCode, nDate, dPriceRate, objData, pszPreName, nPreNamLen );
+		if( 0 == m_objStatus4SZL1.IsStop( sCode ) ) {
+			nErrorCode = m_objTickCache4SZL1.NewSecurity( eMarket, sCode, nDate, dPriceRate, objData, pszPreName, nPreNamLen );
+		} else {
+			QuoCollector::GetCollector()->OnLog( TLV_INFO, "QuotationData::BuildSecurity() : [MkID=%d] tick & day1: code = %s stopflag = true", (int)eMarket, sCode.c_str() );
+		}
 		break;
 	default:
 		nErrorCode = -1024;
