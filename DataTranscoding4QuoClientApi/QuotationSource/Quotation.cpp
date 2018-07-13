@@ -287,7 +287,7 @@ int Quotation::SaveShLv1_Static_Tick_Day( enum XDFRunStat eStatus, bool bBuild )
 		}
 	}
 
-	if( (nErrorCode = m_oQuoDataCenter.GetSHL1StatusTable().FetchAllSFlag( XDF_SH, m_oQuotPlugin.GetPrimeApi(), pKindHead->WareCount )) <= 0 ) {
+	if( m_oQuoDataCenter.GetSHL1StatusTable().FetchAllSFlag( XDF_SH, m_oQuotPlugin.GetPrimeApi(), pKindHead->WareCount ) <= 0 ) {
 		QuoCollector::GetCollector()->OnLog( TLV_ERROR, "Quotation::SaveShLv1_Static_Tick_Day() : cannot fetch stopflag 4 shl1" );
 		return -3;
 	}
@@ -502,7 +502,7 @@ int Quotation::SaveSzLv1_Static_Tick_Day( enum XDFRunStat eStatus, bool bBuild )
 		}
 	}
 
-	if( (nErrorCode = m_oQuoDataCenter.GetSZL1StatusTable().FetchAllSFlag( XDF_SZ, m_oQuotPlugin.GetPrimeApi(), pKindHead->WareCount )) <= 0 ) {
+	if( m_oQuoDataCenter.GetSZL1StatusTable().FetchAllSFlag( XDF_SZ, m_oQuotPlugin.GetPrimeApi(), pKindHead->WareCount ) <= 0 ) {
 		QuoCollector::GetCollector()->OnLog( TLV_ERROR, "Quotation::SaveSzLv1_Static_Tick_Day() : cannot fetch stopflag 4 szl1" );
 		return -3;
 	}
