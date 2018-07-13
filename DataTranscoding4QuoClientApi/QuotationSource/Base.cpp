@@ -27,14 +27,19 @@ char* FormatDouble2Str( const double& dVal, char* pszOutputBuffer, unsigned int 
 	{
 	case 1:
 		nFormatStrLen = ::sprintf( pszOutputBuffer, "%.1f", dVal );
+		break;
 	case 2:
 		nFormatStrLen = ::sprintf( pszOutputBuffer, "%.2f", dVal );
+		break;
 	case 3:
 		nFormatStrLen = ::sprintf( pszOutputBuffer, "%.3f", dVal );
+		break;
 	case 4:
 		nFormatStrLen = ::sprintf( pszOutputBuffer, "%.4f", dVal );
+		break;
 	case 5:
 		nFormatStrLen = ::sprintf( pszOutputBuffer, "%.5f", dVal );
+		break;
 	case 6:
 		nFormatStrLen = ::sprintf( pszOutputBuffer, "%.6f", dVal );
 		break;
