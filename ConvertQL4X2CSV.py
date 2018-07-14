@@ -101,8 +101,14 @@ class SHSZL1DayLineSaver(CSVSaver):
             日线数据回调，不管属于哪一个年份，每一条日线都追加到同一个文件后
         """
         if nDate > 19901010 and nDate < 20301010:
+            dOpen = round( dOpen,  4 )
+            dHigh = round( dHigh,  4 )
+            dLow = round( dLow,  4 )
+            dClose = round( dClose,  4 )
+            dAmount = round( dAmount,  4 )
+            dVoip = round( dVoip,  4 )
             self.Open()
-            sRecord = "{date},{openpx:.4f},{highpx:.4f},{lowpx:.4f},{closepx:.4f},0.0000,{amount:.4f},{volume},0,{numtrades},{voip:.4f}\n".format( date = nDate, openpx = dOpen, highpx = dHigh, lowpx = dLow, closepx = dClose, amount = dAmount, volume = nVolume, numtrades = nTradeNumber, voip = dVoip )
+            sRecord = "{date},{openpx},{highpx},{lowpx},{closepx},,{amount},{volume},,{numtrades},{voip}\n".format( date = nDate, openpx = dOpen, highpx = dHigh, lowpx = dLow, closepx = dClose, amount = dAmount, volume = nVolume, numtrades = nTradeNumber, voip = dVoip )
             self.WriteString( sRecord )
 
 
@@ -132,8 +138,14 @@ class SHSZL1Minute1LineSaver(CSVSaver):
             self.FilePath = self.__sFileBasePath + str(nYear) + ".csv"    ### 重新生成新的目标文件路径(CSV)
             self.__nLastYear = nYear
 
+        dOpen = round( dOpen,  4 )
+        dHigh = round( dHigh,  4 )
+        dLow = round( dLow,  4 )
+        dClose = round( dClose,  4 )
+        dAmount = round( dAmount,  4 )
+        dVoip = round( dVoip,  4 )
         self.Open()
-        sRecord = "{date},{time},{openpx:.4f},{highpx:.4f},{lowpx:.4f},{closepx:.4f},0.0000,{amount:.4f},{volume},0,{numtrades},{voip:.4f}\n".format( date = nDate, time = nTime, openpx = dOpen, highpx = dHigh, lowpx = dLow, closepx = dClose, amount = dAmount, volume = nVolume, numtrades = nTradeNumber, voip = dVoip )
+        sRecord = "{date},{time},{openpx},{highpx},{lowpx},{closepx},,{amount},{volume},,{numtrades},{voip}\n".format( date = nDate, time = nTime, openpx = dOpen, highpx = dHigh, lowpx = dLow, closepx = dClose, amount = dAmount, volume = nVolume, numtrades = nTradeNumber, voip = dVoip )
         self.WriteString( sRecord )
 
 
